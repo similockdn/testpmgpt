@@ -1,0 +1,33 @@
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f8ff;color:#123}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#004b91,#00a8ff);padding:20px}
+.login-box{background:#fff;width:100%;max-width:430px;border-radius:22px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.login-box h1{text-align:center;color:#005fae;margin-top:0}
+label{display:block;font-weight:bold;margin:10px 0 5px}
+input,select{width:100%;padding:11px;border:1px solid #c9dff2;border-radius:10px;font-size:14px}
+button{cursor:pointer;border:0;border-radius:10px;padding:11px 14px;font-weight:bold}
+.primary{background:#0077cc;color:#fff}.primary:hover{background:#005fa3}
+.gray{background:#eef2f7;color:#123}.danger{background:#d00000;color:#fff}
+.full{width:100%;margin-top:10px}.muted{color:#557;text-align:center}.notice{background:#fff7df;border:1px dashed #d99a00;border-radius:12px;padding:12px;margin:12px 0;line-height:1.55}
+header{background:#005fae;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+header h1{font-size:22px;margin:0}header p{margin:4px 0 0}
+.user-box{text-align:right}
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 72px)}
+nav{background:#0b3d66;padding:14px}
+nav button{width:100%;margin:6px 0;background:#145c91;color:white;text-align:left}
+nav button.active,nav button:hover{background:#00a2ff}
+nav button.hide{display:none}
+main{padding:20px}
+section{display:none;background:#fff;border-radius:18px;padding:20px;box-shadow:0 8px 25px rgba(0,0,0,.08)}
+section.active{display:block}
+h2{color:#005fae;margin-top:0}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:#eaf6ff;border-left:6px solid #0077cc;border-radius:16px;padding:18px}
+.card b{display:block;font-size:22px;color:#0061a8;margin-top:8px}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+th,td{border:1px solid #d7e9f7;padding:9px;text-align:left;vertical-align:top}
+th{background:#0077cc;color:white}
+.perm-box{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#f3f8ff;border-radius:12px;padding:12px}
+.perm-box label{font-weight:normal;margin:0}
+.profit{color:#008a3d;font-weight:bold}.loss{color:#d00000;font-weight:bold}.hidden-money{color:#777;font-style:italic}
+@media(max-width:900px){header{display:block}.layout{grid-template-columns:1fr}nav{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}nav button{margin:0}.grid,.cards,.perm-box{grid-template-columns:1fr}table{font-size:11px}}

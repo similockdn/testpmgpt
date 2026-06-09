@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasPerm(perm) {
+      return signedIn() && perm in myProfile().perms;
+    }
+
+    function isAdminSetupAllowed() {
+      return signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == "Admin";
+    }
+
+    match /users/{userId} {
+      allow create: if isAdminSetupAllowed() || hasPerm("users");
+      allow read: if signedIn();
+      allow update, delete: if hasPerm("users");
+    }
+
+    match /pendingUsers/{email} {
+      allow read: if signedIn() && request.auth.token.email == email;
+      allow create, update, delete: if hasPerm("users");
+    }
+
+    match /customers/{id} {
+      allow read: if hasPerm("customers") || hasPerm("sales") || hasPerm("dashboard");
+      allow create, update: if hasPerm("customers");
+      allow delete: if hasPerm("delete");
+    }
+
+    match /products/{id} {
+      allow read: if hasPerm("products") || hasPerm("sales") || hasPerm("inventory") || hasPerm("dashboard");
+      allow create, update: if hasPerm("products") || hasPerm("inventory") || hasPerm("sales");
+      allow delete: if hasPerm("delete");
+    }
+
+    match /staff/{id} {
+      allow read: if hasPerm("staff") || hasPerm("sales") || hasPerm("dashboard");
+      allow create, update: if hasPerm("staff");
+      allow delete: if hasPerm("delete");
+    }
+
+    match /orders/{id} {
+      allow read: if hasPerm("sales") || hasPerm("dashboard");
+      allow create: if hasPerm("sales");
+      allow update: if hasPerm("sales");
+      allow delete: if hasPerm("delete");
+    }
+
+    match /expenses/{id} {
+      allow read: if hasPerm("expenses") || hasPerm("dashboard");
+      allow create, update: if hasPerm("expenses");
+      allow delete: if hasPerm("delete");
+    }
+  }
+}
