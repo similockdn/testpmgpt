@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIMILOCK ERP KAS MISA</title>
+  <title>SIMILOCK ERP</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
@@ -23,12 +23,12 @@
 
   <div id="appPage" class="app" style="display:none">
     <aside class="sidebar">
-      <div class="logo"><span>S</span><div><b>SIMILOCK</b><small>ERP KAS / MISA</small></div></div>
+      <div class="logo"><span>S</span><div><b>SIMILOCK</b><small>ERP COMPLETE</small></div></div>
       <nav id="menu">
         <button data-page="dashboard" class="active">📊 Điều hành</button>
         <button data-page="sales">🛒 Bán hàng</button>
         <button data-page="debts">💳 Công nợ</button>
-        <button data-page="inventory">📦 Kho MISA</button>
+        <button data-page="inventory">📦 Kho hàng</button>
         <button data-page="stockbook">📘 Sổ kho</button>
         <button data-page="warranty">🛡️ Bảo hành</button>
         <button data-page="customers">👥 Khách hàng</button>
@@ -89,7 +89,7 @@
 
       <section id="inventory" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📦 Chứng từ kho chuẩn MISA</h3><div><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
+          <div class="panel-head"><h3>📦 Chứng từ kho</h3><div><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
           <div class="grid form-grid">
             <div><label>Mã phiếu</label><input id="stockCode" readonly /></div>
             <div><label>Ngày</label><input id="stockDate" type="date" /></div>

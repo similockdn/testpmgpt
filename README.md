@@ -1,7 +1,7 @@
-# SIMILOCK ERP KAS / MISA - bản hoàn thiện
+# SIMILOCK ERP COMPLETE - bản hoàn thiện
 
 ## Các nâng cấp chính
-- Kho theo quy trình MISA: phiếu nhập, phiếu xuất, điều chỉnh, kiểm kê. Một chứng từ có nhiều dòng hàng.
+- Kho theo quy trình chuẩn: phiếu nhập, phiếu xuất, điều chỉnh, kiểm kê. Một chứng từ có nhiều dòng hàng.
 - Kiểm kê đúng chênh lệch: nhập tồn thực tế, hệ thống tự tính tồn hệ thống và số lệch.
 - Chặn xuất kho âm.
 - Phiếu bán hàng nhiều sản phẩm, VAT tùy chọn, công nợ tự tính.
@@ -14,7 +14,7 @@
 - Phân quyền chuẩn: Admin, Sale, Kỹ thuật, Kho, Kế toán.
 
 ## Lưu ý Firebase
-File `firebase-config.js` đang giữ project `smilockdng`. Nếu đăng nhập/kết nối lỗi, vào Firebase Console > Project settings > Web app và copy lại đầy đủ `appId`.
+File `firebase-config.js` đã cập nhật đúng project `smilockdng` và `appId` đầy đủ.
 
 ## File import mẫu
 - `khach_hang_mau_import.csv`
