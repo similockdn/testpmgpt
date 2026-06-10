@@ -1,80 +1,44 @@
-# SIMILOCK ERP FIREBASE - Bản nâng cấp kiểu MISA
+# SIMILOCK ERP MISA MINI PRO
 
-Bản này chạy bằng HTML/CSS/JS thuần + Firebase Auth + Firestore, phù hợp GitHub Pages.
+Bản nâng cấp theo quy trình MISA mini cho SIMILOCK: bán hàng, kho, công nợ, thu tiền, bảo hành, phân quyền, nhật ký sửa/xóa, import/export.
 
-## Chức năng chính
+## Tính năng chính
+- Dashboard hiện đại: doanh thu, lợi nhuận, công nợ, cảnh báo tồn kho.
+- Bán hàng: 1 phiếu bán có nhiều sản phẩm, tìm khách đã lưu, tạo khách nhanh, VAT tùy chọn, in A5.
+- Quản trị đơn: Admin/Kế toán có quyền sửa/xóa đơn.
+- Công nợ: theo khách hàng, ghi nhận phiếu thu, cập nhật còn nợ.
+- Kho: 1 phiếu nhập/xuất/điều chỉnh có nhiều mã hàng, in A5.
+- Sổ kho: tồn hiện tại, nhập, xuất, điều chỉnh theo từng model.
+- Bảo hành: ngày lắp, serial/IMEI, hết hạn, tra cứu theo SĐT/serial.
+- Danh mục: khách hàng, sản phẩm, bảng giá, nhân viên, chi phí.
+- Import/export CSV: khách hàng và sản phẩm.
+- Backup toàn bộ dữ liệu JSON.
+- Nhật ký sửa/xóa/import.
+- Firestore Rules phân quyền cơ bản.
 
-### 1. Đăng nhập & phân quyền
-- Tạo Admin lần đầu.
-- Tạo tài khoản nhân viên sau khi Admin phân quyền.
-- Phân quyền theo từng menu: Dashboard, Khách hàng, Sản phẩm, Bảng giá, Bán hàng, Kho, Phiếu kho, Nhân viên, Chi phí, Người dùng.
-- Quyền riêng: xem giá vốn/lợi nhuận.
-- Sale không được xem giá vốn/lợi nhuận nếu không tick quyền.
+## Cách chạy trên GitHub Pages
+1. Upload toàn bộ file lên repository.
+2. Vào Settings → Pages → Deploy from branch → chọn `main` và `/root`.
+3. Mở link GitHub Pages.
 
-### 2. Danh mục khách hàng
-- Form nhập liệu kiểu MISA.
-- Mã khách hàng tự động.
-- Loại khách: Khách lẻ, Khách đại lý, CTV.
-- SĐT, địa chỉ, mã số thuế, chiết khấu, ghi chú.
-- Thêm / sửa / xóa.
+## Cấu hình Firebase
+File `firebase-config.js` đang giữ project `smilockdng`.
+Nếu đăng nhập lỗi, vào Firebase Console → Project settings → Web app → copy đầy đủ `appId` dán lại.
 
-### 3. Danh mục sản phẩm
-- Model/mã hàng, tên hàng, danh mục, đơn vị tính.
-- Giá vốn, giá bán, tồn đầu.
-- Thêm / sửa / xóa.
+## Firebase cần bật
+- Authentication → Sign-in method → Email/Password → Enable.
+- Firestore Database → Create database.
+- Rules → dán nội dung `firestore.rules`.
 
-### 4. Quản lý bảng giá
-- Bảng giá theo từng nhóm khách.
-- Ví dụ: F07 có giá Khách lẻ, Đại lý, CTV khác nhau.
-- Thêm / sửa / xóa.
+## Lần đầu sử dụng
+1. Nhập email admin + mật khẩu.
+2. Bấm `Tạo Admin lần đầu`.
+3. Đăng nhập lại.
+4. Vào Phân quyền để thêm email nhân viên.
 
-### 5. Bán hàng
-- Chọn khách hàng, sản phẩm, số lượng.
-- Tự lấy giá theo bảng giá và loại khách.
-- Có chiết khấu riêng hoặc lấy chiết khấu từ hồ sơ khách.
-- VAT tùy chọn:
-  - Không VAT
-  - Cộng thêm VAT
-  - Giá đã gồm VAT
-- Thuế suất: 0%, 8%, 10%.
-- Hoa hồng sale, chi phí kỹ thuật, chi phí khác.
-- Tự tính doanh thu, VAT, lợi nhuận.
-- Tự trừ kho khi tạo phiếu bán.
-- In phiếu bán hàng A5.
-
-### 6. Kho hàng
-- Tạo phiếu nhập kho.
-- Tạo phiếu xuất kho.
-- Tạo phiếu điều chỉnh tồn.
-- Tự cập nhật tồn kho.
-- Lưu lịch sử phiếu kho.
-- In phiếu kho A5.
-
-### 7. Nhân viên
-- Quản lý nhân viên: tên, phòng ban, điện thoại, email.
-- Thêm / sửa / xóa.
-- Dùng nhân viên sale khi tạo đơn hàng.
-
-### 8. Chi phí
-- Nhập chi phí vận hành, kỹ thuật, marketing, vận chuyển...
-- Tự cộng vào báo cáo.
-
-### 9. Dashboard
-- Doanh thu.
-- VAT.
-- Lợi nhuận.
-- Số đơn.
-- Tồn kho.
-- Top nhân viên theo doanh thu/hoa hồng.
-
-## Cách dùng trên GitHub Pages
-1. Giữ nguyên `firebase-config.js` nếu Firebase project của anh đang chạy.
-2. Nếu đăng nhập lỗi appId, vào Firebase Console > Project settings > Web app > copy lại toàn bộ `firebaseConfig`.
-3. Upload các file này lên GitHub.
-4. Bật GitHub Pages.
-5. Vào Firebase Console > Authentication > Settings > Authorized domains, thêm domain GitHub Pages.
-6. Vào Firestore > Rules, dán nội dung file `firestore.rules`.
+## Collection sử dụng
+users, customers, products, priceLists, staff, sales, receipts, stockVouchers, warranties, expenses, audit.
 
 ## Lưu ý quan trọng
-- Firestore Rules trong bản này cho phép người đã đăng nhập đọc/ghi. Sau khi chạy ổn, nên siết rules theo vai trò.
-- Không nên public dữ liệu thật nếu chưa cấu hình Rules chặt.
+- Khi sửa/xóa phiếu kho cũ, bản web tĩnh này chưa tự hoàn nguyên tồn kho như backend chuyên nghiệp. Muốn chuẩn tuyệt đối cần Cloud Functions để ghi sổ kho bất biến.
+- Phiếu bán mới sẽ tự trừ tồn kho. Khi sửa đơn cũ, nên kiểm tra lại tồn kho thủ công hoặc nâng cấp thêm Cloud Functions.

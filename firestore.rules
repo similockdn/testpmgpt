@@ -2,8 +2,56 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    match /{document=**} {
-      allow read, write: if signedIn();
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isAdmin() { return signedIn() && (profile().role == 'Admin' || 'admin' in profile().permissions); }
+    function isAccounting() { return signedIn() && (profile().role in ['Admin','Kế toán','Quản lý']); }
+    function isWarehouse() { return signedIn() && (profile().role in ['Admin','Kho','Quản lý']); }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+    match /products/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin() || isWarehouse();
+    }
+    match /stockVouchers/{id} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin() || isWarehouse();
+      allow delete: if isAdmin();
+    }
+    match /customers/{id} {
+      allow read, create, update: if signedIn();
+      allow delete: if isAdmin();
+    }
+    match /sales/{id} {
+      allow read, create: if signedIn();
+      allow update, delete: if isAdmin() || isAccounting();
+    }
+    match /receipts/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin() || isAccounting();
+    }
+    match /warranties/{id} {
+      allow read, create, update: if signedIn();
+      allow delete: if isAdmin();
+    }
+    match /expenses/{id} {
+      allow read, create, update, delete: if isAdmin() || isAccounting();
+    }
+    match /priceLists/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    match /staff/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    match /audit/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn();
+      allow update, delete: if false;
     }
   }
 }
