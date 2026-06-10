@@ -10,12 +10,31 @@ const perms = { dashboard:'Dashboard', customers:'Khách hàng', products:'Sản
 let me = null, myPerm = {}, data = {customers:[],products:[],prices:[],orders:[],staff:[],expenses:[],users:[],vouchers:[]};
 
 function code(prefix){ return prefix + '-' + new Date().toISOString().slice(0,10).replaceAll('-','') + '-' + Math.floor(Math.random()*9000+1000); }
-function show(page){ pages.forEach(p=>$(p).classList.toggle('active',p===page)); document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page)); }
-function can(p){ return me?.isAdmin || myPerm[p]; }
+function show(page){
+  if(!pages.includes(page)) page='dashboard';
+  pages.forEach(p=>{ const sec=$(p); if(sec) sec.classList.toggle('active',p===page); });
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  try{ localStorage.setItem('similock_active_page', page); }catch(e){}
+}
+window.show = show;
+function can(p){
+  // Admin luôn thấy toàn bộ menu. Nếu tài khoản cũ chưa có permissions thì vẫn cho thấy menu cơ bản để tránh lỗi mất menu.
+  if(me?.isAdmin) return true;
+  if(!myPerm || Object.keys(myPerm).length===0) return p !== 'users' && p !== 'viewCost';
+  return !!myPerm[p];
+}
 function applyPerm(){
-  pages.forEach(p=>{ const b=document.querySelector(`button[data-page="${p}"]`); if(b) b.style.display=can(p)?'block':'none'; });
+  let firstVisible = 'dashboard';
+  pages.forEach(p=>{
+    const b=document.querySelector(`button[data-page="${p}"]`);
+    const ok=can(p);
+    if(b){ b.style.display=ok?'flex':'none'; }
+    if(ok && firstVisible==='dashboard' && p!=='dashboard') firstVisible=p;
+  });
   document.querySelectorAll('.view-cost').forEach(el=>el.classList.toggle('hidden',!can('viewCost')));
-  show(pages.find(can) || 'dashboard');
+  let saved='dashboard';
+  try{ saved=localStorage.getItem('similock_active_page') || 'dashboard'; }catch(e){}
+  show(can(saved) ? saved : (can('dashboard') ? 'dashboard' : firstVisible));
 }
 async function loadAll(){
   for(const name of ['customers','products','prices','orders','staff','expenses','users','vouchers']){
@@ -32,7 +51,16 @@ function fillSelects(){ opts('sCustomer',data.customers,x=>`${x.name} - ${x.type
 $('loginBtn').onclick=()=>signInWithEmailAndPassword(auth,$('email').value,$('password').value).catch(e=>alert(e.message));
 $('logoutBtn').onclick=()=>signOut(auth);
 $('setupAdminBtn').onclick=async()=>{ const email=$('email').value.trim(); const pass=$('password').value; const cred=await createUserWithEmailAndPassword(auth,email,pass); await setDoc(doc(db,'users',cred.user.uid),{email,name:'Admin',role:'Admin',isAdmin:true,permissions:Object.fromEntries(Object.keys(perms).map(k=>[k,true])),createdAt:serverTimestamp()}); alert('Đã tạo Admin'); };
-$('signupStaffBtn').onclick=async()=>{ const email=$('email').value.trim(); const pass=$('password').value; const allowed = data.users.find(u=>u.email===email); if(!allowed) return alert('Tài khoản chưa được Admin phân quyền.'); const cred=await createUserWithEmailAndPassword(auth,email,pass); await setDoc(doc(db,'users',cred.user.uid),{...allowed,createdAt:serverTimestamp()}); alert('Đã tạo tài khoản nhân viên'); };
+$('signupStaffBtn').onclick=async()=>{
+  const email=$('email').value.trim(); const pass=$('password').value;
+  const snap = await getDocs(collection(db,'users'));
+  const allowed = snap.docs.map(d=>({id:d.id,...d.data()})).find(u=>(u.email||'').toLowerCase()===email.toLowerCase());
+  if(!allowed) return alert('Tài khoản chưa được Admin phân quyền.');
+  const cred=await createUserWithEmailAndPassword(auth,email,pass);
+  const clean={...allowed}; delete clean.id;
+  await setDoc(doc(db,'users',cred.user.uid),{...clean,createdAt:serverTimestamp()});
+  alert('Đã tạo tài khoản nhân viên');
+};
 onAuthStateChanged(auth, async user=>{ if(!user){$('loginPage').style.display='flex';$('appPage').style.display='none';return;} const us=await getDoc(doc(db,'users',user.uid)); if(!us.exists()){alert('Tài khoản chưa được phân quyền.'); await signOut(auth); return;} me={uid:user.uid,...us.data()}; myPerm=me.permissions||{}; $('currentUser').innerText=`${me.name||user.email} (${me.role||''})`; $('loginPage').style.display='none'; $('appPage').style.display='block'; await loadAll(); });
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.page));
 
@@ -85,7 +113,36 @@ function renderExpenses(){ $('expenseTable').innerHTML=data.expenses.map(x=>`<tr
 function renderUsers(){ $('permBox').innerHTML=Object.entries(perms).map(([k,v])=>`<label><input type="checkbox" data-perm="${k}">${v}</label>`).join(''); $('userTable').innerHTML=data.users.map(x=>`<tr><td>${x.email}</td><td>${x.name||''}</td><td>${x.role||''}</td><td>${x.isAdmin?'ADMIN':Object.keys(x.permissions||{}).filter(k=>x.permissions[k]).join(', ')}</td><td><button class="danger" onclick="del('users','${x.id}')">Xóa</button></td></tr>`).join(''); }
 $('saveUserBtn').onclick=async()=>{ const permissions={}; document.querySelectorAll('[data-perm]').forEach(i=>permissions[i.dataset.perm]=i.checked); await addDoc(collection(db,'users'),{email:$('uEmail').value.trim(),name:$('uName').value,role:$('uRole').value,isAdmin:false,permissions,createdAt:serverTimestamp()}); await loadAll(); };
 
-function renderDashboard(){ const revenue=data.orders.reduce((s,x)=>s+(+x.total||0),0), vat=data.orders.reduce((s,x)=>s+(+x.vat||0),0), profit=data.orders.reduce((s,x)=>s+(+x.profit||0),0), stock=data.products.reduce((s,x)=>s+(+x.stock||0),0); $('dashRevenue').innerText=money(revenue); $('dashVat').innerText=money(vat); $('dashProfit').innerText=money(profit); $('dashOrders').innerText=data.orders.length; $('dashStock').innerText=stock; const map={}; data.orders.forEach(o=>{ const k=o.staffName||'Chưa chọn'; map[k]??={orders:0,revenue:0,commission:0,profit:0}; map[k].orders++; map[k].revenue+=+o.total||0; map[k].commission+=+o.commission||0; map[k].profit+=+o.profit||0; }); $('topStaff').innerHTML=Object.entries(map).map(([k,v])=>`<tr><td>${k}</td><td>${v.orders}</td><td>${money(v.revenue)}</td><td>${money(v.commission)}</td><td class="view-cost">${money(v.profit)}</td></tr>`).join(''); }
+function setText(id, val){ const el=$(id); if(el) el.innerText=val; }
+function orderDate(o){ try{return o.createdAt?.toDate?.() || null}catch{return null} }
+function ymKey(d){ return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : 'Chưa ngày'; }
+function shortMoney(n){ n=Number(n)||0; if(n>=1000000000) return (n/1000000000).toFixed(1).replace('.0','')+' tỷ'; if(n>=1000000) return (n/1000000).toFixed(1).replace('.0','')+' tr'; if(n>=1000) return (n/1000).toFixed(0)+'k'; return money(n); }
+function emptyRow(cols, text){ return `<tr><td class="empty-row" colspan="${cols}">${text}</td></tr>`; }
+function renderDashboard(){
+  const revenue=data.orders.reduce((s,x)=>s+(+x.total||0),0), vat=data.orders.reduce((s,x)=>s+(+x.vat||0),0), profit=data.orders.reduce((s,x)=>s+(+x.profit||0),0), stock=data.products.reduce((s,x)=>s+(+x.stock||0),0), expense=data.expenses.reduce((s,x)=>s+(+x.amount||0),0);
+  const today=new Date().toDateString();
+  const todayOrders=data.orders.filter(o=>orderDate(o)?.toDateString()===today).length;
+  const lowStock=data.products.filter(p=>(+p.stock||0)>0 && (+p.stock||0)<=2).length;
+  setText('dashRevenue',money(revenue)); setText('dashVat',money(vat)); setText('dashProfit',money(profit)); setText('dashOrders',data.orders.length); setText('dashStock',stock);
+  setText('dashToday',`Hôm nay: ${todayOrders} đơn`); setText('dashLowStock',`Sắp hết: ${lowStock} mã`); setText('dashCustomers',data.customers.length); setText('dashProducts',data.products.length); setText('dashExpense',money(expense));
+  setText('dashAvgOrder',money(data.orders.length ? revenue/data.orders.length : 0)); setText('dashVouchers',data.vouchers.length); setText('dashStaffCount',data.staff.length);
+
+  const staffMap={}; data.orders.forEach(o=>{ const k=o.staffName||'Chưa chọn'; staffMap[k]??={orders:0,revenue:0,commission:0,profit:0}; staffMap[k].orders++; staffMap[k].revenue+=+o.total||0; staffMap[k].commission+=+o.commission||0; staffMap[k].profit+=+o.profit||0; });
+  $('topStaff').innerHTML=Object.entries(staffMap).sort((a,b)=>b[1].revenue-a[1].revenue).slice(0,5).map(([k,v])=>`<tr><td><b>${k}</b></td><td>${v.orders}</td><td>${money(v.revenue)}</td><td>${money(v.commission)}</td><td class="view-cost">${money(v.profit)}</td></tr>`).join('') || emptyRow(5,'Chưa có dữ liệu nhân viên');
+
+  const productMap={}; data.orders.forEach(o=>{ const k=o.code||'Khác'; productMap[k]??={qty:0,revenue:0}; productMap[k].qty+=+o.qty||0; productMap[k].revenue+=+o.total||0; });
+  $('topProducts').innerHTML=Object.entries(productMap).sort((a,b)=>b[1].revenue-a[1].revenue).slice(0,5).map(([k,v])=>`<tr><td><b>${k}</b></td><td>${v.qty}</td><td>${money(v.revenue)}</td></tr>`).join('') || emptyRow(3,'Chưa có sản phẩm bán chạy');
+
+  const alerts=[...data.products].sort((a,b)=>(+a.stock||0)-(+b.stock||0)).slice(0,6);
+  $('stockAlerts').innerHTML=alerts.map(p=>{ const st=+p.stock||0; const cls=st<=0?'status-out':st<=2?'status-low':'status-ok'; const txt=st<=0?'Hết hàng':st<=2?'Sắp hết':'Ổn'; return `<tr><td><b>${p.code||''}</b><br><small>${p.name||''}</small></td><td>${st}</td><td class="${cls}">${txt}</td></tr>`; }).join('') || emptyRow(3,'Chưa có dữ liệu tồn kho');
+
+  $('recentOrders').innerHTML=data.orders.slice(0,8).map(o=>`<tr><td>${fmtDate(o.createdAt)}</td><td><b>${o.no||''}</b></td><td>${o.customerName||''}</td><td>${o.code||''}</td><td>${o.qty||0}</td><td>${money(o.total)}</td><td>${o.staffName||''}</td></tr>`).join('') || emptyRow(7,'Chưa có đơn hàng');
+
+  const months=[]; const now=new Date(); for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push(ymKey(d)); }
+  const revByMonth=Object.fromEntries(months.map(m=>[m,0])); data.orders.forEach(o=>{ const k=ymKey(orderDate(o)); if(k in revByMonth) revByMonth[k]+=+o.total||0; });
+  const max=Math.max(...Object.values(revByMonth),1);
+  $('revenueBars').innerHTML=months.map(m=>{ const val=revByMonth[m]||0; const h=Math.max(8,Math.round(val/max*170)); return `<div class="bar-item"><div class="bar-value">${shortMoney(val)}</div><div class="bar" style="height:${h}px"></div><div class="bar-label">${m.slice(5)}/${m.slice(2,4)}</div></div>`; }).join('');
+}
 function fmtDate(ts){ try{return ts?.toDate?.().toLocaleDateString('vi-VN')||''}catch{return ''} }
 function printHtml(html){ let box=document.querySelector('.print-only'); if(!box){box=document.createElement('div');box.className='print-only';document.body.appendChild(box)} box.innerHTML=html; window.print(); }
 function printSale(o){ printHtml(`<div class="a5"><h2>PHIẾU BÁN HÀNG</h2><div class="center"><b>SIMILOCK ĐÀ NẴNG</b><br>Call/Zalo: 0902950816</div><p><b>Số phiếu:</b> ${o.no}<br><b>Khách hàng:</b> ${o.customerName} - ${o.customerPhone||''}<br><b>Địa chỉ:</b> ${o.customerAddress||''}</p><table><tr><th>Model</th><th>Tên hàng</th><th>SL</th><th>Đơn giá</th><th>TT</th></tr><tr><td>${o.code}</td><td>${o.productName}</td><td>${o.qty}</td><td>${money(o.price)}</td><td>${money(o.qty*o.price)}</td></tr></table><p>Chiết khấu: ${o.discountPercent}% = ${money(o.discountAmount)}<br>VAT: ${o.vatMode==='none'?'Không VAT':o.vatRate+'%'} = ${money(o.vat)}<br><b>Tổng thanh toán: ${money(o.total)}</b></p><p>Ghi chú: ${o.note||''}</p><div class="sign"><div>Khách hàng<br><br><br>................</div><div>Người bán<br><br><br>................</div></div></div>`); }

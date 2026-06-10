@@ -1,7 +1,105 @@
 <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Similock ERP - Quản trị kiểu MISA</title><link rel="stylesheet" href="./style.css"></head><body>
 <div id="loginPage" class="login-page"><div class="login-box"><h1>🔐 SIMILOCK ERP</h1><p class="muted">Đăng nhập Firebase</p><label>Email</label><input id="email" type="email"><label>Mật khẩu</label><input id="password" type="password"><button id="loginBtn" class="primary full">Đăng nhập</button><button id="setupAdminBtn" class="gray full">Tạo Admin lần đầu</button><button id="signupStaffBtn" class="gray full">Tạo tài khoản nhân viên</button><div class="notice">Admin tạo phân quyền trước, nhân viên nhập email + mật khẩu mới rồi bấm tạo tài khoản.</div></div></div>
 <div id="appPage" style="display:none"><header><div><h1>🚀 SIMILOCK ERP</h1><p>Quản lý kiểu MISA: danh mục • chứng từ • kho • bán hàng • in A5</p></div><div class="user-box"><div id="currentUser"></div><button id="logoutBtn" class="gray">Đăng xuất</button></div></header><div class="layout"><nav><button data-page="dashboard">📊 Tổng quan</button><button data-page="customers">👥 Khách hàng</button><button data-page="products">🔐 Sản phẩm</button><button data-page="pricelist">💰 Bảng giá</button><button data-page="sales">🧾 Bán hàng</button><button data-page="inventory">📦 Kho hàng</button><button data-page="stockvouchers">📑 Phiếu kho</button><button data-page="staff">👨‍💼 Nhân viên</button><button data-page="expenses">💸 Chi phí</button><button data-page="users">🔑 Phân quyền</button></nav><main>
-<section id="dashboard" class="active"><h2>📊 Tổng quan</h2><div class="cards"><div class="card">Doanh thu<b id="dashRevenue">0</b></div><div class="card">VAT<b id="dashVat">0</b></div><div class="card view-cost">Lợi nhuận<b id="dashProfit">0</b></div><div class="card">Đơn hàng<b id="dashOrders">0</b></div><div class="card">Tồn kho<b id="dashStock">0</b></div></div><h3>Top nhân viên</h3><table><thead><tr><th>Nhân viên</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th><th class="view-cost">Lợi nhuận</th></tr></thead><tbody id="topStaff"></tbody></table></section>
+<section id="dashboard" class="active dashboard-page">
+  <div class="dash-shell">
+    <div class="dash-top">
+      <div class="dash-brand">
+        <div class="brand-mark">S</div>
+        <div>
+          <span class="eyebrow">SIMILOCK ERP CONTROL CENTER</span>
+          <h2>Tổng quan kinh doanh</h2>
+          <p>Điều hành doanh thu, lợi nhuận, VAT, kho hàng, đơn bán và hiệu suất nhân viên trên một màn hình.</p>
+        </div>
+      </div>
+      <div class="dash-actions">
+        <button class="primary big" onclick="show('sales')">+ Phiếu bán A5</button>
+        <button class="glass-btn" onclick="show('inventory')">+ Phiếu kho</button>
+      </div>
+    </div>
+
+    <div class="metric-grid premium">
+      <div class="metric-card revenue-card">
+        <div class="metric-bg"></div>
+        <div class="metric-icon">💰</div>
+        <span>Doanh thu</span>
+        <b id="dashRevenue">0</b>
+        <small>Tổng giá trị phiếu bán</small>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">🧾</div>
+        <span>VAT</span>
+        <b id="dashVat">0</b>
+        <small>Thuế đã ghi nhận</small>
+      </div>
+      <div class="metric-card view-cost">
+        <div class="metric-icon">📈</div>
+        <span>Lợi nhuận</span>
+        <b id="dashProfit">0</b>
+        <small>Sau giá vốn & chi phí</small>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">🛒</div>
+        <span>Đơn hàng</span>
+        <b id="dashOrders">0</b>
+        <small id="dashToday">Hôm nay: 0 đơn</small>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📦</div>
+        <span>Tồn kho</span>
+        <b id="dashStock">0</b>
+        <small id="dashLowStock">Sắp hết: 0 mã</small>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">👥</div>
+        <span>Khách hàng</span>
+        <b id="dashCustomers">0</b>
+        <small>Đang quản lý</small>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">🔐</div>
+        <span>Sản phẩm</span>
+        <b id="dashProducts">0</b>
+        <small>Danh mục model</small>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">💸</div>
+        <span>Chi phí</span>
+        <b id="dashExpense">0</b>
+        <small>Chi phí vận hành</small>
+      </div>
+    </div>
+
+    <div class="dash-content-grid">
+      <div class="dash-panel chart-panel">
+        <div class="panel-head premium-head">
+          <div><h3>📊 Doanh thu 6 tháng gần nhất</h3><p>Theo dữ liệu phiếu bán đã ghi nhận</p></div>
+          <span class="live-badge">LIVE</span>
+        </div>
+        <div id="revenueBars" class="bar-chart premium-chart"></div>
+      </div>
+      <div class="dash-panel quick-panel">
+        <div class="panel-head premium-head"><div><h3>⚡ Chỉ số nhanh</h3><p>Tự động cập nhật</p></div></div>
+        <div class="quick-list premium-list">
+          <div><span>Giá trị TB/đơn</span><b id="dashAvgOrder">0</b></div>
+          <div><span>Phiếu kho</span><b id="dashVouchers">0</b></div>
+          <div><span>Nhân viên</span><b id="dashStaffCount">0</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-content-grid three">
+      <div class="dash-panel"><div class="panel-head premium-head"><div><h3>🏆 Top nhân viên</h3><p>Theo doanh thu</p></div></div><table class="modern-table"><thead><tr><th>Nhân viên</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th><th class="view-cost">Lợi nhuận</th></tr></thead><tbody id="topStaff"></tbody></table></div>
+      <div class="dash-panel"><div class="panel-head premium-head"><div><h3>🔥 Top sản phẩm</h3><p>Model bán chạy</p></div></div><table class="modern-table"><thead><tr><th>Model</th><th>SL</th><th>Doanh thu</th></tr></thead><tbody id="topProducts"></tbody></table></div>
+      <div class="dash-panel"><div class="panel-head premium-head"><div><h3>⚠️ Cảnh báo tồn kho</h3><p>Ưu tiên xử lý</p></div></div><table class="modern-table"><thead><tr><th>Model</th><th>Tồn</th><th>Trạng thái</th></tr></thead><tbody id="stockAlerts"></tbody></table></div>
+    </div>
+
+    <div class="dash-panel order-panel">
+      <div class="panel-head premium-head"><div><h3>🧾 Đơn hàng gần nhất</h3><p>Danh sách phiếu bán mới tạo</p></div><button class="gray" onclick="show('sales')">Xem bán hàng</button></div>
+      <table class="modern-table"><thead><tr><th>Ngày</th><th>Số phiếu</th><th>Khách</th><th>Model</th><th>SL</th><th>Tổng tiền</th><th>Sale</th></tr></thead><tbody id="recentOrders"></tbody></table>
+    </div>
+  </div>
+</section>
 <section id="customers"><div class="section-title"><h2>👥 Danh mục khách hàng</h2><button class="gray" onclick="resetCustomer()">+ Thêm mới</button></div><div class="misa-box"><h3 id="customerFormTitle">Thông tin khách hàng</h3><input id="customerEditId" type="hidden"><div class="grid"><div><label>Mã KH</label><input id="cCode" placeholder="Tự động nếu bỏ trống"></div><div><label>Tên khách</label><input id="cName"></div><div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Khách đại lý</option><option>CTV</option></select></div><div><label>Điện thoại</label><input id="cPhone"></div><div><label>Địa chỉ</label><input id="cAddress"></div><div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0"></div><div><label>Mã số thuế</label><input id="cTax"></div><div><label>Ghi chú</label><input id="cNote"></div></div><div class="button-group"><button id="saveCustomerBtn" class="primary">Cất / Lưu</button><button id="cancelCustomerBtn" class="gray">Hủy</button></div></div><table><thead><tr><th>Mã</th><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Thao tác</th></tr></thead><tbody id="customerTable"></tbody></table></section>
 <section id="products"><div class="section-title"><h2>🔐 Danh mục sản phẩm</h2><button class="gray" onclick="resetProduct()">+ Thêm mới</button></div><div class="misa-box"><h3 id="productFormTitle">Thông tin sản phẩm</h3><input id="productEditId" type="hidden"><div class="grid"><div><label>Model/Mã hàng</label><input id="pCode"></div><div><label>Tên sản phẩm</label><input id="pName"></div><div><label>Danh mục</label><input id="pCategory" value="Khóa thông minh"></div><div><label>Đơn vị</label><input id="pUnit" value="Bộ"></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number"></div><div><label>Giá bán mặc định</label><input id="pPrice" type="number"></div><div><label>Tồn đầu</label><input id="pStock" type="number"></div><div><label>Ghi chú</label><input id="pNote"></div></div><div class="button-group"><button id="saveProductBtn" class="primary">Cất / Lưu</button><button id="cancelProductBtn" class="gray">Hủy</button></div></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th>ĐVT</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Thao tác</th></tr></thead><tbody id="productTable"></tbody></table></section>
 <section id="pricelist"><div class="section-title"><h2>💰 Quản lý bảng giá</h2><button class="gray" onclick="resetPrice()">+ Thêm mới</button></div><div class="misa-box"><input id="priceEditId" type="hidden"><div class="grid"><div><label>Sản phẩm</label><select id="plProductCode"></select></div><div><label>Loại khách</label><select id="plCustomerType"><option>Khách lẻ</option><option>Khách đại lý</option><option>CTV</option></select></div><div><label>Giá bán</label><input id="plPrice" type="number"></div><div><label>Ghi chú</label><input id="plNote"></div></div><button id="savePriceBtn" class="primary">Cất / Lưu bảng giá</button></div><table><thead><tr><th>Model</th><th>Loại khách</th><th>Giá</th><th>Ghi chú</th><th>Thao tác</th></tr></thead><tbody id="priceTable"></tbody></table></section>
