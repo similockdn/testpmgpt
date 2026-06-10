@@ -1,10 +1,6 @@
-// BƯỚC QUAN TRỌNG:
-// Vào Firebase Console > Project settings > General > Your apps > Web app
-// Copy firebaseConfig và dán thay vào bên dưới.
 
 export const firebaseConfig = {
-
-  apiKey: "AIzaSyAn0KxCUWbD-PieOL6Ro26rEXd_B9F1GnM",
+apiKey: "AIzaSyAn0KxCUWbD-PieOL6Ro26rEXd_B9F1GnM",
   authDomain: "smilockdng.firebaseapp.com",
   projectId: "smilockdng",
   storageBucket: "smilockdng.firebasestorage.app",
