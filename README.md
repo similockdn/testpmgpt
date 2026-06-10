@@ -1,44 +1,48 @@
-# SIMILOCK ERP MISA MINI PRO
+# SIMILOCK ERP - KAS giao diện / MISA quy trình
 
-Bản nâng cấp theo quy trình MISA mini cho SIMILOCK: bán hàng, kho, công nợ, thu tiền, bảo hành, phân quyền, nhật ký sửa/xóa, import/export.
+Bản nâng cấp gồm:
+- Giao diện gần kiểu KAS: sidebar tối, dashboard KPI, card hiện đại.
+- Bán hàng nhiều sản phẩm trên 1 phiếu, VAT tùy chọn, in phiếu A5.
+- Tìm khách hàng ngay khi bán, tạo khách nhanh tại phiếu bán.
+- Admin có quyền sửa/xóa đơn bán.
+- Kho chuẩn MISA: Phiếu nhập, xuất, điều chỉnh, kiểm kê. Một phiếu nhiều mã hàng. Có sửa/xóa theo quyền.
+- Sổ kho: tồn đầu, nhập, xuất, điều chỉnh, tồn cuối theo từng model.
+- Công nợ: theo khách hàng, phiếu thu, đã thu/còn nợ.
+- Bảo hành: lưu khách, SĐT, model/serial, ngày lắp, hạn bảo hành.
+- Bảng phân quyền chuẩn: Admin, Sale, Kỹ thuật, Kho, Kế toán.
+- Import/export CSV khách hàng, sản phẩm, sổ kho, bán hàng.
 
-## Tính năng chính
-- Dashboard hiện đại: doanh thu, lợi nhuận, công nợ, cảnh báo tồn kho.
-- Bán hàng: 1 phiếu bán có nhiều sản phẩm, tìm khách đã lưu, tạo khách nhanh, VAT tùy chọn, in A5.
-- Quản trị đơn: Admin/Kế toán có quyền sửa/xóa đơn.
-- Công nợ: theo khách hàng, ghi nhận phiếu thu, cập nhật còn nợ.
-- Kho: 1 phiếu nhập/xuất/điều chỉnh có nhiều mã hàng, in A5.
-- Sổ kho: tồn hiện tại, nhập, xuất, điều chỉnh theo từng model.
-- Bảo hành: ngày lắp, serial/IMEI, hết hạn, tra cứu theo SĐT/serial.
-- Danh mục: khách hàng, sản phẩm, bảng giá, nhân viên, chi phí.
-- Import/export CSV: khách hàng và sản phẩm.
-- Backup toàn bộ dữ liệu JSON.
-- Nhật ký sửa/xóa/import.
-- Firestore Rules phân quyền cơ bản.
+## Cài đặt Firebase
+1. Giữ nguyên `firebase-config.js` hoặc copy lại appId đầy đủ từ Firebase Console.
+2. Bật Authentication > Email/Password.
+3. Tạo Firestore Database.
+4. Dán nội dung `firestore.rules` vào Firestore Rules và Publish.
+5. Upload toàn bộ file lên GitHub Pages hoặc Firebase Hosting.
 
-## Cách chạy trên GitHub Pages
-1. Upload toàn bộ file lên repository.
-2. Vào Settings → Pages → Deploy from branch → chọn `main` và `/root`.
-3. Mở link GitHub Pages.
-
-## Cấu hình Firebase
-File `firebase-config.js` đang giữ project `smilockdng`.
-Nếu đăng nhập lỗi, vào Firebase Console → Project settings → Web app → copy đầy đủ `appId` dán lại.
-
-## Firebase cần bật
-- Authentication → Sign-in method → Email/Password → Enable.
-- Firestore Database → Create database.
-- Rules → dán nội dung `firestore.rules`.
-
-## Lần đầu sử dụng
-1. Nhập email admin + mật khẩu.
-2. Bấm `Tạo Admin lần đầu`.
-3. Đăng nhập lại.
-4. Vào Phân quyền để thêm email nhân viên.
-
-## Collection sử dụng
-users, customers, products, priceLists, staff, sales, receipts, stockVouchers, warranties, expenses, audit.
+## Tạo Admin lần đầu
+- Nhập email + mật khẩu.
+- Bấm **Tạo Admin lần đầu**.
+- Sau đó đăng nhập bình thường.
 
 ## Lưu ý quan trọng
-- Khi sửa/xóa phiếu kho cũ, bản web tĩnh này chưa tự hoàn nguyên tồn kho như backend chuyên nghiệp. Muốn chuẩn tuyệt đối cần Cloud Functions để ghi sổ kho bất biến.
-- Phiếu bán mới sẽ tự trừ tồn kho. Khi sửa đơn cũ, nên kiểm tra lại tồn kho thủ công hoặc nâng cấp thêm Cloud Functions.
+- Nếu đang chạy trên GitHub Pages mà không thấy cập nhật, bấm Ctrl + Shift + R hoặc Clear Site Data.
+- Nếu đăng nhập lỗi, kiểm tra Firebase Console đã bật Email/Password và appId trong `firebase-config.js` đã đủ.
+
+## Bảng giá có thời hạn
+
+Module Bảng giá đã hỗ trợ:
+- Import CSV bảng giá.
+- Export CSV bảng giá.
+- Ngày hiệu lực từ / đến.
+- Trạng thái đang áp dụng hoặc ngưng áp dụng.
+- Khi tạo phiếu bán, hệ thống tự lấy giá còn hiệu lực theo Model + nhóm khách + ngày bán.
+- Nếu không có bảng giá còn hiệu lực, hệ thống dùng giá bán trong danh mục sản phẩm.
+
+File mẫu: `bang_gia_mau_import.csv`
+
+Cột import bắt buộc/khuyến nghị:
+
+```csv
+code,type,price,validFrom,validTo,active,note
+S01,Khách lẻ,2350000,2026-06-01,2026-06-30,true,Giá lẻ tháng 6
+```

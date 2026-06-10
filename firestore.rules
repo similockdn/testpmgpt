@@ -2,56 +2,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function isAdmin() { return signedIn() && (profile().role == 'Admin' || 'admin' in profile().permissions); }
-    function isAccounting() { return signedIn() && (profile().role in ['Admin','Kế toán','Quản lý']); }
-    function isWarehouse() { return signedIn() && (profile().role in ['Admin','Kho','Quản lý']); }
+    function myUser() { return get(/databases/$(database)/documents/users/$(request.auth.token.email)); }
+    function myRole() { return signedIn() && myUser().data.role; }
+    function isAdmin() { return signedIn() && myRole() == 'Admin'; }
+    function hasPerm(p) { return signedIn() && (isAdmin() || p in myUser().data.perms); }
 
-    match /users/{userId} {
+    match /users/{email} {
       allow read: if signedIn();
-      allow create: if signedIn();
-      allow update, delete: if isAdmin();
+      allow create, update, delete: if isAdmin() || (signedIn() && request.auth.token.email == email && !exists(/databases/$(database)/documents/users/$(email)));
     }
-    match /products/{id} {
-      allow read: if signedIn();
-      allow create, update, delete: if isAdmin() || isWarehouse();
-    }
-    match /stockVouchers/{id} {
-      allow read: if signedIn();
-      allow create, update: if isAdmin() || isWarehouse();
-      allow delete: if isAdmin();
-    }
-    match /customers/{id} {
-      allow read, create, update: if signedIn();
-      allow delete: if isAdmin();
-    }
-    match /sales/{id} {
-      allow read, create: if signedIn();
-      allow update, delete: if isAdmin() || isAccounting();
-    }
-    match /receipts/{id} {
-      allow read: if signedIn();
-      allow create, update, delete: if isAdmin() || isAccounting();
-    }
-    match /warranties/{id} {
-      allow read, create, update: if signedIn();
-      allow delete: if isAdmin();
-    }
-    match /expenses/{id} {
-      allow read, create, update, delete: if isAdmin() || isAccounting();
-    }
-    match /priceLists/{id} {
-      allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
-    }
-    match /staff/{id} {
-      allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
-    }
-    match /audit/{id} {
-      allow read: if isAdmin();
-      allow create: if signedIn();
-      allow update, delete: if false;
-    }
+
+    match /customers/{id} { allow read: if signedIn(); allow write: if hasPerm('customers'); }
+    match /products/{id} { allow read: if signedIn(); allow write: if hasPerm('products'); }
+    match /prices/{id} { allow read: if signedIn(); allow write: if hasPerm('prices'); }
+    match /staff/{id} { allow read: if signedIn(); allow write: if hasPerm('staff'); }
+    match /sales/{id} { allow read: if hasPerm('sales') || hasPerm('debts') || hasPerm('reports'); allow create: if hasPerm('sales'); allow update: if hasPerm('editSales'); allow delete: if hasPerm('deleteSales'); }
+    match /stockVouchers/{id} { allow read: if hasPerm('inventory') || hasPerm('stockbook'); allow create: if hasPerm('inventory'); allow update: if hasPerm('editStock'); allow delete: if hasPerm('deleteStock'); }
+    match /receipts/{id} { allow read, write: if hasPerm('debts'); }
+    match /warranties/{id} { allow read, write: if hasPerm('warranty'); }
+    match /logs/{id} { allow create: if signedIn(); allow read: if hasPerm('audit'); allow update, delete: if false; }
   }
 }

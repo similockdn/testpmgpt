@@ -3,142 +3,154 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIMILOCK ERP MISA MINI PRO</title>
+  <title>SIMILOCK ERP KAS MISA</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div id="loginPage" class="login-page">
     <div class="login-card">
       <div class="brand-mark">S</div>
-      <h1>SIMILOCK ERP PRO</h1>
-      <p>Mini ERP quản lý bán hàng • kho • công nợ • bảo hành</p>
+      <h1>SIMILOCK ERP</h1>
+      <p>Quản trị bán hàng • kho • công nợ • bảo hành</p>
       <label>Email</label><input id="email" type="email" placeholder="admin@similock.vn" />
       <label>Mật khẩu</label><input id="password" type="password" placeholder="Tối thiểu 6 ký tự" />
       <button id="loginBtn" class="btn primary full">Đăng nhập</button>
       <button id="setupAdminBtn" class="btn ghost full">Tạo Admin lần đầu</button>
       <button id="signupStaffBtn" class="btn ghost full">Tạo tài khoản nhân viên</button>
-      <div class="hint">Admin tạo email và phân quyền trước, nhân viên nhập email + mật khẩu mới rồi bấm tạo tài khoản.</div>
+      <div class="hint">Admin tạo email và phân quyền trước, nhân viên dùng đúng email đó để tạo tài khoản.</div>
     </div>
   </div>
 
   <div id="appPage" class="app" style="display:none">
     <aside class="sidebar">
-      <div class="logo"><div class="logo-icon">S</div><div><b>SIMILOCK</b><span>ERP MISA MINI</span></div></div>
+      <div class="logo"><span>S</span><div><b>SIMILOCK</b><small>ERP KAS / MISA</small></div></div>
       <nav id="menu">
-        <button data-page="dashboard">📊 Tổng quan</button>
+        <button data-page="dashboard" class="active">📊 Điều hành</button>
         <button data-page="sales">🛒 Bán hàng</button>
-        <button data-page="receipts">💵 Thu tiền/Công nợ</button>
-        <button data-page="inventory">📦 Kho hàng</button>
+        <button data-page="debts">💳 Công nợ</button>
+        <button data-page="inventory">📦 Kho MISA</button>
         <button data-page="stockbook">📘 Sổ kho</button>
         <button data-page="warranty">🛡️ Bảo hành</button>
         <button data-page="customers">👥 Khách hàng</button>
         <button data-page="products">🔐 Sản phẩm</button>
-        <button data-page="pricelist">💰 Bảng giá</button>
+        <button data-page="prices">💵 Bảng giá</button>
         <button data-page="staff">👨‍💼 Nhân viên</button>
-        <button data-page="expenses">💸 Chi phí</button>
         <button data-page="reports">📈 Báo cáo</button>
-        <button data-page="users">🔑 Phân quyền</button>
-        <button data-page="audit">🧾 Nhật ký sửa/xóa</button>
-        <button data-page="backup">☁️ Backup</button>
+        <button data-page="permissions">🔑 Phân quyền</button>
       </nav>
     </aside>
 
-    <section class="workspace">
+    <main class="main">
       <header class="topbar">
-        <div><h1 id="pageTitle">Tổng quan</h1><p>Quản trị vận hành SIMILOCK theo quy trình chứng từ</p></div>
-        <div class="userbox"><span id="currentUser"></span><button id="logoutBtn" class="btn light">Đăng xuất</button></div>
+        <div><h2 id="pageTitle">Dashboard điều hành</h2><p id="pageSub">Tổng quan vận hành Similock</p></div>
+        <div class="user"><span id="currentUser"></span><button id="logoutBtn" class="btn ghost">Đăng xuất</button></div>
       </header>
 
-      <main>
-        <section id="dashboard" class="page active">
-          <div class="executive-hero">
+      <section id="dashboard" class="page active">
+        <div class="kpi-grid">
+          <div class="kpi blue"><span>Doanh thu tháng</span><b id="kpiRevenue">0</b><small>Đã trừ chiết khấu, gồm VAT nếu có</small></div>
+          <div class="kpi green"><span>Lợi nhuận tháng</span><b id="kpiProfit">0</b><small class="view-cost">Admin/Kế toán</small></div>
+          <div class="kpi orange"><span>Công nợ phải thu</span><b id="kpiDebt">0</b><small>Còn nợ từ đơn bán</small></div>
+          <div class="kpi red"><span>Tồn kho thấp</span><b id="kpiLowStock">0</b><small>Cảnh báo dưới 3 bộ</small></div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="panel wide"><div class="panel-head"><h3>📊 Sản phẩm bán chạy</h3><span>Top theo số lượng</span></div><div id="bestProducts" class="bar-list"></div></div>
+          <div class="panel"><div class="panel-head"><h3>🏆 Top nhân viên</h3></div><table><thead><tr><th>NV</th><th>Doanh thu</th><th>Đơn</th></tr></thead><tbody id="topStaff"></tbody></table></div>
+          <div class="panel"><div class="panel-head"><h3>🧾 Đơn gần nhất</h3></div><table><thead><tr><th>Mã</th><th>Khách</th><th>Tổng</th></tr></thead><tbody id="latestSales"></tbody></table></div>
+          <div class="panel wide"><div class="panel-head"><h3>⚠️ Cảnh báo kho</h3></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th></tr></thead><tbody id="lowStockRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="sales" class="page">
+        <div class="panel">
+          <div class="panel-head"><h3>🛒 Phiếu bán hàng nhiều sản phẩm</h3><div><button class="btn ghost" onclick="resetSaleForm()">Phiếu mới</button><button class="btn primary" onclick="saveSale()">Lưu phiếu bán</button></div></div>
+          <div class="grid form-grid">
+            <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
+            <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
+            <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm theo tên/SĐT hoặc nhập khách mới" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button></div><datalist id="customerList"></datalist></div>
+            <div><label>Nhân viên sale</label><select id="saleStaff"></select></div>
+            <div><label>Kỹ thuật</label><select id="saleTech"></select></div>
+            <div><label>VAT</label><select id="saleVatMode"><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option><option value="included8">Giá đã gồm VAT 8%</option></select></div>
+            <div><label>Đã thu</label><input id="salePaid" type="number" value="0" /></div>
+            <div class="span2"><label>Ghi chú</label><input id="saleNote" /></div>
+          </div>
+          <h4>Chi tiết hàng bán</h4>
+          <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK %</th><th>Thành tiền</th><th></th></tr></thead><tbody id="saleItems"></tbody></table>
+          <button class="btn ghost" onclick="addSaleItem()">+ Thêm dòng hàng</button>
+          <div class="total-box"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Danh sách phiếu bán</h3><input class="search" id="saleSearch" placeholder="Tìm mã phiếu/khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
+      </section>
+
+      <section id="debts" class="page">
+        <div class="panel"><div class="panel-head"><h3>💳 Công nợ phải thu</h3><button class="btn primary" onclick="openReceiptForm()">+ Phiếu thu</button></div><table><thead><tr><th>Khách hàng</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th><th>Hành động</th></tr></thead><tbody id="debtTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><h3>Phiếu thu</h3></div><div class="grid form-grid"><div><label>Khách hàng</label><select id="receiptCustomer"></select></div><div><label>Số tiền thu</label><input id="receiptAmount" type="number" /></div><div><label>Ngày thu</label><input id="receiptDate" type="date" /></div><div><label>Ghi chú</label><input id="receiptNote" /></div></div><button class="btn primary" onclick="saveReceipt()">Lưu phiếu thu</button><table><thead><tr><th>Ngày</th><th>Khách</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="receiptTable"></tbody></table></div>
+      </section>
+
+      <section id="inventory" class="page">
+        <div class="panel">
+          <div class="panel-head"><h3>📦 Chứng từ kho chuẩn MISA</h3><div><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
+          <div class="grid form-grid">
+            <div><label>Mã phiếu</label><input id="stockCode" readonly /></div>
+            <div><label>Ngày</label><input id="stockDate" type="date" /></div>
+            <div><label>Loại chứng từ</label><select id="stockType"><option value="IN">Phiếu nhập kho</option><option value="OUT">Phiếu xuất kho</option><option value="ADJUST">Phiếu điều chỉnh</option><option value="CHECK">Phiếu kiểm kê</option></select></div>
+            <div><label>Kho</label><input id="stockWarehouse" value="Kho SIMILOCK" /></div>
+            <div class="span2"><label>Lý do/Ghi chú</label><input id="stockNote" /></div>
+          </div>
+          <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá vốn</th><th>Ghi chú</th><th></th></tr></thead><tbody id="stockItems"></tbody></table>
+          <button class="btn ghost" onclick="addStockItem()">+ Thêm mã hàng</button>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Danh sách chứng từ kho</h3></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Loại</th><th>Số dòng</th><th>Giá trị</th><th>Hành động</th></tr></thead><tbody id="stockVoucherTable"></tbody></table></div>
+      </section>
+
+      <section id="stockbook" class="page"><div class="panel"><div class="panel-head"><h3>📘 Sổ kho</h3><button class="btn ghost" onclick="exportCSV('stockbook')">Export CSV</button></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn đầu</th><th>Nhập</th><th>Xuất</th><th>Điều chỉnh</th><th>Tồn cuối</th></tr></thead><tbody id="stockBookTable"></tbody></table></div></section>
+
+      <section id="warranty" class="page">
+        <div class="panel"><div class="panel-head"><h3>🛡️ Quản lý bảo hành</h3><button class="btn primary" onclick="saveWarranty()">Lưu bảo hành</button></div><div class="grid form-grid"><div><label>Mã phiếu bán</label><select id="wSale"></select></div><div><label>Khách hàng</label><input id="wCustomer" /></div><div><label>SĐT</label><input id="wPhone" /></div><div><label>Model/Serial</label><input id="wSerial" /></div><div><label>Ngày lắp</label><input id="wStart" type="date" /></div><div><label>Thời hạn tháng</label><input id="wMonths" type="number" value="24" /></div><div><label>Trạng thái</label><select id="wStatus"><option>Còn bảo hành</option><option>Đang xử lý</option><option>Hết bảo hành</option></select></div><div><label>Ghi chú</label><input id="wNote" /></div></div></div>
+        <div class="panel"><div class="panel-head"><h3>Danh sách bảo hành</h3><input class="search" id="wSearch" placeholder="Tìm SĐT/serial/model" oninput="renderWarranties()" /></div><table><thead><tr><th>Khách</th><th>SĐT</th><th>Serial/Model</th><th>Ngày lắp</th><th>Hết hạn</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="warrantyTable"></tbody></table></div>
+      </section>
+
+      <section id="customers" class="page"><div class="panel"><div class="panel-head"><h3>👥 Danh mục khách hàng</h3><div><input type="file" id="importCustomers" accept=".csv" hidden onchange="importCSV(event,'customers')"><button class="btn ghost" onclick="importCustomers.click()">Import CSV</button><button class="btn ghost" onclick="exportCSV('customers')">Export CSV</button><button class="btn primary" onclick="saveCustomer()">Lưu</button></div></div><div class="grid form-grid"><input id="cId" hidden><div><label>Tên khách</label><input id="cName"></div><div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div><div><label>SĐT</label><input id="cPhone"></div><div><label>Địa chỉ</label><input id="cAddress"></div><div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0"></div><div><label>Công nợ đầu kỳ</label><input id="cOpeningDebt" type="number" value="0"></div></div><table><thead><tr><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Hành động</th></tr></thead><tbody id="customerTable"></tbody></table></div></section>
+
+      <section id="products" class="page"><div class="panel"><div class="panel-head"><h3>🔐 Danh mục sản phẩm</h3><div><input type="file" id="importProducts" accept=".csv" hidden onchange="importCSV(event,'products')"><button class="btn ghost" onclick="importProducts.click()">Import CSV</button><button class="btn ghost" onclick="exportCSV('products')">Export CSV</button><button class="btn primary" onclick="saveProduct()">Lưu</button></div></div><div class="grid form-grid"><input id="pId" hidden><div><label>Model</label><input id="pCode"></div><div><label>Tên sản phẩm</label><input id="pName"></div><div><label>Danh mục</label><input id="pCategory" value="Khóa thông minh"></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number"></div><div><label>Giá bán</label><input id="pPrice" type="number"></div><div><label>Tồn tối thiểu</label><input id="pMinStock" type="number" value="3"></div></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Hành động</th></tr></thead><tbody id="productTable"></tbody></table></div></section>
+
+      <section id="prices" class="page">
+        <div class="panel">
+          <div class="panel-head">
             <div>
-              <div class="eyebrow">SIMILOCK ERP • Dashboard điều hành</div>
-              <h2>Trung tâm kiểm soát bán hàng, kho và công nợ</h2>
-              <p>Theo dõi nhanh doanh thu, lợi nhuận, công nợ, tồn kho và sản phẩm bán chạy trong một màn hình.</p>
+              <h3>💵 Bảng giá theo nhóm khách có thời hạn</h3>
+              <span>Quản lý giá bán theo Model, nhóm khách và ngày hiệu lực. Khi bán hàng hệ thống tự lấy bảng giá còn hạn.</span>
             </div>
-            <div class="hero-actions">
-              <button class="btn light" onclick="showPage('sales')">+ Tạo đơn bán</button>
-              <button class="btn primary" onclick="window.print()">In báo cáo</button>
-            </div>
-          </div>
-
-          <div class="kpis executive-kpis">
-            <div class="kpi blue"><span>Doanh thu</span><b id="kpiRevenue">0</b><em>Tổng giá trị đơn bán</em></div>
-            <div class="kpi green"><span>Lợi nhuận</span><b id="kpiProfit">0</b><em>Ẩn theo phân quyền</em></div>
-            <div class="kpi orange"><span>Công nợ</span><b id="kpiDebt">0</b><em>Còn phải thu</em></div>
-            <div class="kpi purple"><span>Tồn kho thấp</span><b id="kpiLowStock">0</b><em>Sản phẩm cần nhập</em></div>
-          </div>
-
-          <div class="quick-stats">
-            <div><span>Đơn hàng</span><b id="kpiOrderCount">0</b></div>
-            <div><span>Khách hàng</span><b id="kpiCustomerCount">0</b></div>
-            <div><span>Sản phẩm</span><b id="kpiProductCount">0</b></div>
-            <div><span>Phiếu kho</span><b id="kpiStockVoucherCount">0</b></div>
-          </div>
-
-          <div class="dash-grid-modern">
-            <div class="panel chart-panel">
-              <div class="panel-title"><h3>Sản phẩm bán chạy</h3><span>Top theo số lượng bán</span></div>
-              <div id="topProductBars" class="bar-list"></div>
-            </div>
-            <div class="panel">
-              <div class="panel-title"><h3>Top sản phẩm</h3><span>Model / SL / Doanh thu</span></div>
-              <table><thead><tr><th>Model</th><th>Tên hàng</th><th>SL</th><th>Doanh thu</th></tr></thead><tbody id="topProducts"></tbody></table>
+            <div>
+              <input type="file" id="importPrices" accept=".csv" hidden onchange="importCSV(event,'prices')">
+              <button class="btn ghost" onclick="importPrices.click()">Import CSV</button>
+              <button class="btn ghost" onclick="exportCSV('prices')">Export CSV</button>
+              <button class="btn primary" onclick="savePrice()">Lưu bảng giá</button>
             </div>
           </div>
-
-          <div class="dash-grid">
-            <div class="panel"><div class="panel-title"><h3>Đơn hàng gần nhất</h3><span>8 phiếu mới nhất</span></div><table><thead><tr><th>Mã</th><th>Khách</th><th>Tổng</th><th>Trạng thái</th></tr></thead><tbody id="recentOrders"></tbody></table></div>
-            <div class="panel"><div class="panel-title"><h3>Cảnh báo kho</h3><span>Tồn nhỏ hơn mức tối thiểu</span></div><table><thead><tr><th>Model</th><th>Tên</th><th>Tồn</th></tr></thead><tbody id="lowStockTable"></tbody></table></div>
+          <div class="grid form-grid">
+            <input id="priceId" hidden>
+            <div><label>Model</label><select id="priceProduct"></select></div>
+            <div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div>
+            <div><label>Giá bán</label><input id="priceValue" type="number"></div>
+            <div><label>Hiệu lực từ</label><input id="priceFrom" type="date"></div>
+            <div><label>Hiệu lực đến</label><input id="priceTo" type="date"></div>
+            <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
+            <div class="span2"><label>Ghi chú</label><input id="priceNote" placeholder="VD: Giá đại lý tháng 6, giá CTKM..."></div>
           </div>
-        </section>
+          <div class="hint price-template">File import CSV cần cột: <b>code,type,price,validFrom,validTo,active,note</b>. Ví dụ: S01,Khách lẻ,2350000,2026-06-01,2026-06-30,true,Giá tháng 6</div>
+          <table><thead><tr><th>Model</th><th>Nhóm khách</th><th>Giá</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table>
+        </div>
+      </section>
 
-        <section id="sales" class="page">
-          <div class="section-head"><h2>Phiếu bán hàng</h2><div><button class="btn light" id="newSaleBtn">Tạo mới</button><button class="btn primary" id="saveSaleBtn">Lưu phiếu</button><button class="btn success" id="printSaleBtn">In A5</button></div></div>
-          <div class="panel form-panel">
-            <div class="grid four">
-              <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
-              <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
-              <div><label>Trạng thái</label><select id="saleStatus"><option>Mới tạo</option><option>Đã lắp đặt</option><option>Đã thu tiền</option><option>Đã hủy</option></select></div>
-              <div><label>Nhân viên sale</label><select id="saleStaff"></select></div>
-              <div class="span2"><label>Tìm khách hàng</label><input id="saleCustomerSearch" list="customerSuggest" placeholder="Nhập tên/SĐT để tìm" /><datalist id="customerSuggest"></datalist></div>
-              <div><label>Chọn khách đã lưu</label><select id="saleCustomer"></select></div>
-              <div><label>Tạo khách nhanh</label><button class="btn light full" id="quickCustomerBtn">+ Khách mới</button></div>
-              <div><label>VAT</label><select id="vatMode"><option value="none">Không VAT</option><option value="add">Cộng VAT</option><option value="included">Giá đã gồm VAT</option></select></div>
-              <div><label>% VAT</label><input id="vatRate" type="number" value="8" /></div>
-              <div><label>Đã thanh toán</label><input id="paidAmount" type="number" value="0" /></div>
-              <div><label>Ghi chú</label><input id="saleNote" /></div>
-            </div>
-            <h3>Hàng hóa trong đơn</h3>
-            <div class="line-editor"><select id="lineProduct"></select><input id="lineQty" type="number" value="1" placeholder="SL"/><input id="linePrice" type="number" placeholder="Giá bán"/><input id="lineDiscount" type="number" value="0" placeholder="CK %"/><button id="addLineBtn" class="btn primary">Thêm dòng</button></div>
-            <table><thead><tr><th>Model</th><th>Sản phẩm</th><th>SL</th><th>Giá</th><th>CK%</th><th>Thành tiền</th><th>Xóa</th></tr></thead><tbody id="saleLines"></tbody></table>
-            <div class="totals"><span>Tiền hàng: <b id="subTotal">0</b></span><span>VAT: <b id="vatAmount">0</b></span><span>Tổng: <b id="grandTotal">0</b></span><span>Còn nợ: <b id="debtAmount">0</b></span></div>
-          </div>
-          <div class="panel"><h3>Danh sách phiếu bán</h3><input class="search" id="saleSearch" placeholder="Tìm mã phiếu/khách hàng"/><table><thead><tr><th>Mã</th><th>Ngày</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Nợ</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
-        </section>
+      <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><button class="btn primary" onclick="saveStaff()">Lưu</button></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
 
-        <section id="receipts" class="page"><div class="section-head"><h2>Thu tiền & công nợ</h2><button id="saveReceiptBtn" class="btn primary">Lưu phiếu thu</button></div><div class="panel"><div class="grid four"><div><label>Mã phiếu thu</label><input id="receiptCode" readonly /></div><div><label>Ngày thu</label><input id="receiptDate" type="date" /></div><div><label>Phiếu bán</label><select id="receiptSale"></select></div><div><label>Số tiền thu</label><input id="receiptAmount" type="number" /></div><div class="span2"><label>Ghi chú</label><input id="receiptNote" /></div></div></div><div class="panel"><h3>Công nợ khách hàng</h3><table><thead><tr><th>Khách</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th></tr></thead><tbody id="debtTable"></tbody></table></div><div class="panel"><h3>Lịch sử thu tiền</h3><table><thead><tr><th>Mã</th><th>Ngày</th><th>Phiếu bán</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="receiptTable"></tbody></table></div></section>
+      <section id="reports" class="page"><div class="panel"><div class="panel-head"><h3>📈 Báo cáo nhanh</h3><button class="btn ghost" onclick="exportCSV('sales')">Export bán hàng</button></div><div id="reportBox" class="report-grid"></div></div></section>
 
-        <section id="inventory" class="page"><div class="section-head"><h2>Phiếu kho</h2><div><button id="newStockBtn" class="btn light">Tạo mới</button><button id="saveStockBtn" class="btn primary">Lưu phiếu kho</button><button id="printStockBtn" class="btn success">In A5</button></div></div><div class="panel"><div class="grid four"><div><label>Mã phiếu</label><input id="stockCode" readonly /></div><div><label>Ngày</label><input id="stockDate" type="date" /></div><div><label>Loại phiếu</label><select id="stockType"><option>Nhập kho</option><option>Xuất kho</option><option>Điều chỉnh tăng</option><option>Điều chỉnh giảm</option></select></div><div><label>Lý do</label><input id="stockReason" /></div></div><h3>Hàng hóa trong phiếu kho</h3><div class="line-editor"><select id="stockLineProduct"></select><input id="stockLineQty" type="number" value="1"/><input id="stockLineNote" placeholder="Ghi chú dòng"/><button id="addStockLineBtn" class="btn primary">Thêm dòng</button></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>SL</th><th>Ghi chú</th><th>Xóa</th></tr></thead><tbody id="stockLines"></tbody></table></div><div class="panel"><h3>Danh sách phiếu kho</h3><table><thead><tr><th>Mã</th><th>Ngày</th><th>Loại</th><th>Số dòng</th><th>Lý do</th><th>Hành động</th></tr></thead><tbody id="stockVoucherTable"></tbody></table></div></section>
-
-        <section id="stockbook" class="page"><div class="section-head"><h2>Sổ kho</h2><button id="exportStockBookBtn" class="btn light">Export CSV</button></div><div class="panel"><table><thead><tr><th>Model</th><th>Tên</th><th>Tồn hiện tại</th><th>Nhập</th><th>Xuất</th><th>Điều chỉnh</th></tr></thead><tbody id="stockBookTable"></tbody></table></div></section>
-
-        <section id="warranty" class="page"><div class="section-head"><h2>Bảo hành</h2><button id="saveWarrantyBtn" class="btn primary">Lưu bảo hành</button></div><div class="panel"><div class="grid four"><div><label>Khách hàng</label><select id="wCustomer"></select></div><div><label>Sản phẩm</label><select id="wProduct"></select></div><div><label>Serial/IMEI</label><input id="wSerial" /></div><div><label>Ngày lắp</label><input id="wInstallDate" type="date" /></div><div><label>Tháng BH</label><input id="wMonths" type="number" value="24" /></div><div><label>Trạng thái</label><select id="wStatus"><option>Còn bảo hành</option><option>Hết bảo hành</option><option>Đã xử lý</option></select></div><div class="span2"><label>Ghi chú</label><input id="wNote" /></div></div></div><div class="panel"><h3>Tra cứu bảo hành</h3><input class="search" id="wSearch" placeholder="Tìm SĐT / khách / serial"/><table><thead><tr><th>Khách</th><th>SĐT</th><th>Model</th><th>Serial</th><th>Ngày lắp</th><th>Hết hạn</th><th>Trạng thái</th><th>Xóa</th></tr></thead><tbody id="warrantyTable"></tbody></table></div></section>
-
-        <section id="customers" class="page"></section>
-        <section id="products" class="page"></section>
-        <section id="pricelist" class="page"></section>
-        <section id="staff" class="page"></section>
-        <section id="expenses" class="page"></section>
-        <section id="reports" class="page"></section>
-        <section id="users" class="page"></section>
-        <section id="audit" class="page"></section>
-        <section id="backup" class="page"></section>
-      </main>
-    </section>
+      <section id="permissions" class="page"><div class="panel"><div class="panel-head"><h3>🔑 Bảng phân quyền chuẩn</h3><button class="btn primary" onclick="saveUserPermission()">Lưu phân quyền</button></div><div class="grid form-grid"><div><label>Email nhân viên</label><input id="uEmail" type="email"></div><div><label>Họ tên</label><input id="uName"></div><div><label>Vai trò</label><select id="uRole"><option>Admin</option><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option></select></div></div><div id="permBox" class="permission-grid"></div><table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Quyền</th><th>Hành động</th></tr></thead><tbody id="permissionTable"></tbody></table></div></section>
+    </main>
   </div>
-  <div id="printArea"></div>
+
   <script type="module" src="./app.js"></script>
 </body>
 </html>

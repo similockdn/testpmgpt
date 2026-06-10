@@ -1,0 +1,5 @@
+code,type,price,validFrom,validTo,active,note
+S01,Khách lẻ,2350000,2026-06-01,2026-06-30,true,Giá lẻ tháng 6
+S01,Đại lý,2100000,2026-06-01,2026-06-30,true,Giá đại lý tháng 6
+F07,Khách lẻ,1850000,2026-06-01,2026-12-31,true,Giá F07 đang áp dụng
+569,CTV,3200000,2026-06-01,,true,Giá CTV không giới hạn ngày kết thúc
