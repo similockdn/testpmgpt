@@ -1,37 +1,9 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function userPath() { return /databases/$(database)/documents/users/$(request.auth.token.email); }
-    function userExists() { return signedIn() && exists(userPath()); }
-    function userData() { return get(userPath()).data; }
-    function isAdmin() { return userExists() && userData().role == 'Admin'; }
-    function hasPerm(p) { return userExists() && (isAdmin() || p in userData().perms); }
-
-    match /users/{email} {
-      allow read: if signedIn();
-      allow create: if isAdmin() || (signedIn() && request.auth.token.email == email && !exists(/databases/$(database)/documents/users/$(email)) && request.resource.data.role == 'Admin');
-      allow update, delete: if isAdmin();
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
-
-    match /customers/{id} { allow read: if signedIn(); allow write: if hasPerm('customers'); }
-    match /products/{id} { allow read: if signedIn(); allow write: if hasPerm('products'); }
-    match /prices/{id} { allow read: if signedIn(); allow write: if hasPerm('prices'); }
-    match /staff/{id} { allow read: if signedIn(); allow write: if hasPerm('staff'); }
-    match /sales/{id} {
-      allow read: if hasPerm('sales') || hasPerm('debts') || hasPerm('reports');
-      allow create: if hasPerm('sales');
-      allow update: if hasPerm('editSales');
-      allow delete: if hasPerm('deleteSales');
-    }
-    match /stockVouchers/{id} {
-      allow read: if hasPerm('inventory') || hasPerm('stockbook') || hasPerm('reports');
-      allow create: if hasPerm('inventory');
-      allow update: if hasPerm('editStock');
-      allow delete: if hasPerm('deleteStock');
-    }
-    match /receipts/{id} { allow read, write: if hasPerm('debts'); }
-    match /warranties/{id} { allow read, write: if hasPerm('warranty'); }
-    match /logs/{id} { allow create: if signedIn(); allow read: if hasPerm('audit'); allow update, delete: if false; }
   }
 }
