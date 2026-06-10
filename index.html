@@ -35,7 +35,7 @@
     <header>
       <div>
         <h1>🚀 SIMILOCK ERP FIREBASE</h1>
-        <p>Khách hàng • Sản phẩm • Bán hàng • Kho • Chi phí • Phân quyền</p>
+        <p>Khách hàng • Sản phẩm • Bảng giá • Bán hàng • Kho • Chi phí • Phân quyền</p>
       </div>
       <div class="user-box">
         <div id="currentUser"></div>
@@ -48,6 +48,7 @@
         <button data-page="dashboard">📊 Dashboard</button>
         <button data-page="customers">👥 Khách hàng</button>
         <button data-page="products">🔐 Sản phẩm</button>
+        <button data-page="pricelist">💰 Bảng giá</button>
         <button data-page="sales">🛒 Bán hàng</button>
         <button data-page="inventory">📦 Kho</button>
         <button data-page="staff">👨‍💼 Nhân viên</button>
@@ -80,9 +81,12 @@
             <div><label>Địa chỉ</label><input id="cAddress" /></div>
             <div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0" /></div>
           </div>
-          <button class="primary" id="addCustomerBtn">Lưu khách hàng</button>
+          <div class="button-group">
+            <button class="primary" id="addCustomerBtn">Lưu khách hàng</button>
+            <button class="gray" id="cancelCustomerBtn" style="display:none;">Hủy</button>
+          </div>
           <table>
-            <thead><tr><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Xóa</th></tr></thead>
+            <thead><tr><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Hành động</th></tr></thead>
             <tbody id="customerTable"></tbody>
           </table>
         </section>
@@ -97,10 +101,30 @@
             <div><label>Giá bán</label><input id="pPrice" type="number" /></div>
             <div><label>Tồn kho</label><input id="pStock" type="number" /></div>
           </div>
-          <button class="primary" id="addProductBtn">Lưu sản phẩm</button>
+          <div class="button-group">
+            <button class="primary" id="addProductBtn">Lưu sản phẩm</button>
+            <button class="gray" id="cancelProductBtn" style="display:none;">Hủy</button>
+          </div>
           <table>
-            <thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Xóa</th></tr></thead>
+            <thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Hành động</th></tr></thead>
             <tbody id="productTable"></tbody>
+          </table>
+        </section>
+
+        <section id="pricelist">
+          <h2>💰 Bảng giá</h2>
+          <div class="grid">
+            <div><label>Model sản phẩm</label><select id="plProductCode"></select></div>
+            <div><label>Loại khách</label><select id="plCustomerType"><option>Khách lẻ</option><option>Khách đại lý</option><option>CTV</option></select></div>
+            <div><label>Giá bán</label><input id="plPrice" type="number" /></div>
+          </div>
+          <div class="button-group">
+            <button class="primary" id="addPriceBtn">Thêm bảng giá</button>
+            <button class="gray" id="cancelPriceBtn" style="display:none;">Hủy</button>
+          </div>
+          <table>
+            <thead><tr><th>Model</th><th>Loại khách</th><th>Giá</th><th>Hành động</th></tr></thead>
+            <tbody id="priceTable"></tbody>
           </table>
         </section>
 
@@ -170,7 +194,7 @@
         <section id="users">
           <h2>🔑 Phân quyền nhân viên</h2>
           <div class="notice">
-            Cách tạo nhân viên: Admin nhập email nhân viên, tick quyền, bấm lưu. Sau đó nhân viên vào màn hình đăng nhập, nhập email đó và mật khẩu mới rồi bấm “Tạo tài khoản nhân viên”.
+            Cách tạo nhân viên: Admin nhập email nhân viên, tick quyền, bấm lưu. Sau đó nhân viên vào màn hình đăng nhập, nhập email đó và mật khẩu mới rồi bấm tạo tài khoản.
           </div>
           <div class="grid">
             <div><label>Email nhân viên</label><input id="uEmail" type="email" /></div>
