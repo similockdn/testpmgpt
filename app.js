@@ -12,6 +12,33 @@ async function audit(action,type,data){await addDoc(collection(db,'audit'),{acti
 async function seq(prefix,col){let n=(await loadCol(col)).length+1; return prefix+String(n).padStart(6,'0');}
 function today(){return new Date().toISOString().slice(0,10)};
 
+// In phiếu A5 ổn định trên Chrome/GitHub Pages.
+// Bản trước gọi printDoc() nhưng chưa khai báo hàm nên bấm In không chạy.
+function printDoc(html){
+  const area = $('printArea');
+  if(!area){
+    alert('Không tìm thấy vùng in #printArea');
+    return;
+  }
+  area.innerHTML = html || '';
+  area.classList.add('ready-print');
+
+  // Dùng timeout nhỏ để trình duyệt kịp render HTML/CSS trước khi gọi hộp thoại in.
+  setTimeout(()=>{
+    try{
+      window.focus();
+      window.print();
+    }finally{
+      // Không xoá ngay lập tức vì một số trình duyệt mở print dialog bất đồng bộ.
+      setTimeout(()=>{
+        area.innerHTML = '';
+        area.classList.remove('ready-print');
+      }, 600);
+    }
+  }, 150);
+}
+window.printDoc = printDoc;
+
 $('loginBtn').onclick=async()=>{try{await signInWithEmailAndPassword(auth,$('email').value,$('password').value)}catch(e){alert('Đăng nhập lỗi: '+e.message)}};
 $('setupAdminBtn').onclick=async()=>{try{let u=await createUserWithEmailAndPassword(auth,$('email').value,$('password').value);await setDoc(doc(db,'users',u.user.uid),{email:u.user.email,name:'Admin SIMILOCK',role:'Admin',permissions:['admin','cost','profit','sales','warehouse','accounting'],createdAt:serverTimestamp()});alert('Đã tạo Admin')}catch(e){alert(e.message)}};
 $('signupStaffBtn').onclick=async()=>{try{let email=$('email').value;let allowed=state.users.find(u=>u.email===email); if(!allowed){alert('Email chưa được Admin phân quyền');return} await createUserWithEmailAndPassword(auth,email,$('password').value); alert('Đã tạo tài khoản nhân viên')}catch(e){alert(e.message)}};
@@ -19,6 +46,7 @@ $('logoutBtn').onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async user=>{state.user=user;if(!user){$('loginPage').style.display='flex';$('appPage').style.display='none';return}$('loginPage').style.display='none';$('appPage').style.display='grid';let p=await getDoc(doc(db,'users',user.uid));state.profile=p.exists()?p.data():{email:user.email,role:'Admin',permissions:['admin']};$('currentUser').textContent=user.email+' • '+state.profile.role; await refresh();});
 
 document.querySelectorAll('#menu button').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+window.showPage=showPage;
 function showPage(id){document.querySelectorAll('#menu button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=document.querySelector(`#menu button[data-page="${id}"]`)?.textContent.replace(/[📊🛒💵📦📘🛡️👥🔐💰👨‍💼💸📈🔑🧾☁️]/g,'').trim()||'';}
 
 function renderAll(){renderBaseSections();renderOptions();renderDashboard();renderSales();renderReceipts();renderStock();renderStockBook();renderWarranty();renderSimpleTables();}
@@ -35,7 +63,33 @@ $('reports').innerHTML=`<div class="section-head"><h2>Báo cáo</h2><button clas
 }
 function renderOptions(){let opts=state.products.map(p=>`<option value="${p.id}">${p.code} - ${p.name}</option>`).join('');['lineProduct','stockLineProduct','wProduct'].forEach(id=>{if($(id))$(id).innerHTML=opts});let cust=state.customers.map(c=>`<option value="${c.id}">${c.name} - ${c.phone||''}</option>`).join('');['saleCustomer','wCustomer'].forEach(id=>{if($(id))$(id).innerHTML=cust});if($('customerSuggest'))$('customerSuggest').innerHTML=state.customers.map(c=>`<option value="${c.name} - ${c.phone||''}"></option>`).join('');let st=state.staff.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');if($('saleStaff'))$('saleStaff').innerHTML=st;if($('receiptSale'))$('receiptSale').innerHTML=state.sales.filter(s=>Number(s.debt)>0).map(s=>`<option value="${s.id}">${s.code} - ${s.customerName} - Nợ ${money(s.debt)}</option>`).join('');}
 function totalRevenue(){return state.sales.filter(s=>s.status!=='Đã hủy').reduce((a,s)=>a+Number(s.total||0),0)}function totalProfit(){let cost=0;state.sales.forEach(s=>(s.lines||[]).forEach(l=>cost+=Number(l.cost||0)*Number(l.qty||0)));return totalRevenue()-cost-state.expenses.reduce((s,x)=>s+Number(x.amount||0),0)}function totalDebt(){return state.sales.reduce((a,s)=>a+Number(s.debt||0),0)}
-function renderDashboard(){$('kpiRevenue').textContent=money(totalRevenue());$('kpiProfit').textContent=canCost()?money(totalProfit()):'Ẩn';$('kpiDebt').textContent=money(totalDebt());let low=state.products.filter(p=>Number(p.stock||0)<=Number(p.minStock||2));$('kpiLowStock').textContent=low.length;$('recentOrders').innerHTML=state.sales.slice(0,8).map(s=>`<tr><td>${s.code}</td><td>${s.customerName}</td><td>${money(s.total)}</td><td><span class="pill">${s.status}</span></td></tr>`).join('');$('lowStockTable').innerHTML=low.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td>${p.stock||0}</td></tr>`).join('')}
+function topProductStats(){
+  const map={};
+  state.sales.forEach(s=>(s.lines||[]).forEach(l=>{
+    const key=l.code||l.productId||l.name||'SP';
+    if(!map[key]) map[key]={code:l.code||'',name:l.name||'',qty:0,revenue:0};
+    map[key].qty+=Number(l.qty||0);
+    map[key].revenue+=Number(l.total||0);
+  }));
+  return Object.values(map).sort((a,b)=>b.qty-a.qty).slice(0,6);
+}
+function renderDashboard(){
+  $('kpiRevenue').textContent=money(totalRevenue());
+  $('kpiProfit').textContent=canCost()?money(totalProfit()):'Ẩn';
+  $('kpiDebt').textContent=money(totalDebt());
+  let low=state.products.filter(p=>Number(p.stock||0)<=Number(p.minStock||2));
+  $('kpiLowStock').textContent=low.length;
+  if($('kpiOrderCount')) $('kpiOrderCount').textContent=state.sales.length;
+  if($('kpiCustomerCount')) $('kpiCustomerCount').textContent=state.customers.length;
+  if($('kpiProductCount')) $('kpiProductCount').textContent=state.products.length;
+  if($('kpiStockVoucherCount')) $('kpiStockVoucherCount').textContent=state.stockVouchers.length;
+  $('recentOrders').innerHTML=state.sales.slice(0,8).map(s=>`<tr><td><b>${s.code||''}</b></td><td>${s.customerName||''}</td><td>${money(s.total)}</td><td><span class="pill">${s.status||''}</span></td></tr>`).join('') || `<tr><td colspan="4" class="empty">Chưa có đơn hàng</td></tr>`;
+  $('lowStockTable').innerHTML=low.slice(0,8).map(p=>`<tr><td><b>${p.code||''}</b></td><td>${p.name||''}</td><td><span class="stock-alert">${p.stock||0}</span></td></tr>`).join('') || `<tr><td colspan="3" class="empty">Kho đang ổn định</td></tr>`;
+  const top=topProductStats();
+  const maxQty=Math.max(...top.map(x=>x.qty),1);
+  if($('topProducts')) $('topProducts').innerHTML=top.map(x=>`<tr><td><b>${x.code}</b></td><td>${x.name}</td><td>${x.qty}</td><td>${money(x.revenue)}</td></tr>`).join('') || `<tr><td colspan="4" class="empty">Chưa có dữ liệu bán hàng</td></tr>`;
+  if($('topProductBars')) $('topProductBars').innerHTML=top.map((x,i)=>`<div class="bar-item"><div class="bar-head"><b>${i+1}. ${x.code} - ${x.name}</b><span>${x.qty} bộ • ${money(x.revenue)}</span></div><div class="bar-track"><i style="width:${Math.max(8,Math.round(x.qty/maxQty*100))}%"></i></div></div>`).join('') || `<div class="empty-card">Chưa có sản phẩm bán chạy. Hãy tạo đơn bán để Dashboard tự cập nhật.</div>`;
+}
 
 function calcSale(){let sub=state.saleLines.reduce((s,l)=>s+(l.qty*l.price*(1-l.discount/100)),0), rate=Number($('vatRate')?.value||0)/100, vat=0,total=sub;if($('vatMode')?.value==='add'){vat=sub*rate;total=sub+vat}else if($('vatMode')?.value==='included'){vat=sub-sub/(1+rate)}let paid=Number($('paidAmount')?.value||0);if($('subTotal')){$('subTotal').textContent=money(sub);$('vatAmount').textContent=money(vat);$('grandTotal').textContent=money(total);$('debtAmount').textContent=money(total-paid)}return{sub,vat,total,paid,debt:total-paid}}
 function renderSales(){if(!$('saleDate'))return; if(!$('saleDate').value)$('saleDate').value=today(); if(!$('saleCode').value) seq('BH','sales').then(x=>$('saleCode').value=x);$('saleLines').innerHTML=state.saleLines.map((l,i)=>`<tr><td>${l.code}</td><td>${l.name}</td><td>${l.qty}</td><td>${money(l.price)}</td><td>${l.discount}</td><td>${money(l.qty*l.price*(1-l.discount/100))}</td><td><button class="btn danger" onclick="delLine(${i})">Xóa</button></td></tr>`).join('');calcSale();let q=($('saleSearch')?.value||'').toLowerCase();$('saleTable').innerHTML=state.sales.filter(s=>(s.code+s.customerName).toLowerCase().includes(q)).map(s=>`<tr><td>${s.code}</td><td>${s.date}</td><td>${s.customerName}</td><td>${money(s.total)}</td><td>${money(s.paid)}</td><td>${money(s.debt)}</td><td><span class="pill">${s.status}</span></td><td class="actions"><button class="btn light" onclick="editSale('${s.id}')">Sửa</button><button class="btn success" onclick="printSale('${s.id}')">In</button>${canAdmin()?`<button class="btn danger" onclick="deleteSale('${s.id}')">Xóa</button>`:''}</td></tr>`).join('')}

@@ -51,16 +51,46 @@
 
       <main>
         <section id="dashboard" class="page active">
-          <div class="hero"><div><h2>Dashboard điều hành</h2><p>Theo dõi doanh thu, công nợ, kho và bảo hành trong một màn hình.</p></div><button class="btn primary" onclick="window.print()">In báo cáo</button></div>
-          <div class="kpis">
-            <div class="kpi blue"><span>Doanh thu</span><b id="kpiRevenue">0</b><em>Đã tạo đơn</em></div>
-            <div class="kpi green"><span>Lợi nhuận</span><b id="kpiProfit">0</b><em>Admin/Kế toán</em></div>
-            <div class="kpi orange"><span>Công nợ</span><b id="kpiDebt">0</b><em>Còn phải thu</em></div>
-            <div class="kpi purple"><span>Tồn kho thấp</span><b id="kpiLowStock">0</b><em>Cần nhập thêm</em></div>
+          <div class="executive-hero">
+            <div>
+              <div class="eyebrow">SIMILOCK ERP • Dashboard điều hành</div>
+              <h2>Trung tâm kiểm soát bán hàng, kho và công nợ</h2>
+              <p>Theo dõi nhanh doanh thu, lợi nhuận, công nợ, tồn kho và sản phẩm bán chạy trong một màn hình.</p>
+            </div>
+            <div class="hero-actions">
+              <button class="btn light" onclick="showPage('sales')">+ Tạo đơn bán</button>
+              <button class="btn primary" onclick="window.print()">In báo cáo</button>
+            </div>
           </div>
+
+          <div class="kpis executive-kpis">
+            <div class="kpi blue"><span>Doanh thu</span><b id="kpiRevenue">0</b><em>Tổng giá trị đơn bán</em></div>
+            <div class="kpi green"><span>Lợi nhuận</span><b id="kpiProfit">0</b><em>Ẩn theo phân quyền</em></div>
+            <div class="kpi orange"><span>Công nợ</span><b id="kpiDebt">0</b><em>Còn phải thu</em></div>
+            <div class="kpi purple"><span>Tồn kho thấp</span><b id="kpiLowStock">0</b><em>Sản phẩm cần nhập</em></div>
+          </div>
+
+          <div class="quick-stats">
+            <div><span>Đơn hàng</span><b id="kpiOrderCount">0</b></div>
+            <div><span>Khách hàng</span><b id="kpiCustomerCount">0</b></div>
+            <div><span>Sản phẩm</span><b id="kpiProductCount">0</b></div>
+            <div><span>Phiếu kho</span><b id="kpiStockVoucherCount">0</b></div>
+          </div>
+
+          <div class="dash-grid-modern">
+            <div class="panel chart-panel">
+              <div class="panel-title"><h3>Sản phẩm bán chạy</h3><span>Top theo số lượng bán</span></div>
+              <div id="topProductBars" class="bar-list"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><h3>Top sản phẩm</h3><span>Model / SL / Doanh thu</span></div>
+              <table><thead><tr><th>Model</th><th>Tên hàng</th><th>SL</th><th>Doanh thu</th></tr></thead><tbody id="topProducts"></tbody></table>
+            </div>
+          </div>
+
           <div class="dash-grid">
-            <div class="panel"><h3>Đơn hàng gần nhất</h3><table><thead><tr><th>Mã</th><th>Khách</th><th>Tổng</th><th>Trạng thái</th></tr></thead><tbody id="recentOrders"></tbody></table></div>
-            <div class="panel"><h3>Cảnh báo kho</h3><table><thead><tr><th>Model</th><th>Tên</th><th>Tồn</th></tr></thead><tbody id="lowStockTable"></tbody></table></div>
+            <div class="panel"><div class="panel-title"><h3>Đơn hàng gần nhất</h3><span>8 phiếu mới nhất</span></div><table><thead><tr><th>Mã</th><th>Khách</th><th>Tổng</th><th>Trạng thái</th></tr></thead><tbody id="recentOrders"></tbody></table></div>
+            <div class="panel"><div class="panel-title"><h3>Cảnh báo kho</h3><span>Tồn nhỏ hơn mức tối thiểu</span></div><table><thead><tr><th>Model</th><th>Tên</th><th>Tồn</th></tr></thead><tbody id="lowStockTable"></tbody></table></div>
           </div>
         </section>
 
