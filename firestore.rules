@@ -1,22 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn(){ return request.auth != null; }
-    function me(){ return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function isAdmin(){ return signedIn() && me().isAdmin == true; }
-    function hasPerm(p){ return signedIn() && (me().isAdmin == true || me().permissions[p] == true); }
-
-    match /users/{uid} {
-      allow read: if signedIn();
-      allow create: if signedIn();
-      allow update, delete: if isAdmin();
+    function signedIn() { return request.auth != null; }
+    match /{document=**} {
+      allow read, write: if signedIn();
     }
-    match /customers/{id} { allow read, write: if hasPerm('customers'); }
-    match /products/{id} { allow read, write: if hasPerm('products') || hasPerm('inventory'); }
-    match /prices/{id} { allow read, write: if hasPerm('pricelist'); }
-    match /orders/{id} { allow read, write: if hasPerm('sales'); }
-    match /staff/{id} { allow read, write: if hasPerm('staff') || hasPerm('sales'); }
-    match /expenses/{id} { allow read, write: if hasPerm('expenses'); }
-    match /vouchers/{id} { allow read, write: if hasPerm('inventory') || hasPerm('stockvouchers'); }
   }
 }
