@@ -52,11 +52,64 @@ function validateDate(v){return !v || /^\d{4}-\d{2}-\d{2}$/.test(v)}
 function calcSaleTotals(items,vatMode,paid){let subtotal=items.reduce((a,it)=>a+(+it.qty||0)*(+it.price||0)*(1-(+it.discount||0)/100),0);let rate=vatMode?.includes('10') ? 0.10 : (vatMode?.includes('8') ? 0.08 : 0);let vat=0,grand=subtotal;if(vatMode?.startsWith('add')){vat=subtotal*rate;grand=subtotal+vat}else if(vatMode?.startsWith('included')){vat=subtotal-subtotal/(1+rate);grand=subtotal}return{subtotal,vat,grand,debt:grand-(+paid||0)}}
 
 function authMsg(e){const m=e?.code||e?.message||'';if(m.includes('invalid-credential'))return 'Email hoặc mật khẩu không đúng';if(m.includes('user-not-found'))return 'Email chưa tồn tại';if(m.includes('wrong-password'))return 'Mật khẩu không đúng';if(m.includes('email-already-in-use'))return 'Email này đã được tạo tài khoản rồi. Hãy bấm Đăng nhập.';if(m.includes('weak-password'))return 'Mật khẩu phải tối thiểu 6 ký tự';if(m.includes('operation-not-allowed'))return 'Firebase chưa bật Email/Password Authentication';return e.message||String(e)}
-$('loginBtn').onclick=()=>signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value).catch(e=>alert(authMsg(e)));
-$('setupAdminBtn').onclick=async()=>{try{const email=$('email').value.trim(),pw=$('password').value;if(!email||!pw)return alert('Nhập email và mật khẩu');await createUserWithEmailAndPassword(auth,email,pw);await setDoc(doc(db,'users',email),{email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp()});alert('Đã tạo Admin. Bạn có thể dùng tài khoản này để đăng nhập.')}catch(e){alert(authMsg(e))}};
-$('signupStaffBtn').onclick=async()=>{try{const email=$('email').value.trim(),pw=$('password').value;if(!email||!pw)return alert('Nhập email và mật khẩu');const p=await getDoc(doc(db,'users',email));if(!p.exists())return alert('Email chưa được Admin phân quyền');await createUserWithEmailAndPassword(auth,email,pw);alert('Tạo tài khoản nhân viên thành công')}catch(e){alert(authMsg(e))}};
+$('loginBtn').onclick=async()=>{
+  try{
+    const email=$('email').value.trim(),pw=$('password').value;
+    if(!email||!pw)return alert('Nhập email và mật khẩu');
+    await signInWithEmailAndPassword(auth,email,pw);
+  }catch(e){alert(authMsg(e))}
+};
+
+$('setupAdminBtn').onclick=async()=>{
+  try{
+    const email=$('email').value.trim(),pw=$('password').value;
+    if(!email||!pw)return alert('Nhập email và mật khẩu');
+    try{
+      await createUserWithEmailAndPassword(auth,email,pw);
+    }catch(e){
+      if((e.code||'').includes('email-already-in-use')){
+        await signInWithEmailAndPassword(auth,email,pw);
+      }else throw e;
+    }
+    await setDoc(doc(db,'users',email),{email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+    alert('Đã tạo/cập nhật Admin thành công.');
+  }catch(e){alert(authMsg(e)+'\n\nNếu vẫn lỗi, hãy kiểm tra Firestore Rules đã Publish và Email/Password đã bật trong Firebase Authentication.')}
+};
+
+$('signupStaffBtn').onclick=async()=>{
+  try{
+    const email=$('email').value.trim(),pw=$('password').value;
+    if(!email||!pw)return alert('Nhập email và mật khẩu');
+    // Không đọc Firestore trước khi tạo user, vì Rules chỉ cho đọc sau khi đã đăng nhập.
+    try{
+      await createUserWithEmailAndPassword(auth,email,pw);
+    }catch(e){
+      if((e.code||'').includes('email-already-in-use')){
+        await signInWithEmailAndPassword(auth,email,pw);
+      }else throw e;
+    }
+    const p=await getDoc(doc(db,'users',email));
+    if(!p.exists()){
+      alert('Tài khoản Auth đã tạo, nhưng email này chưa được Admin phân quyền trong mục Phân quyền. Hãy đăng nhập Admin và thêm email này.');
+      return;
+    }
+    alert('Tạo/đăng nhập tài khoản nhân viên thành công.');
+  }catch(e){alert(authMsg(e)+'\n\nLưu ý: Admin phải vào mục Phân quyền và lưu email nhân viên trước.')}
+};
 $('logoutBtn').onclick=()=>signOut(auth);
-onAuthStateChanged(auth,async u=>{if(!u){$('loginPage').style.display='grid';$('appPage').style.display='none';return}currentUser=u;$('loginPage').style.display='none';$('appPage').style.display='flex';$('currentUser').textContent=u.email;const p=await getDoc(doc(db,'users',u.email));currentPerm=p.exists()?p.data():{role:'Admin',perms:permissionMap.Admin};applyPermissions();await loadAll();});
+onAuthStateChanged(auth,async u=>{
+  if(!u){$('loginPage').style.display='grid';$('appPage').style.display='none';return}
+  currentUser=u;$('loginPage').style.display='none';$('appPage').style.display='flex';$('currentUser').textContent=u.email;
+  try{
+    const p=await getDoc(doc(db,'users',u.email));
+    if(p.exists()) currentPerm=p.data();
+    else currentPerm={role:'Chưa phân quyền',perms:[]};
+  }catch(e){
+    alert('Đăng nhập Firebase thành công nhưng chưa đọc được phân quyền Firestore. Hãy kiểm tra Firestore Rules đã Publish.\n\nLỗi: '+authMsg(e));
+    currentPerm={role:'Chưa phân quyền',perms:[]};
+  }
+  applyPermissions();await loadAll();
+});
 
 function applyPermissions(){document.querySelectorAll('#menu button').forEach(b=>{b.style.display=has(b.dataset.page)?'block':'none'});document.querySelectorAll('.view-cost').forEach(x=>x.classList.toggle('hidden',!has('viewCost')));}
 document.querySelectorAll('#menu button').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page));
