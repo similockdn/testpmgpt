@@ -72,7 +72,7 @@ $('setupAdminBtn').onclick=async()=>{
       }else throw e;
     }
     await setDoc(doc(db,'users',email),{email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
-    alert('Đã tạo/cập nhật Admin thành công.');
+    alert('Đã tạo/cập nhật Admin thành công. Nếu chưa vào màn hình chính, bấm Đăng nhập lại.');
   }catch(e){alert(authMsg(e)+'\n\nNếu vẫn lỗi, hãy kiểm tra Firestore Rules đã Publish và Email/Password đã bật trong Firebase Authentication.')}
 };
 
@@ -105,7 +105,7 @@ onAuthStateChanged(auth,async u=>{
     if(p.exists()) currentPerm=p.data();
     else currentPerm={role:'Chưa phân quyền',perms:[]};
   }catch(e){
-    alert('Đăng nhập Firebase thành công nhưng chưa đọc được phân quyền Firestore. Hãy kiểm tra Firestore Rules đã Publish.\n\nLỗi: '+authMsg(e));
+    alert('Đăng nhập Firebase thành công nhưng Firestore đang chặn đọc dữ liệu. Hãy cập nhật Firestore Rules trong file firestore.rules rồi bấm Publish.\n\nLỗi: '+authMsg(e));
     currentPerm={role:'Chưa phân quyền',perms:[]};
   }
   applyPermissions();await loadAll();

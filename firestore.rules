@@ -3,10 +3,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Chỉ tài khoản đã đăng nhập mới được đọc/ghi dữ liệu
+    // SIMILOCK ERP - bản vận hành ổn định
+    // Chỉ tài khoản đã đăng nhập Firebase Authentication mới được đọc/ghi dữ liệu.
+    // Phân quyền chi tiết Admin/Sale/Kho/Kế toán/Kỹ thuật được xử lý trong app.js.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
-
   }
 }
