@@ -11,208 +11,56 @@
     <div class="login-box">
       <h1>🔐 Similock ERP Firebase</h1>
       <p class="muted">Đăng nhập bằng Firebase Authentication</p>
-
-      <label>Email</label>
-      <input id="email" type="email" placeholder="admin@similock.vn" />
-
-      <label>Mật khẩu</label>
-      <input id="password" type="password" placeholder="Tối thiểu 6 ký tự" />
-
+      <label>Email</label><input id="email" type="email" placeholder="admin@similock.vn" />
+      <label>Mật khẩu</label><input id="password" type="password" placeholder="Tối thiểu 6 ký tự" />
       <button class="primary full" id="loginBtn">Đăng nhập</button>
       <button class="gray full" id="setupAdminBtn">Tạo Admin lần đầu</button>
       <button class="gray full" id="signupStaffBtn">Tạo tài khoản nhân viên</button>
-
-      <div class="notice">
-        <b>Lần đầu sử dụng:</b><br>
-        1. Nhập email admin + mật khẩu.<br>
-        2. Bấm <b>Tạo Admin lần đầu</b>.<br>
-        3. Sau đó đăng nhập bình thường.
-      </div>
+      <div class="notice"><b>Lần đầu sử dụng:</b><br>Nhập email admin + mật khẩu → bấm <b>Tạo Admin lần đầu</b> → đăng nhập.</div>
     </div>
   </div>
 
   <div id="appPage" style="display:none;">
     <header>
-      <div>
-        <h1>🚀 SIMILOCK ERP FIREBASE</h1>
-        <p>Khách hàng • Sản phẩm • Bảng giá • Bán hàng • Kho • Chi phí • Phân quyền</p>
-      </div>
-      <div class="user-box">
-        <div id="currentUser"></div>
-        <button class="gray" id="logoutBtn">Đăng xuất</button>
-      </div>
+      <div><h1>🚀 SIMILOCK ERP FIREBASE</h1><p>Khách hàng • Sản phẩm • Bảng giá • Bán hàng • Kho • Phiếu A5 • VAT • Phân quyền</p></div>
+      <div class="user-box"><div id="currentUser"></div><button class="gray" id="logoutBtn">Đăng xuất</button></div>
     </header>
-
     <div class="layout">
-      <nav>
+      <nav id="sideNav">
         <button data-page="dashboard">📊 Dashboard</button>
         <button data-page="customers">👥 Khách hàng</button>
         <button data-page="products">🔐 Sản phẩm</button>
         <button data-page="pricelist">💰 Bảng giá</button>
         <button data-page="sales">🛒 Bán hàng</button>
-        <button data-page="inventory">📦 Kho</button>
+        <button data-page="inventory">📦 Kho hàng</button>
+        <button data-page="stockvouchers">🧾 Phiếu kho</button>
         <button data-page="staff">👨‍💼 Nhân viên</button>
         <button data-page="expenses">💸 Chi phí</button>
         <button data-page="users">🔑 Phân quyền</button>
       </nav>
-
       <main>
-        <section id="dashboard">
-          <h2>📊 Dashboard</h2>
-          <div class="cards">
-            <div class="card">Doanh thu <b id="dashRevenue">0</b></div>
-            <div class="card">Lợi nhuận <b id="dashProfit">0</b></div>
-            <div class="card">Đơn hàng <b id="dashOrders">0</b></div>
-            <div class="card">Khách hàng <b id="dashCustomers">0</b></div>
-          </div>
-          <h3>Top nhân viên</h3>
-          <table>
-            <thead><tr><th>Nhân viên</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th><th>Lợi nhuận</th></tr></thead>
-            <tbody id="topStaff"></tbody>
-          </table>
-        </section>
+        <section id="dashboard"><h2>📊 Dashboard</h2><div class="cards"><div class="card">Doanh thu <b id="dashRevenue">0</b></div><div class="card">VAT <b id="dashVat">0</b></div><div class="card view-cost">Lợi nhuận <b id="dashProfit">0</b></div><div class="card">Đơn hàng <b id="dashOrders">0</b></div><div class="card">Tồn kho <b id="dashStock">0</b></div></div><h3>Top nhân viên</h3><table><thead><tr><th>Nhân viên</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th><th class="view-cost">Lợi nhuận</th></tr></thead><tbody id="topStaff"></tbody></table></section>
 
-        <section id="customers">
-          <h2>👥 Khách hàng</h2>
-          <div class="grid">
-            <div><label>Tên khách</label><input id="cName" /></div>
-            <div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Khách đại lý</option><option>CTV</option></select></div>
-            <div><label>Điện thoại</label><input id="cPhone" /></div>
-            <div><label>Địa chỉ</label><input id="cAddress" /></div>
-            <div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0" /></div>
-          </div>
-          <div class="button-group">
-            <button class="primary" id="addCustomerBtn">Lưu khách hàng</button>
-            <button class="gray" id="cancelCustomerBtn" style="display:none;">Hủy</button>
-          </div>
-          <table>
-            <thead><tr><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Hành động</th></tr></thead>
-            <tbody id="customerTable"></tbody>
-          </table>
-        </section>
+        <section id="customers"><h2>👥 Danh mục khách hàng</h2><div class="grid"><div><label>Tên khách</label><input id="cName" /></div><div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Khách đại lý</option><option>CTV</option></select></div><div><label>Điện thoại</label><input id="cPhone" /></div><div><label>Địa chỉ</label><input id="cAddress" /></div><div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0" /></div></div><div class="button-group"><button class="primary" id="addCustomerBtn">Lưu khách hàng</button><button class="gray" id="cancelCustomerBtn" style="display:none;">Hủy</button></div><table><thead><tr><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Hành động</th></tr></thead><tbody id="customerTable"></tbody></table></section>
 
-        <section id="products">
-          <h2>🔐 Sản phẩm</h2>
-          <div class="grid">
-            <div><label>Model</label><input id="pCode" placeholder="S01/F07/569" /></div>
-            <div><label>Tên sản phẩm</label><input id="pName" /></div>
-            <div><label>Danh mục</label><input id="pCategory" value="Khóa thông minh" /></div>
-            <div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number" /></div>
-            <div><label>Giá bán</label><input id="pPrice" type="number" /></div>
-            <div><label>Tồn kho</label><input id="pStock" type="number" /></div>
-          </div>
-          <div class="button-group">
-            <button class="primary" id="addProductBtn">Lưu sản phẩm</button>
-            <button class="gray" id="cancelProductBtn" style="display:none;">Hủy</button>
-          </div>
-          <table>
-            <thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Hành động</th></tr></thead>
-            <tbody id="productTable"></tbody>
-          </table>
-        </section>
+        <section id="products"><h2>🔐 Danh mục sản phẩm</h2><div class="grid"><div><label>Model</label><input id="pCode" placeholder="S01/F07/569" /></div><div><label>Tên sản phẩm</label><input id="pName" /></div><div><label>Danh mục</label><input id="pCategory" value="Khóa thông minh" /></div><div><label>ĐVT</label><input id="pUnit" value="Bộ" /></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number" /></div><div><label>Giá bán lẻ</label><input id="pPrice" type="number" /></div><div><label>Tồn đầu</label><input id="pStock" type="number" /></div></div><div class="button-group"><button class="primary" id="addProductBtn">Lưu sản phẩm</button><button class="gray" id="cancelProductBtn" style="display:none;">Hủy</button></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th>ĐVT</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Hành động</th></tr></thead><tbody id="productTable"></tbody></table></section>
 
-        <section id="pricelist">
-          <h2>💰 Bảng giá</h2>
-          <div class="grid">
-            <div><label>Model sản phẩm</label><select id="plProductCode"></select></div>
-            <div><label>Loại khách</label><select id="plCustomerType"><option>Khách lẻ</option><option>Khách đại lý</option><option>CTV</option></select></div>
-            <div><label>Giá bán</label><input id="plPrice" type="number" /></div>
-          </div>
-          <div class="button-group">
-            <button class="primary" id="addPriceBtn">Thêm bảng giá</button>
-            <button class="gray" id="cancelPriceBtn" style="display:none;">Hủy</button>
-          </div>
-          <table>
-            <thead><tr><th>Model</th><th>Loại khách</th><th>Giá</th><th>Hành động</th></tr></thead>
-            <tbody id="priceTable"></tbody>
-          </table>
-        </section>
+        <section id="pricelist"><h2>💰 Quản lý bảng giá</h2><div class="grid"><div><label>Model sản phẩm</label><select id="plProductCode"></select></div><div><label>Loại khách</label><select id="plCustomerType"><option>Khách lẻ</option><option>Khách đại lý</option><option>CTV</option></select></div><div><label>Giá bán áp dụng</label><input id="plPrice" type="number" /></div></div><div class="button-group"><button class="primary" id="addPriceBtn">Lưu bảng giá</button><button class="gray" id="cancelPriceBtn" style="display:none;">Hủy</button></div><table><thead><tr><th>Model</th><th>Loại khách</th><th>Giá</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table></section>
 
-        <section id="sales">
-          <h2>🛒 Bán hàng</h2>
-          <div class="grid">
-            <div><label>Khách hàng</label><select id="sCustomer"></select></div>
-            <div><label>Sản phẩm</label><select id="sProduct"></select></div>
-            <div><label>Số lượng</label><input id="sQty" type="number" value="1" /></div>
-            <div><label>Giá bán / SP</label><input id="sPrice" type="number" /></div>
-            <div><label>Chiết khấu riêng %</label><input id="sDiscount" type="number" placeholder="Bỏ trống dùng CK khách" /></div>
-            <div><label>Nhân viên sale</label><select id="sStaff"></select></div>
-            <div><label>Hoa hồng sale</label><input id="sCommission" type="number" value="0" /></div>
-            <div class="view-cost"><label>Chi phí kỹ thuật</label><input id="sTech" type="number" value="0" /></div>
-            <div class="view-cost"><label>Chi phí khác</label><input id="sOther" type="number" value="0" /></div>
-          </div>
-          <button class="primary" id="createOrderBtn">Tạo đơn & trừ kho</button>
-          <table>
-            <thead id="orderHead"></thead>
-            <tbody id="orderTable"></tbody>
-          </table>
-        </section>
+        <section id="sales"><h2>🛒 Bán hàng & phiếu in A5</h2><div class="grid"><div><label>Khách hàng</label><select id="sCustomer"></select></div><div><label>Sản phẩm</label><select id="sProduct"></select></div><div><label>Số lượng</label><input id="sQty" type="number" value="1" /></div><div><label>Giá bán / SP</label><input id="sPrice" type="number" /></div><div><label>Chiết khấu %</label><input id="sDiscount" type="number" placeholder="Theo khách" /></div><div><label>VAT</label><select id="sVatMode"><option value="none">Không VAT</option><option value="add">Cộng VAT</option><option value="included">Giá đã gồm VAT</option></select></div><div><label>% VAT</label><input id="sVatRate" type="number" value="8" /></div><div><label>Nhân viên sale</label><select id="sStaff"></select></div><div><label>Hoa hồng sale</label><input id="sCommission" type="number" value="0" /></div><div class="view-cost"><label>Chi phí kỹ thuật</label><input id="sTech" type="number" value="0" /></div><div class="view-cost"><label>Chi phí khác</label><input id="sOther" type="number" value="0" /></div><div><label>Ghi chú</label><input id="sNote" placeholder="Lắp đặt, bảo hành..." /></div></div><button class="primary" id="createOrderBtn">Tạo đơn & trừ kho</button><table><thead id="orderHead"></thead><tbody id="orderTable"></tbody></table></section>
 
-        <section id="inventory">
-          <h2>📦 Kho hàng</h2>
-          <div class="grid">
-            <div><label>Sản phẩm</label><select id="iProduct"></select></div>
-            <div><label>Loại phiếu</label><select id="iType"><option>Nhập kho</option><option>Xuất kho</option><option>Điều chỉnh tồn</option></select></div>
-            <div><label>Số lượng</label><input id="iQty" type="number" value="1" /></div>
-          </div>
-          <button class="primary" id="stockMoveBtn">Cập nhật kho</button>
-          <table>
-            <thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn kho</th></tr></thead>
-            <tbody id="stockTable"></tbody>
-          </table>
-        </section>
+        <section id="inventory"><h2>📦 Kho hàng - tạo phiếu</h2><div class="grid"><div><label>Sản phẩm</label><select id="iProduct"></select></div><div><label>Loại phiếu</label><select id="iType"><option>Nhập kho</option><option>Xuất kho</option><option>Điều chỉnh tồn</option></select></div><div><label>Số lượng</label><input id="iQty" type="number" value="1" /></div><div><label>Lý do/Ghi chú</label><input id="iNote" /></div></div><button class="primary" id="stockMoveBtn">Tạo phiếu kho & cập nhật tồn</button><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn kho</th></tr></thead><tbody id="stockTable"></tbody></table></section>
 
-        <section id="staff">
-          <h2>👨‍💼 Nhân viên</h2>
-          <div class="grid">
-            <div><label>Tên nhân viên</label><input id="eName" /></div>
-            <div><label>Phòng ban</label><select id="eDept"><option>Sale</option><option>Kỹ thuật</option><option>Kế toán</option><option>Kho</option><option>Quản lý</option></select></div>
-            <div><label>SĐT</label><input id="ePhone" /></div>
-          </div>
-          <button class="primary" id="addStaffBtn">Lưu nhân viên</button>
-          <table>
-            <thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Xóa</th></tr></thead>
-            <tbody id="staffTable"></tbody>
-          </table>
-        </section>
+        <section id="stockvouchers"><h2>🧾 Danh sách phiếu kho</h2><table><thead><tr><th>Ngày</th><th>Số phiếu</th><th>Loại</th><th>Model</th><th>SL</th><th>Ghi chú</th><th>In A5</th></tr></thead><tbody id="voucherTable"></tbody></table></section>
 
-        <section id="expenses">
-          <h2>💸 Chi phí</h2>
-          <div class="grid">
-            <div><label>Khoản chi</label><input id="xName" /></div>
-            <div><label>Nhóm</label><input id="xType" value="Vận hành" /></div>
-            <div><label>Số tiền</label><input id="xAmount" type="number" /></div>
-            <div><label>Ghi chú</label><input id="xNote" /></div>
-          </div>
-          <button class="primary" id="addExpenseBtn">Lưu chi phí</button>
-          <table>
-            <thead><tr><th>Ngày</th><th>Khoản chi</th><th>Nhóm</th><th>Số tiền</th><th>Ghi chú</th><th>Xóa</th></tr></thead>
-            <tbody id="expenseTable"></tbody>
-          </table>
-        </section>
+        <section id="staff"><h2>👨‍💼 Danh mục nhân viên</h2><div class="grid"><div><label>Tên nhân viên</label><input id="eName" /></div><div><label>Phòng ban</label><select id="eDept"><option>Sale</option><option>Kỹ thuật</option><option>Kế toán</option><option>Kho</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone" /></div><div><label>Email</label><input id="eEmail" /></div></div><button class="primary" id="addStaffBtn">Lưu nhân viên</button><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Email</th><th>Xóa</th></tr></thead><tbody id="staffTable"></tbody></table></section>
 
-        <section id="users">
-          <h2>🔑 Phân quyền nhân viên</h2>
-          <div class="notice">
-            Cách tạo nhân viên: Admin nhập email nhân viên, tick quyền, bấm lưu. Sau đó nhân viên vào màn hình đăng nhập, nhập email đó và mật khẩu mới rồi bấm tạo tài khoản.
-          </div>
-          <div class="grid">
-            <div><label>Email nhân viên</label><input id="uEmail" type="email" /></div>
-            <div><label>Họ tên</label><input id="uName" /></div>
-            <div><label>Ghi chú vai trò</label><input id="uRole" placeholder="Sale/Kỹ thuật/Kế toán" /></div>
-          </div>
-          <h3>Tick quyền</h3>
-          <div id="permBox" class="perm-box"></div>
-          <button class="primary" id="saveUserBtn">Lưu phân quyền</button>
-          <table>
-            <thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Quyền</th><th>Xóa</th></tr></thead>
-            <tbody id="userTable"></tbody>
-          </table>
-        </section>
+        <section id="expenses"><h2>💸 Chi phí</h2><div class="grid"><div><label>Khoản chi</label><input id="xName" /></div><div><label>Nhóm</label><input id="xType" value="Vận hành" /></div><div><label>Số tiền</label><input id="xAmount" type="number" /></div><div><label>Ghi chú</label><input id="xNote" /></div></div><button class="primary" id="addExpenseBtn">Lưu chi phí</button><table><thead><tr><th>Ngày</th><th>Khoản chi</th><th>Nhóm</th><th>Số tiền</th><th>Ghi chú</th><th>Xóa</th></tr></thead><tbody id="expenseTable"></tbody></table></section>
+
+        <section id="users"><h2>🔑 Phân quyền nhân viên</h2><div class="notice">Admin nhập email nhân viên, tick quyền, bấm lưu. Nhân viên dùng email đó để tạo tài khoản.</div><div class="grid"><div><label>Email nhân viên</label><input id="uEmail" type="email" /></div><div><label>Họ tên</label><input id="uName" /></div><div><label>Ghi chú vai trò</label><input id="uRole" placeholder="Sale/Kỹ thuật/Kế toán" /></div></div><h3>Tick quyền</h3><div id="permBox" class="perm-box"></div><button class="primary" id="saveUserBtn">Lưu phân quyền</button><table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Quyền</th><th>Xóa</th></tr></thead><tbody id="userTable"></tbody></table></section>
       </main>
     </div>
   </div>
-
   <script type="module" src="./firebase-config.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
