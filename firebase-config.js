@@ -3,10 +3,11 @@
 // Copy firebaseConfig và dán thay vào bên dưới.
 
 export const firebaseConfig = {
-  apiKey: "DAN_API_KEY_CUA_ANH",
-  authDomain: "TEN_PROJECT.firebaseapp.com",
-  projectId: "TEN_PROJECT",
-  storageBucket: "TEN_PROJECT.appspot.com",
-  messagingSenderId: "DAN_MESSAGING_SENDER_ID",
-  appId: "DAN_APP_ID"
+
+  apiKey: "AIzaSyAn0KxCUWbD-PieOL6Ro26rEXd_B9F1GnM",
+  authDomain: "smilockdng.firebaseapp.com",
+  projectId: "smilockdng",
+  storageBucket: "smilockdng.firebasestorage.app",
+  messagingSenderId: "245518310247",
+  appId: "1:245518310247:web:9568fd36149523aa626dc2"
 };
