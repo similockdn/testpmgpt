@@ -28,6 +28,8 @@
       <nav id="menu">
         <button data-page="dashboard" class="active">📊 Điều hành</button>
         <button data-page="sales">🛒 Bán hàng</button>
+        <button data-page="commissions">💰 Hoa hồng</button>
+        <button data-page="expenses">📒 Chi phí</button>
         <button data-page="debts">💳 Công nợ</button>
         <button data-page="inventory">📦 Kho hàng</button>
         <button data-page="stockbook">📘 Sổ kho</button>
@@ -71,6 +73,8 @@
             <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm theo tên/SĐT hoặc nhập khách mới" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button></div><datalist id="customerList"></datalist></div>
             <div><label>Nhân viên sale</label><select id="saleStaff"></select></div>
             <div><label>Kỹ thuật</label><select id="saleTech"></select></div>
+            <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
+            <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" /></div>
             <div><label>VAT</label><select id="saleVatMode"><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option><option value="included8">Giá đã gồm VAT 8%</option></select></div>
             <div><label>Đã thu</label><input id="salePaid" type="number" value="0" /></div>
             <div class="span2"><label>Ghi chú</label><input id="saleNote" /></div>
@@ -80,7 +84,33 @@
           <button class="btn ghost" onclick="addSaleItem()">+ Thêm dòng hàng</button>
           <div class="total-box"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
         </div>
-        <div class="panel"><div class="panel-head"><h3>Danh sách phiếu bán</h3><input class="search" id="saleSearch" placeholder="Tìm mã phiếu/khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><h3>Danh sách phiếu bán</h3><input class="search" id="saleSearch" placeholder="Tìm mã phiếu/khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng</th><th class="view-cost">Lợi nhuận</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
+      </section>
+
+
+      <section id="commissions" class="page">
+        <div class="panel">
+          <div class="panel-head"><h3>💰 Hoa hồng theo nhân viên</h3><button class="btn ghost" onclick="exportCSV('commissions')">Export CSV</button></div>
+          <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>🧾 Hoa hồng theo từng đơn hàng</h3></div>
+          <table><thead><tr><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Doanh thu</th><th>%</th><th>Hoa hồng</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
+        </div>
+      </section>
+
+      <section id="expenses" class="page">
+        <div class="panel">
+          <div class="panel-head"><h3>📒 Chi phí vận hành</h3><div><button class="btn ghost" onclick="resetExpenseForm()">Phiếu mới</button><button class="btn ghost" onclick="exportCSV('expenses')">Export CSV</button><button class="btn primary" onclick="saveExpense()">Lưu chi phí</button></div></div>
+          <div class="grid form-grid">
+            <div><label>Ngày</label><input id="exDate" type="date"></div>
+            <div><label>Loại chi phí</label><select id="exCategory"><option>Tiền điện</option><option>Tiền nước</option><option>Tiền Internet</option><option>Tiền thuê nhà</option><option>Tiền vận chuyển hàng</option><option>Khác</option></select></div>
+            <div><label>Số tiền</label><input id="exAmount" type="number"></div>
+            <div class="span2"><label>Ghi chú</label><input id="exNote" placeholder="VD: Tiền điện tháng 6"></div>
+          </div>
+          <div class="total-box"><div>Tổng chi phí vận hành: <b id="expenseTotal">0</b></div></div>
+          <table><thead><tr><th>Ngày</th><th>Loại chi phí</th><th>Số tiền</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="expenseTable"></tbody></table>
+        </div>
       </section>
 
       <section id="debts" class="page">
@@ -144,7 +174,7 @@
         </div>
       </section>
 
-      <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><button class="btn primary" onclick="saveStaff()">Lưu</button></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
+      <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><button class="btn primary" onclick="saveStaff()">Lưu</button></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div><div><label>Hoa hồng mặc định %</label><input id="eCommissionPercent" type="number" value="5"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
 
       <section id="reports" class="page"><div class="panel"><div class="panel-head"><h3>📈 Báo cáo nhanh</h3><div><button class="btn ghost" onclick="exportCSV('sales')">Export bán hàng</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div><div id="reportBox" class="report-grid"></div></div></section>
 
