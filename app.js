@@ -35,20 +35,48 @@ function prefixByStockType(t){return t==='IN'?'NK':t==='OUT'?'XK':t==='CHECK'?'K
 function stockTypeName(t){return t==='IN'?'Phiếu nhập kho':t==='OUT'?'Phiếu xuất kho':t==='CHECK'?'Phiếu kiểm kê':'Phiếu điều chỉnh kho'}
 function safeNum(v){return Number(String(v??'').replace(/[^0-9.-]/g,''))||0}
 function parseCSV(text){
-  const rows=[];let row=[],cur='',q=false;
-  text=text.replace(/^﻿/,'');
-  for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];
-    if(q&&c==='"'&&n==='"'){cur+='"';i++;continue}
-    if(c==='"'){q=!q;continue}
-    if(c===','&&!q){row.push(cur.trim());cur='';continue}
-    if((c==='
-'||c==='
-')&&!q){if(c==='
-'&&n==='
-')i++;row.push(cur.trim());cur='';if(row.some(x=>x!==''))rows.push(row);row=[];continue}
-    cur+=c;
+  const rows = [];
+  let row = [];
+  let cur = '';
+  let q = false;
+  text = String(text || '').replace(/^\uFEFF/, '');
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const n = text[i + 1];
+
+    if (q && c === '"' && n === '"') {
+      cur += '"';
+      i++;
+      continue;
+    }
+
+    if (c === '"') {
+      q = !q;
+      continue;
+    }
+
+    if (c === ',' && !q) {
+      row.push(cur.trim());
+      cur = '';
+      continue;
+    }
+
+    if ((c === '\n' || c === '\r') && !q) {
+      if (c === '\r' && n === '\n') i++;
+      row.push(cur.trim());
+      cur = '';
+      if (row.some(x => x !== '')) rows.push(row);
+      row = [];
+      continue;
+    }
+
+    cur += c;
   }
-  row.push(cur.trim());if(row.some(x=>x!==''))rows.push(row);return rows;
+
+  row.push(cur.trim());
+  if (row.some(x => x !== '')) rows.push(row);
+  return rows;
 }
 function normalizePhone(v){return String(v||'').replace(/\D/g,'')}
 function validateDate(v){return !v || /^\d{4}-\d{2}-\d{2}$/.test(v)}
