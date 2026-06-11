@@ -11,27 +11,35 @@ service cloud.firestore {
     function isAdmin() { return myUserExists() && myUser().role == 'Admin'; }
     function hasProfile() { return myUserExists() && myUser().role != 'Chưa phân quyền'; }
 
-    // CHUẨN MỚI: users/{UID Firebase Auth}
+    // CHUẨN BẢO MẬT: users/{UID Firebase Auth}
     match /users/{uid} {
       allow read: if signedIn();
 
-      // User được tạo hồ sơ của chính UID mình.
-      // Admin chính similockdn@gmail.com được tự tạo/cập nhật quyền Admin cho chính UID của mình.
+      // Chỉ email similockdn@gmail.com được tự tạo hồ sơ Admin cho chính UID của mình.
+      // Tài khoản khác chỉ được tự tạo hồ sơ chờ phân quyền, KHÔNG được tự gán Admin.
       allow create: if signedIn() && (
-        uid == request.auth.uid ||
-        isAdmin() ||
-        (isMainAdminEmail() && uid == request.auth.uid && request.resource.data.role == 'Admin')
+        (isMainAdminEmail() && uid == request.auth.uid && request.resource.data.role == 'Admin') ||
+        (uid == request.auth.uid
+          && request.resource.data.role == 'Chưa phân quyền'
+          && request.resource.data.perms is list
+          && request.resource.data.perms.size() == 0)
       );
 
+      // Admin đã hợp lệ được phân quyền/sửa user.
+      // User thường chỉ được sửa thông tin cá nhân, không được đổi role/perms.
       allow update: if signedIn() && (
         isAdmin() ||
         (isMainAdminEmail() && uid == request.auth.uid && request.resource.data.role == 'Admin') ||
-        (uid == request.auth.uid && request.resource.data.role == resource.data.role && request.resource.data.perms == resource.data.perms)
+        (uid == request.auth.uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.perms == resource.data.perms)
       );
 
       allow delete: if isAdmin();
     }
 
+    // Dữ liệu ERP: chỉ tài khoản đã có hồ sơ hợp lệ mới truy cập.
+    // Email Admin chính được phép khởi tạo hệ thống lần đầu.
     match /{document=**} {
       allow read, write: if signedIn() && (hasProfile() || isMainAdminEmail());
     }

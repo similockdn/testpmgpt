@@ -143,13 +143,8 @@ async function loadUserProfile(u){
       return admin;
     }
 
-    // Dữ liệu mới hoàn toàn: tài khoản đầu tiên là Admin.
-    const snap=await getDocs(col('users'));
-    if(snap.empty){
-      const admin=userProfileData(u,{name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-      await setDoc(pRef,admin,{merge:true});
-      return admin;
-    }
+    // Bảo mật: KHÔNG tự cấp Admin cho tài khoản đầu tiên.
+    // Chỉ ADMIN_EMAIL được tự tạo hồ sơ Admin. Các tài khoản khác luôn chờ phân quyền.
 
     // Nhân viên tự tạo hồ sơ chờ phân quyền bằng UID để Admin sửa sau.
     const pending=userProfileData(u,{name:'',role:'Chưa phân quyền',perms:[],createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
@@ -174,8 +169,9 @@ $('setupAdminBtn').onclick=async()=>{
   try{
     const email=normEmail($('email').value),pw=$('password').value;
     if(!email||!pw)return alert('Nhập email và mật khẩu');
+    if(email!==ADMIN_EMAIL)return alert('Chỉ email Admin chính '+ADMIN_EMAIL+' mới được kích hoạt Admin. Không cho phép tài khoản khác tự tạo Admin.');
     if(pw.length<6)return alert('Mật khẩu phải tối thiểu 6 ký tự');
-    setLoginBusy(true,'Đang tạo/cập nhật Admin...');
+    setLoginBusy(true,'Đang kích hoạt Admin chính...');
     creatingAdmin=true;
     try{
       await createUserWithEmailAndPassword(auth,email,pw);
@@ -183,8 +179,9 @@ $('setupAdminBtn').onclick=async()=>{
       if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
       else throw e;
     }
+    if(normEmail(auth.currentUser.email)!==ADMIN_EMAIL) throw new Error('Email đăng nhập không đúng Admin chính.');
     await setDoc(userDocRef(auth.currentUser),userProfileData(auth.currentUser,{name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),{merge:true});
-    alert('Đã tạo/cập nhật Admin thành công.');
+    alert('Đã kích hoạt/cập nhật Admin chính thành công.');
   }catch(e){alert(authMsg(e)+'\n\nCần kiểm tra 3 mục: Authentication đã bật Email/Password, Authorized domains có domain GitHub Pages, Firestore Rules đã Publish.');setLoginBusy(false)}
   finally{creatingAdmin=false}
 };
@@ -218,11 +215,6 @@ onAuthStateChanged(auth,async u=>{
     setLoginBusy(true,'Đang tải phân quyền...');
     currentUser=u;
     currentPerm = await loadUserProfile(u);
-    if(currentPerm.role==='Chưa phân quyền' && creatingAdmin){
-      const email=normEmail(u.email);
-      currentPerm={email,name:'Admin',role:'Admin',perms:permissionMap.Admin};
-      await setDoc(userDocRef(u),userProfileData(u,{...currentPerm,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),{merge:true});
-    }
     if(currentPerm.role==='Chưa phân quyền'){
       await signOut(auth);
       alert('Đăng nhập Auth thành công nhưng email này chưa được Admin phân quyền: '+normEmail(u.email));
