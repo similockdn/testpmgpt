@@ -513,45 +513,116 @@ window.removeDoc=async(name,id)=>{
   await deleteDoc(doc(db,name,id));await logAction('Xóa '+label,id);await loadAll()
 }
 function doPrint(html){let w=window.open('','PRINT','width=800,height=900');w.document.write(`<!doctype html><html><head><title>In phiếu</title><style>body{font-family:Arial;margin:0}.print-a5{width:148mm;min-height:210mm;padding:8mm;font-size:12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #222;padding:5px;text-align:left}@page{size:A5;margin:0}</style></head><body>${html}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);w.document.close()}
-window.exportCSV=(type)=>{let rows=[];if(type==='customers')rows=data.customers.map(({name,type,phone,address,discount,openingDebt})=>({name,type,phone,address,discount,openingDebt}));if(type==='products')rows=data.products.map(p=>({code:p.code,name:p.name,category:p.category,cost:p.cost,price:p.price,minStock:p.minStock,stock:stockOf(p.code)}));if(type==='prices')rows=data.prices.map(p=>({code:p.code,type:p.type,price:p.price,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));if(type==='sales')rows=data.sales.map(s=>({code:s.code,date:s.date,customer:s.customerName,staff:s.staffName,grand:s.grand,cost:s.cost,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,profit:s.profit,paid:s.paid,debt:s.debt}));if(type==='expenses')rows=data.expenses.map(e=>({date:e.date,category:e.category,amount:e.amount,note:e.note}));if(type==='commissions')rows=data.sales.map(s=>({date:s.date,code:s.code,customer:s.customerName,saleStaff:s.staffName,techStaff:s.techName,grand:s.grand,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,totalCommission:(+s.saleCommission||0)+(+s.techCost||0)}));if(type==='stockbook')rows=data.products.map(p=>({code:p.code,name:p.name,stock:stockOf(p.code)}));let csv='\ufeff'+(rows[0]?Object.keys(rows[0]).join(',')+'\n':'')+rows.map(r=>Object.values(r).map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=type+'.csv';a.click()}
-window.importCSV=async(e,type)=>{
+
+function excelReady(){return !!window.XLSX}
+function assertExcel(){if(!excelReady())throw new Error('Thư viện Excel chưa tải xong. Kiểm tra Internet hoặc tải lại trang.');}
+const excelSchemas={
+  customers:{sheet:'Khach_hang',headers:['name','type','phone','address','discount','openingDebt'],sample:[{name:'Nguyễn Văn A',type:'Khách lẻ',phone:'0902950816',address:'Đà Nẵng',discount:0,openingDebt:0}]},
+  products:{sheet:'San_pham',headers:['code','name','category','cost','price','minStock'],sample:[{code:'F07',name:'Khóa thông minh F07',category:'Khóa thông minh',cost:950000,price:1850000,minStock:3}]},
+  prices:{sheet:'Bang_gia',headers:['code','type','price','validFrom','validTo','active','note'],sample:[{code:'F07',type:'Khách lẻ',price:1850000,validFrom:today(),validTo:'',active:true,note:'Giá bán lẻ'}]},
+  staff:{sheet:'Nhan_vien',headers:['name','dept','phone','commissionPercent','techFee'],sample:[{name:'Nguyễn Sale',dept:'Sale',phone:'0900000001',commissionPercent:5,techFee:0},{name:'Lê Kỹ Thuật',dept:'Kỹ thuật',phone:'0900000002',commissionPercent:0,techFee:100000}]},
+  expenses:{sheet:'Chi_phi',headers:['date','category','amount','note'],sample:[{date:today(),category:'Chi lương cố định',amount:8000000,note:'Lương tháng'}]},
+  warranties:{sheet:'Bao_hanh',headers:['saleId','customer','phone','serial','start','months','end','status','note'],sample:[{saleId:'',customer:'Nguyễn Văn A',phone:'0902950816',serial:'F07-001',start:today(),months:24,end:'',status:'Còn bảo hành',note:''}]},
+  stockVouchers:{sheet:'Chung_tu_kho',headers:['code','date','type','warehouse','productCode','productName','qty','cost','note'],sample:[{code:'NK000001',date:today(),type:'IN',warehouse:'Kho SIMILOCK',productCode:'F07',productName:'Khóa thông minh F07',qty:10,cost:950000,note:'Nhập kho'}]},
+  sales:{sheet:'Ban_hang',headers:['code','date','customerName','customerPhone','staffName','techName','grand','paid','debt','commissionPercent','saleCommission','techCost','profit','itemsJson','note'],sample:[{code:'BH000001',date:today(),customerName:'Nguyễn Văn A',customerPhone:'0902950816',staffName:'Nguyễn Sale',techName:'Lê Kỹ Thuật',grand:1850000,paid:1850000,debt:0,commissionPercent:5,saleCommission:92500,techCost:100000,profit:707500,itemsJson:'[{"code":"F07","name":"Khóa thông minh F07","qty":1,"price":1850000,"discount":0}]',note:''}]},
+  commissions:{sheet:'Hoa_hong',headers:['date','code','customer','saleStaff','techStaff','grand','commissionPercent','saleCommission','techCost','totalCommission'],sample:[]},
+  stockbook:{sheet:'So_kho',headers:['code','name','openingStock','inQty','outQty','adjustQty','stock'],sample:[]}
+};
+function exportRows(type){let rows=[];
+  if(type==='customers')rows=data.customers.map(({name,type,phone,address,discount,openingDebt})=>({name,type,phone,address,discount,openingDebt}));
+  if(type==='products')rows=data.products.map(p=>({code:p.code,name:p.name,category:p.category,cost:p.cost,price:p.price,minStock:p.minStock,stock:stockOf(p.code)}));
+  if(type==='prices')rows=data.prices.map(p=>({code:p.code,type:p.type,price:p.price,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));
+  if(type==='staff')rows=data.staff.map(e=>({name:e.name,dept:e.dept,phone:e.phone,commissionPercent:e.commissionPercent||0,techFee:e.techFee||0}));
+  if(type==='expenses')rows=data.expenses.map(e=>({date:e.date,category:e.category,amount:e.amount,note:e.note}));
+  if(type==='warranties')rows=data.warranties.map(w=>({saleId:w.saleId||'',customer:w.customer,phone:w.phone,serial:w.serial,start:w.start,months:w.months,end:w.end,status:w.status,note:w.note}));
+  if(type==='stockVouchers')rows=data.stockVouchers.flatMap(v=>(v.items||[]).map(it=>({code:v.code,date:v.date,type:v.type,warehouse:v.warehouse,productCode:it.code,productName:it.name,qty:it.actualQty??it.inputQty??it.qty,cost:it.cost,note:it.note||v.note||''})));
+  if(type==='sales')rows=data.sales.map(s=>({code:s.code,date:s.date,customerName:s.customerName,customerPhone:s.customerPhone||'',staffName:s.staffName,techName:s.techName,grand:s.grand,paid:s.paid,debt:s.debt,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,profit:s.profit,itemsJson:JSON.stringify(s.items||[]),note:s.note||''}));
+  if(type==='commissions')rows=data.sales.map(s=>({date:s.date,code:s.code,customer:s.customerName,saleStaff:s.staffName,techStaff:s.techName,grand:s.grand,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,totalCommission:(+s.saleCommission||0)+(+s.techCost||0)}));
+  if(type==='stockbook')rows=data.products.map(p=>({code:p.code,name:p.name,openingStock:0,inQty:stockQtyByType(p.code,'IN'),outQty:Math.abs(stockQtyByType(p.code,'OUT')),adjustQty:stockQtyByType(p.code,'ADJUST')+stockQtyByType(p.code,'CHECK'),stock:stockOf(p.code)}));
+  return rows;
+}
+function stockQtyByType(code,type){let q=0;data.stockVouchers.forEach(v=>{if(v.type!==type)return;(v.items||[]).forEach(it=>{if(it.code===code)q+=+it.qty||0})});return q}
+function makeWorkbook(sheets){assertExcel();const wb=XLSX.utils.book_new();Object.entries(sheets).forEach(([name,rows])=>{const ws=XLSX.utils.json_to_sheet(rows.length?rows:[{}]);XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31));});return wb;}
+window.exportExcel=(type)=>{try{const schema=excelSchemas[type]||{sheet:type};const rows=exportRows(type);const wb=makeWorkbook({[schema.sheet||type]:rows.length?rows:(schema.sample||[])});XLSX.writeFile(wb,`${type}_${today()}.xlsx`);}catch(err){alert(err.message)}};
+window.downloadTemplateExcel=(type)=>{try{const schema=excelSchemas[type];if(!schema)return alert('Chưa có mẫu Excel cho mục này');const sample=schema.sample?.length?schema.sample:[Object.fromEntries(schema.headers.map(h=>[h,'']))];const wb=makeWorkbook({[schema.sheet]:sample});XLSX.writeFile(wb,`mau_import_${type}.xlsx`);}catch(err){alert(err.message)}};
+window.exportAllExcel=()=>{try{const sheets={};['customers','products','prices','staff','sales','stockVouchers','expenses','warranties','commissions','stockbook'].forEach(t=>{sheets[excelSchemas[t]?.sheet||t]=exportRows(t)});const wb=makeWorkbook(sheets);XLSX.writeFile(wb,`Similock_Da_Nang_Toan_bo_${today()}.xlsx`);}catch(err){alert(err.message)}};
+function rowsFromCsvText(text){const rows=parseCSV(text);if(rows.length<2)return[];const heads=rows.shift().map(x=>x.trim());return rows.map(r=>{let o={};heads.forEach((h,i)=>o[h]=r[i]??'');return o})}
+async function readImportRows(file){if(/\.csv$/i.test(file.name))return rowsFromCsvText(await file.text());assertExcel();const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array',cellDates:false});const ws=wb.Sheets[wb.SheetNames[0]];return XLSX.utils.sheet_to_json(ws,{defval:''});}
+window.importExcel=async(e,type)=>{
   let file=e.target.files[0];if(!file)return;
-  let rows=parseCSV(await file.text());if(rows.length<2)return alert('File import không có dữ liệu');
-  let heads=rows.shift().map(x=>x.trim());let ok=0,skip=0,errors=[];
+  let rows=[];try{rows=await readImportRows(file)}catch(err){alert('Không đọc được file Excel/CSV: '+err.message);return}
+  if(!rows.length){e.target.value='';return alert('File import không có dữ liệu')}
+  let ok=0,skip=0,errors=[];
   const existingByPhone=new Map(data.customers.map(x=>[normalizePhone(x.phone),x]));
   const existingByCode=new Map(data.products.map(x=>[String(x.code||'').toUpperCase(),x]));
+  const existingStaff=new Map(data.staff.map(x=>[String(x.name||'').trim().toLowerCase(),x]));
   const existingPriceKey=new Map(data.prices.map(x=>[`${String(x.code||'').toUpperCase()}|${x.type}|${x.validFrom||''}|${x.validTo||''}`,x]));
+  const stockGroup=new Map();
   for(let r=0;r<rows.length;r++){
-    let obj={};heads.forEach((h,i)=>obj[h]=rows[r][i]??'');
+    let obj={...rows[r]};
     try{
       if(type==='customers'){
-        obj.name=(obj.name||obj['Tên khách']||'').trim(); obj.phone=(obj.phone||obj['SĐT']||obj['phone']||'').trim();
+        obj.name=String(obj.name||obj['Tên khách']||'').trim(); obj.phone=String(obj.phone||obj['SĐT']||'').trim();
         if(!obj.name){skip++;errors.push(`Dòng ${r+2}: thiếu tên khách`);continue}
         obj.type=obj.type||'Khách lẻ';obj.discount=safeNum(obj.discount);obj.openingDebt=safeNum(obj.openingDebt);obj.address=obj.address||'';
         const key=normalizePhone(obj.phone);
         if(key&&existingByPhone.has(key)){await updateDoc(doc(db,'customers',existingByPhone.get(key).id),obj);}
         else await addDoc(col('customers'),{...obj,createdAt:serverTimestamp()});
       }else if(type==='products'){
-        obj.code=String(obj.code||obj.model||'').trim().toUpperCase();obj.name=(obj.name||'').trim();
+        obj.code=String(obj.code||obj.model||'').trim().toUpperCase();obj.name=String(obj.name||'').trim();
         if(!obj.code||!obj.name){skip++;errors.push(`Dòng ${r+2}: thiếu model/tên sản phẩm`);continue}
         obj.category=obj.category||'Khóa thông minh';obj.cost=safeNum(obj.cost);obj.price=safeNum(obj.price);obj.minStock=safeNum(obj.minStock)||3;
         if(existingByCode.has(obj.code)) await updateDoc(doc(db,'products',existingByCode.get(obj.code).id),obj);
         else await addDoc(col('products'),{...obj,createdAt:serverTimestamp()});
       }else if(type==='prices'){
-        obj.code=String(obj.code||'').trim().toUpperCase();obj.type=obj.type||'Khách lẻ';obj.price=safeNum(obj.price);obj.validFrom=obj.validFrom||'';obj.validTo=obj.validTo||'';obj.active=String(obj.active).toLowerCase()!=='false';obj.note=obj.note||'';
+        obj.code=String(obj.code||'').trim().toUpperCase();obj.type=obj.type||'Khách lẻ';obj.price=safeNum(obj.price);obj.validFrom=String(obj.validFrom||'');obj.validTo=String(obj.validTo||'');obj.active=String(obj.active).toLowerCase()!=='false';obj.note=obj.note||'';
         if(!obj.code||!obj.price){skip++;errors.push(`Dòng ${r+2}: thiếu model/giá`);continue}
         if(!validateDate(obj.validFrom)||!validateDate(obj.validTo)){skip++;errors.push(`Dòng ${r+2}: sai định dạng ngày YYYY-MM-DD`);continue}
         if(obj.validFrom&&obj.validTo&&obj.validFrom>obj.validTo){skip++;errors.push(`Dòng ${r+2}: ngày bắt đầu lớn hơn ngày kết thúc`);continue}
         const key=`${obj.code}|${obj.type}|${obj.validFrom}|${obj.validTo}`;
         if(existingPriceKey.has(key)) await updateDoc(doc(db,'prices',existingPriceKey.get(key).id),obj);
         else await addDoc(col('prices'),{...obj,createdAt:serverTimestamp()});
-      }
+      }else if(type==='staff'){
+        obj.name=String(obj.name||'').trim();obj.dept=obj.dept||obj.department||'Sale';obj.phone=String(obj.phone||'').trim();obj.commissionPercent=safeNum(obj.commissionPercent);obj.techFee=safeNum(obj.techFee);
+        if(!obj.name){skip++;errors.push(`Dòng ${r+2}: thiếu tên nhân viên`);continue}
+        if(obj.dept==='Kỹ thuật'){obj.commissionPercent=0;if(!obj.techFee)obj.techFee=100000}else if(obj.dept==='Sale'||obj.dept==='Quản lý'){if(!obj.commissionPercent)obj.commissionPercent=5;obj.techFee=0}else{obj.commissionPercent=0;obj.techFee=0}
+        const key=obj.name.toLowerCase();if(existingStaff.has(key)) await updateDoc(doc(db,'staff',existingStaff.get(key).id),obj);else await addDoc(col('staff'),obj);
+      }else if(type==='expenses'){
+        obj.date=String(obj.date||today());obj.category=obj.category||'Khác';obj.amount=safeNum(obj.amount);obj.note=obj.note||'';
+        if(!validateDate(obj.date)||!obj.amount){skip++;errors.push(`Dòng ${r+2}: thiếu ngày hoặc số tiền`);continue}
+        await addDoc(col('expenses'),{...obj,createdAt:serverTimestamp()});
+      }else if(type==='warranties'){
+        obj.customer=String(obj.customer||'').trim();obj.phone=String(obj.phone||'').trim();obj.serial=String(obj.serial||'').trim();obj.start=String(obj.start||today());obj.months=safeNum(obj.months)||24;obj.status=obj.status||'Còn bảo hành';obj.note=obj.note||'';obj.saleId=obj.saleId||'';
+        if(!obj.customer||!obj.serial){skip++;errors.push(`Dòng ${r+2}: thiếu khách hoặc serial/model`);continue}
+        let end=obj.end;if(!end){let d=new Date(obj.start);d.setMonth(d.getMonth()+obj.months);end=d.toISOString().slice(0,10)}
+        await addDoc(col('warranties'),{...obj,end});
+      }else if(type==='stockVouchers'){
+        const code=String(obj.code||nextCode(prefixByStockType(obj.type||'IN'),data.stockVouchers)).trim();
+        const key=code+'|'+(obj.type||'IN')+'|'+(obj.date||today())+'|'+(obj.warehouse||'Kho SIMILOCK');
+        const item={code:String(obj.productCode||obj.codeProduct||'').trim().toUpperCase(),name:obj.productName||obj.name||'',qty:safeNum(obj.qty),cost:safeNum(obj.cost),note:obj.note||''};
+        if(!item.code||!item.qty){skip++;errors.push(`Dòng ${r+2}: thiếu model hoặc số lượng`);continue}
+        if(!stockGroup.has(key)) stockGroup.set(key,{code,date:String(obj.date||today()),type:obj.type||'IN',warehouse:obj.warehouse||'Kho SIMILOCK',note:obj.note||'',items:[]});
+        stockGroup.get(key).items.push(item);
+        ok++;continue;
+      }else if(type==='sales'){
+        let items=[];try{items=obj.itemsJson?JSON.parse(obj.itemsJson):[]}catch(_){items=[]}
+        if(!items.length){skip++;errors.push(`Dòng ${r+2}: thiếu itemsJson`);continue}
+        const grand=safeNum(obj.grand)||items.reduce((a,it)=>a+(+it.qty||0)*(+it.price||0)*(1-(+it.discount||0)/100),0);
+        const o={code:obj.code||nextCode('BH',data.sales),date:String(obj.date||today()),customerName:obj.customerName||'',customerPhone:obj.customerPhone||'',staffName:obj.staffName||'',techName:obj.techName||'',items,grand,paid:safeNum(obj.paid),debt:safeNum(obj.debt)||grand-safeNum(obj.paid),commissionPercent:safeNum(obj.commissionPercent),saleCommission:safeNum(obj.saleCommission),techCost:safeNum(obj.techCost),profit:safeNum(obj.profit),note:obj.note||'',createdAt:serverTimestamp()};
+        await addDoc(col('sales'),o);
+      }else{skip++;errors.push(`Mục ${type} chưa hỗ trợ nhập Excel`);continue}
       ok++;
     }catch(err){skip++;errors.push(`Dòng ${r+2}: ${err.message}`)}
   }
-  await logAction('Import '+type,`Thành công ${ok}, bỏ qua ${skip}`);
-  await loadAll();e.target.value='';alert(`Import xong: ${ok} dòng. Bỏ qua: ${skip}`+(errors.length?'\n'+errors.slice(0,8).join('\n'):''))
-}
+  if(type==='stockVouchers'){
+    for(const v of stockGroup.values()){v.value=(v.items||[]).reduce((a,it)=>a+Math.abs(+it.qty||0)*(+it.cost||0),0);await addDoc(col('stockVouchers'),{...v,createdAt:serverTimestamp()});}
+  }
+  await logAction('Import Excel '+type,`Thành công ${ok}, bỏ qua ${skip}`);
+  await loadAll();e.target.value='';alert(`Import Excel xong: ${ok} dòng. Bỏ qua: ${skip}`+(errors.length?'\n'+errors.slice(0,8).join('\n'):''));
+};
+window.exportCSV=(type)=>window.exportExcel(type);
+window.importCSV=(e,type)=>window.importExcel(e,type);
+
 
 window.exportBackup=()=>{
   const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,expenses:data.expenses,users:data.users};

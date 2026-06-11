@@ -28,3 +28,9 @@ File `firebase-config.js` đã cập nhật đúng project `smilockdng` và `app
 4. Nhập danh mục sản phẩm/khách hàng/bảng giá.
 5. Tạo phiếu kho nhập đầu kỳ.
 6. Bắt đầu bán hàng, thu tiền, bảo hành.
+
+## Cập nhật Excel import/export
+- Các mục Khách hàng, Sản phẩm, Bảng giá, Nhân viên, Chi phí, Kho, Bảo hành đã có nút Mẫu Excel / Nhập Excel / Xuất Excel.
+- Mục Báo cáo và Hệ thống có xuất Excel doanh thu, chi phí và toàn bộ dữ liệu nhiều sheet.
+- File import hỗ trợ .xlsx, .xls, .csv. Nên tải Mẫu Excel trước rồi nhập đúng tên cột.
+- Phiếu kho import theo từng dòng sản phẩm: các dòng cùng mã phiếu sẽ tự gom thành một chứng từ kho.

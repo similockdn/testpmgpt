@@ -116,7 +116,7 @@
 
       <section id="commissions" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3><button class="btn ghost" onclick="exportCSV('commissions')">Export CSV</button></div>
+          <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3><button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel</button></div>
           <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn</th><th>Doanh thu</th><th>Hoa hồng Sale</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
         </div>
         <div class="panel">
@@ -131,7 +131,7 @@
 
       <section id="expenses" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📒 Chi phí vận hành</h3><div><button class="btn ghost" onclick="resetExpenseForm()">Phiếu mới</button><button class="btn ghost" onclick="exportCSV('expenses')">Export CSV</button><button class="btn primary" onclick="saveExpense()">Lưu chi phí</button></div></div>
+          <div class="panel-head"><h3>📒 Chi phí vận hành</h3><div><button class="btn ghost" onclick="resetExpenseForm()">Phiếu mới</button><input type="file" id="importExpenses" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'expenses')"><button class="btn ghost" onclick="downloadTemplateExcel('expenses')">Mẫu Excel</button><button class="btn ghost" onclick="importExpenses.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất Excel</button><button class="btn primary" onclick="saveExpense()">Lưu chi phí</button></div></div>
           <div class="grid form-grid">
             <div><label>Ngày</label><input id="exDate" type="date"></div>
             <div><label>Loại chi phí</label><select id="exCategory"><option>Tiền điện</option><option>Tiền nước</option><option>Tiền Internet</option><option>Tiền thuê nhà</option><option>Tiền vận chuyển hàng</option><option>Chi lương cố định</option><option>Khác</option></select></div>
@@ -150,7 +150,7 @@
 
       <section id="inventory" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📦 Chứng từ kho</h3><div><button class="btn ghost" onclick="setStockMode('IN')">Nhập kho</button><button class="btn ghost" onclick="setStockMode('OUT')">Xuất kho</button><button class="btn ghost" onclick="setStockMode('ADJUST')">Điều chỉnh kho</button><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
+          <div class="panel-head"><h3>📦 Chứng từ kho</h3><div><input type="file" id="importStock" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'stockVouchers')"><button class="btn ghost" onclick="downloadTemplateExcel('stockVouchers')">Mẫu Excel</button><button class="btn ghost" onclick="importStock.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất Excel</button><button class="btn ghost" onclick="setStockMode('IN')">Nhập kho</button><button class="btn ghost" onclick="setStockMode('OUT')">Xuất kho</button><button class="btn ghost" onclick="setStockMode('ADJUST')">Điều chỉnh kho</button><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
           <div class="grid form-grid">
             <div><label>Mã phiếu</label><input id="stockCode" readonly /></div>
             <div><label>Ngày</label><input id="stockDate" type="date" /></div>
@@ -165,16 +165,16 @@
         <div class="panel"><div class="panel-head"><h3>Danh sách chứng từ kho</h3></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Loại</th><th>Số dòng</th><th>Giá trị</th><th>Hành động</th></tr></thead><tbody id="stockVoucherTable"></tbody></table></div>
       </section>
 
-      <section id="stockbook" class="page"><div class="panel"><div class="panel-head"><h3>📘 Sổ kho</h3><button class="btn ghost" onclick="exportCSV('stockbook')">Export CSV</button></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn đầu</th><th>Nhập</th><th>Xuất</th><th>Điều chỉnh</th><th>Tồn cuối</th></tr></thead><tbody id="stockBookTable"></tbody></table></div></section>
+      <section id="stockbook" class="page"><div class="panel"><div class="panel-head"><h3>📘 Sổ kho</h3><button class="btn ghost" onclick="exportExcel('stockbook')">Xuất Excel</button></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn đầu</th><th>Nhập</th><th>Xuất</th><th>Điều chỉnh</th><th>Tồn cuối</th></tr></thead><tbody id="stockBookTable"></tbody></table></div></section>
 
       <section id="warranty" class="page">
-        <div class="panel"><div class="panel-head"><h3>🛡️ Quản lý bảo hành</h3><button class="btn primary" onclick="saveWarranty()">Lưu bảo hành</button></div><div class="grid form-grid"><div><label>Mã phiếu bán</label><select id="wSale"></select></div><div><label>Khách hàng</label><input id="wCustomer" /></div><div><label>SĐT</label><input id="wPhone" /></div><div><label>Model/Serial</label><input id="wSerial" /></div><div><label>Ngày lắp</label><input id="wStart" type="date" /></div><div><label>Thời hạn tháng</label><input id="wMonths" type="number" value="24" /></div><div><label>Trạng thái</label><select id="wStatus"><option>Còn bảo hành</option><option>Đang xử lý</option><option>Hết bảo hành</option></select></div><div><label>Ghi chú</label><input id="wNote" /></div></div></div>
+        <div class="panel"><div class="panel-head"><h3>🛡️ Quản lý bảo hành</h3><div><input type="file" id="importWarranties" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'warranties')"><button class="btn ghost" onclick="downloadTemplateExcel('warranties')">Mẫu Excel</button><button class="btn ghost" onclick="importWarranties.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('warranties')">Xuất Excel</button><button class="btn primary" onclick="saveWarranty()">Lưu bảo hành</button></div></div><div class="grid form-grid"><div><label>Mã phiếu bán</label><select id="wSale"></select></div><div><label>Khách hàng</label><input id="wCustomer" /></div><div><label>SĐT</label><input id="wPhone" /></div><div><label>Model/Serial</label><input id="wSerial" /></div><div><label>Ngày lắp</label><input id="wStart" type="date" /></div><div><label>Thời hạn tháng</label><input id="wMonths" type="number" value="24" /></div><div><label>Trạng thái</label><select id="wStatus"><option>Còn bảo hành</option><option>Đang xử lý</option><option>Hết bảo hành</option></select></div><div><label>Ghi chú</label><input id="wNote" /></div></div></div>
         <div class="panel"><div class="panel-head"><h3>Danh sách bảo hành</h3><input class="search" id="wSearch" placeholder="Tìm SĐT/serial/model" oninput="renderWarranties()" /></div><table><thead><tr><th>Khách</th><th>SĐT</th><th>Serial/Model</th><th>Ngày lắp</th><th>Hết hạn</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="warrantyTable"></tbody></table></div>
       </section>
 
-      <section id="customers" class="page"><div class="panel"><div class="panel-head"><h3>👥 Danh mục khách hàng</h3><div><input type="file" id="importCustomers" accept=".csv" hidden onchange="importCSV(event,'customers')"><button class="btn ghost" onclick="importCustomers.click()">Import CSV</button><button class="btn ghost" onclick="exportCSV('customers')">Export CSV</button><button class="btn primary" onclick="saveCustomer()">Lưu</button></div></div><div class="grid form-grid"><input id="cId" hidden><div><label>Tên khách</label><input id="cName"></div><div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div><div><label>SĐT</label><input id="cPhone"></div><div><label>Địa chỉ</label><input id="cAddress"></div><div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0"></div><div><label>Công nợ đầu kỳ</label><input id="cOpeningDebt" type="number" value="0"></div></div><table><thead><tr><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Hành động</th></tr></thead><tbody id="customerTable"></tbody></table></div></section>
+      <section id="customers" class="page"><div class="panel"><div class="panel-head"><h3>👥 Danh mục khách hàng</h3><div><input type="file" id="importCustomers" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'customers')"><button class="btn ghost" onclick="downloadTemplateExcel('customers')">Mẫu Excel</button><button class="btn ghost" onclick="importCustomers.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('customers')">Xuất Excel</button><button class="btn primary" onclick="saveCustomer()">Lưu</button></div></div><div class="grid form-grid"><input id="cId" hidden><div><label>Tên khách</label><input id="cName"></div><div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div><div><label>SĐT</label><input id="cPhone"></div><div><label>Địa chỉ</label><input id="cAddress"></div><div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0"></div><div><label>Công nợ đầu kỳ</label><input id="cOpeningDebt" type="number" value="0"></div></div><table><thead><tr><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Hành động</th></tr></thead><tbody id="customerTable"></tbody></table></div></section>
 
-      <section id="products" class="page"><div class="panel"><div class="panel-head"><h3>🔐 Danh mục sản phẩm</h3><div><input type="file" id="importProducts" accept=".csv" hidden onchange="importCSV(event,'products')"><button class="btn ghost" onclick="importProducts.click()">Import CSV</button><button class="btn ghost" onclick="exportCSV('products')">Export CSV</button><button class="btn primary" onclick="saveProduct()">Lưu</button></div></div><div class="grid form-grid"><input id="pId" hidden><div><label>Model</label><input id="pCode"></div><div><label>Tên sản phẩm</label><input id="pName"></div><div><label>Danh mục</label><input id="pCategory" value="Khóa thông minh"></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number"></div><div><label>Giá bán</label><input id="pPrice" type="number"></div><div><label>Tồn tối thiểu</label><input id="pMinStock" type="number" value="3"></div></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Hành động</th></tr></thead><tbody id="productTable"></tbody></table></div></section>
+      <section id="products" class="page"><div class="panel"><div class="panel-head"><h3>🔐 Danh mục sản phẩm</h3><div><input type="file" id="importProducts" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'products')"><button class="btn ghost" onclick="downloadTemplateExcel('products')">Mẫu Excel</button><button class="btn ghost" onclick="importProducts.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('products')">Xuất Excel</button><button class="btn primary" onclick="saveProduct()">Lưu</button></div></div><div class="grid form-grid"><input id="pId" hidden><div><label>Model</label><input id="pCode"></div><div><label>Tên sản phẩm</label><input id="pName"></div><div><label>Danh mục</label><input id="pCategory" value="Khóa thông minh"></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number"></div><div><label>Giá bán</label><input id="pPrice" type="number"></div><div><label>Tồn tối thiểu</label><input id="pMinStock" type="number" value="3"></div></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Hành động</th></tr></thead><tbody id="productTable"></tbody></table></div></section>
 
       <section id="prices" class="page">
         <div class="panel">
@@ -184,9 +184,10 @@
               <span>Quản lý giá bán theo Model, nhóm khách và ngày hiệu lực. Khi bán hàng hệ thống tự lấy bảng giá còn hạn.</span>
             </div>
             <div>
-              <input type="file" id="importPrices" accept=".csv" hidden onchange="importCSV(event,'prices')">
-              <button class="btn ghost" onclick="importPrices.click()">Import CSV</button>
-              <button class="btn ghost" onclick="exportCSV('prices')">Export CSV</button>
+              <input type="file" id="importPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'prices')">
+              <button class="btn ghost" onclick="downloadTemplateExcel('prices')">Mẫu Excel</button>
+              <button class="btn ghost" onclick="importPrices.click()">Nhập Excel</button>
+              <button class="btn ghost" onclick="exportExcel('prices')">Xuất Excel</button>
               <button class="btn primary" onclick="savePrice()">Lưu bảng giá</button>
             </div>
           </div>
@@ -200,16 +201,16 @@
             <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
             <div class="span2"><label>Ghi chú</label><input id="priceNote" placeholder="VD: Giá đại lý tháng 6, giá CTKM..."></div>
           </div>
-          <div class="hint price-template">File import CSV cần cột: <b>code,type,price,validFrom,validTo,active,note</b>. Ví dụ: S01,Khách lẻ,2350000,2026-06-01,2026-06-30,true,Giá tháng 6</div>
+          <div class="hint price-template">File Excel import cần cột: <b>code,type,price,validFrom,validTo,active,note</b>. Ví dụ: S01,Khách lẻ,2350000,2026-06-01,2026-06-30,true,Giá tháng 6</div>
           <table><thead><tr><th>Model</th><th>Nhóm khách</th><th>Giá</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table>
         </div>
       </section>
 
-      <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><button class="btn primary" onclick="saveStaff()">Lưu</button></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept" onchange="staffDeptChanged()"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div><div id="saleCommissionBox"><label>Hoa hồng Sale mặc định %</label><input id="eCommissionPercent" type="number" value="5"></div><div id="techFeeBox"><label>Công kỹ thuật mặc định / đơn</label><input id="eTechFee" type="number" value="100000"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
+      <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><div><input type="file" id="importStaff" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'staff')"><button class="btn ghost" onclick="downloadTemplateExcel('staff')">Mẫu Excel</button><button class="btn ghost" onclick="importStaff.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('staff')">Xuất Excel</button><button class="btn primary" onclick="saveStaff()">Lưu</button></div></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept" onchange="staffDeptChanged()"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div><div id="saleCommissionBox"><label>Hoa hồng Sale mặc định %</label><input id="eCommissionPercent" type="number" value="5"></div><div id="techFeeBox"><label>Công kỹ thuật mặc định / đơn</label><input id="eTechFee" type="number" value="100000"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
 
       <section id="reports" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📈 Báo cáo doanh thu - chi phí - lợi nhuận</h3><div><button class="btn ghost" onclick="exportCSV('sales')">Export bán hàng</button><button class="btn ghost" onclick="exportCSV('expenses')">Export chi phí</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div>
+          <div class="panel-head"><h3>📈 Báo cáo doanh thu - chi phí - lợi nhuận</h3><div><button class="btn ghost" onclick="exportExcel('sales')">Xuất bán hàng</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất chi phí</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div>
           <div class="grid form-grid">
             <div><label>Kiểu xem</label><select id="reportPeriod" onchange="setReportQuickRange();renderReports()"><option value="day">Theo ngày</option><option value="week">Theo tuần</option><option value="month" selected>Theo tháng</option><option value="year">Theo năm</option><option value="custom">Tùy chọn ngày</option></select></div>
             <div><label>Từ ngày</label><input id="reportFrom" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
@@ -244,7 +245,7 @@
 
       <section id="system" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>⚙️ Hệ thống</h3><button class="btn ghost" onclick="exportBackup()">Sao lưu dữ liệu JSON</button></div>
+          <div class="panel-head"><h3>⚙️ Hệ thống</h3><div><button class="btn ghost" onclick="exportAllExcel()">Xuất toàn bộ Excel</button><button class="btn ghost" onclick="exportBackup()">Sao lưu dữ liệu JSON</button></div></div>
           <div class="danger-zone">
             <h3>🗑️ Clear Data</h3>
             <p>Chức năng này xóa dữ liệu vận hành để làm mới hệ thống. Không xóa tài khoản, phân quyền và cấu hình.</p>
@@ -261,6 +262,7 @@
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
