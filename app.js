@@ -96,7 +96,7 @@ function authMsg(e){
   if(m.includes('auth/unauthorized-domain')||m.includes('unauthorized-domain'))return 'Domain web chưa được thêm trong Firebase Authentication > Settings > Authorized domains. Hãy thêm domain GitHub Pages của bạn.';
   if(m.includes('operation-not-allowed'))return 'Firebase chưa bật Email/Password. Vào Authentication > Sign-in method > bật Email/Password.';
   if(m.includes('invalid-credential'))return 'Email hoặc mật khẩu không đúng, hoặc tài khoản chưa tồn tại.';
-  if(m.includes('user-not-found'))return 'Email chưa tồn tại hoặc chưa được Admin tạo tài khoản.';
+  if(m.includes('user-not-found'))return 'Email chưa tồn tại hoặc chưa được tạo trong Firebase Authentication.';
   if(m.includes('wrong-password'))return 'Mật khẩu không đúng.';
   if(m.includes('email-already-in-use'))return 'Email này đã được tạo tài khoản rồi. Hãy bấm Đăng nhập.';
   if(m.includes('weak-password'))return 'Mật khẩu phải tối thiểu 6 ký tự.';
@@ -125,7 +125,7 @@ async function ensureFirstAdmin(u){
 
 
 function setLoginBusy(isBusy, msg=''){
-  ['loginBtn','setupAdminBtn','signupStaffBtn'].forEach(id=>{ if($(id)) $(id).disabled=!!isBusy; });
+  ['loginBtn'].forEach(id=>{ if($(id)) $(id).disabled=!!isBusy; });
   const box=$('loginStatus');
   if(box){ box.textContent=msg||''; box.style.display=msg?'block':'none'; }
 }
@@ -165,48 +165,6 @@ $('loginBtn').onclick=async()=>{
   }catch(e){alert(authMsg(e));setLoginBusy(false)}
 };
 
-if($('setupAdminBtn')) $('setupAdminBtn').onclick=async()=>{
-  try{
-    const email=normEmail($('email').value),pw=$('password').value;
-    if(!email||!pw)return alert('Nhập email và mật khẩu');
-    if(email!==ADMIN_EMAIL)return alert('Chỉ email Admin chính '+ADMIN_EMAIL+' mới được kích hoạt Admin. Không cho phép tài khoản khác tự tạo Admin.');
-    if(pw.length<6)return alert('Mật khẩu phải tối thiểu 6 ký tự');
-    setLoginBusy(true,'Đang kích hoạt Admin chính...');
-    creatingAdmin=true;
-    try{
-      await createUserWithEmailAndPassword(auth,email,pw);
-    }catch(e){
-      if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
-      else throw e;
-    }
-    if(normEmail(auth.currentUser.email)!==ADMIN_EMAIL) throw new Error('Email đăng nhập không đúng Admin chính.');
-    await setDoc(userDocRef(auth.currentUser),userProfileData(auth.currentUser,{name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),{merge:true});
-    alert('Đã kích hoạt/cập nhật Admin chính thành công.');
-  }catch(e){alert(authMsg(e)+'\n\nCần kiểm tra 3 mục: Authentication đã bật Email/Password, Authorized domains có domain GitHub Pages, Firestore Rules đã Publish.');setLoginBusy(false)}
-  finally{creatingAdmin=false}
-};
-
-if($('signupStaffBtn')) $('signupStaffBtn').onclick=async()=>{
-  try{
-    const email=normEmail($('email').value),pw=$('password').value;
-    if(!email||!pw)return alert('Nhập email và mật khẩu');
-    if(pw.length<6)return alert('Mật khẩu phải tối thiểu 6 ký tự');
-    setLoginBusy(true,'Đang tạo tài khoản nhân viên...');
-    try{
-      await createUserWithEmailAndPassword(auth,email,pw);
-    }catch(e){
-      if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
-      else throw e;
-    }
-    const pRef=userDocRef(auth.currentUser);
-    const p=await getDoc(pRef);
-    if(!p.exists()){
-      await setDoc(pRef,userProfileData(auth.currentUser,{name:'',role:'Chưa phân quyền',perms:[],createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),{merge:true});
-    }
-    await signOut(auth);
-    alert('Tài khoản nhân viên đã tạo hồ sơ UID. Admin vào mục Phân quyền, tìm email '+email+' rồi cấp quyền.');
-  }catch(e){alert(authMsg(e)+'\n\nLưu ý: Admin phải vào mục Phân quyền và lưu email nhân viên trước.');setLoginBusy(false)}
-};
 $('logoutBtn').onclick=()=>signOut(auth);
 
 onAuthStateChanged(auth,async u=>{

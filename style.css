@@ -10,11 +10,76 @@ body{background:radial-gradient(circle at top left,#e0f2fe 0,#f7fbff 34%,#eef6ff
 .danger-zone{border:1px solid rgba(220,38,38,.25);background:linear-gradient(135deg,rgba(254,242,242,.95),rgba(255,255,255,.95));border-radius:18px;padding:18px;margin-top:12px}
 .danger-zone h3{color:#b91c1c;margin-top:0}.danger-zone p{color:#7f1d1d}
 
+body{background:#f0f2f5!important;}
+.login-page{background:#f0f2f5!important;}
+.login-card{background:#fff!important;border-radius:16px!important;box-shadow:0 8px 30px rgba(0,0,0,.12)!important;}
+.brand-mark{background:#1877F2!important;}
+.login-card h1{color:#1877F2!important;}
+.login-card button,#loginBtn{background:#1877F2!important;color:#fff!important;}
+.login-card button:hover,#loginBtn:hover{background:#166FE5!important;}
+.login-card input{border:1px solid #dddfe2!important;border-radius:8px!important;}
 
-/* Login clean Similock brand update */
-:root{--primary:#00A651;--primary2:#008F45;}
-.login-page{background:linear-gradient(135deg,#06231a,#007a3d 52%,#00A651)!important;}
-.brand-mark,.logo span{background:linear-gradient(135deg,#00A651,#39D353)!important;}
-.login-card .btn.primary,#loginBtn.btn.primary{background:#00A651!important;color:#fff!important;box-shadow:0 12px 28px rgba(0,166,81,.26);}
-.login-card .btn.primary:hover,#loginBtn.btn.primary:hover{background:#008F45!important;}
-.login-card .hint{margin-top:10px;text-align:center;}
+
+/* ===== LOGIN FACEBOOK STYLE - CLEAN ===== */
+:root{--fb:#1877F2;--fb-dark:#166FE5;--fb-bg:#f0f2f5;}
+.login-page{
+  min-height:100vh!important;
+  display:grid!important;
+  place-items:center!important;
+  background:var(--fb-bg)!important;
+  padding:24px!important;
+}
+.login-card{
+  width:min(430px,94vw)!important;
+  background:#fff!important;
+  border:1px solid #dddfe2!important;
+  border-radius:12px!important;
+  box-shadow:0 2px 4px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.10)!important;
+  padding:28px!important;
+}
+.login-brand{text-align:center;margin-bottom:20px;}
+.login-card .brand-mark{
+  width:64px!important;height:64px!important;
+  margin:0 auto 12px!important;
+  border-radius:16px!important;
+  background:var(--fb)!important;
+  color:#fff!important;
+  font-size:34px!important;
+  box-shadow:0 8px 20px rgba(24,119,242,.22)!important;
+}
+.login-card h1{
+  color:var(--fb)!important;
+  font-size:32px!important;
+  line-height:1.15!important;
+  margin:0 0 8px!important;
+  font-weight:900!important;
+  letter-spacing:-.6px!important;
+}
+.login-card p{margin:0!important;color:#606770!important;font-size:15px!important;font-weight:600!important;}
+.login-card label{color:#606770!important;font-size:13px!important;font-weight:800!important;margin-top:12px!important;}
+.login-card input{
+  height:52px!important;
+  border:1px solid #dddfe2!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  padding:14px 16px!important;
+  font-size:16px!important;
+  color:#1c1e21!important;
+}
+.login-card input:focus{
+  border-color:var(--fb)!important;
+  box-shadow:0 0 0 2px rgba(24,119,242,.14)!important;
+}
+.login-card .btn.primary,#loginBtn{
+  height:52px!important;
+  margin-top:18px!important;
+  border-radius:8px!important;
+  background:var(--fb)!important;
+  color:#fff!important;
+  font-size:20px!important;
+  font-weight:800!important;
+  box-shadow:none!important;
+}
+.login-card .btn.primary:hover,#loginBtn:hover{background:var(--fb-dark)!important;}
+.login-card .hint{margin-top:12px!important;text-align:center!important;color:#d93025!important;font-weight:700!important;}
+@media(max-width:520px){.login-card{padding:22px!important}.login-card h1{font-size:28px!important}.login-card p{font-size:14px!important}}
