@@ -96,7 +96,7 @@ function authMsg(e){
   if(m.includes('auth/unauthorized-domain')||m.includes('unauthorized-domain'))return 'Domain web chưa được thêm trong Firebase Authentication > Settings > Authorized domains. Hãy thêm domain GitHub Pages của bạn.';
   if(m.includes('operation-not-allowed'))return 'Firebase chưa bật Email/Password. Vào Authentication > Sign-in method > bật Email/Password.';
   if(m.includes('invalid-credential'))return 'Email hoặc mật khẩu không đúng, hoặc tài khoản chưa tồn tại.';
-  if(m.includes('user-not-found'))return 'Email chưa tồn tại. Hãy bấm Tạo Admin lần đầu hoặc Tạo tài khoản nhân viên.';
+  if(m.includes('user-not-found'))return 'Email chưa tồn tại hoặc chưa được Admin tạo tài khoản.';
   if(m.includes('wrong-password'))return 'Mật khẩu không đúng.';
   if(m.includes('email-already-in-use'))return 'Email này đã được tạo tài khoản rồi. Hãy bấm Đăng nhập.';
   if(m.includes('weak-password'))return 'Mật khẩu phải tối thiểu 6 ký tự.';
@@ -165,7 +165,7 @@ $('loginBtn').onclick=async()=>{
   }catch(e){alert(authMsg(e));setLoginBusy(false)}
 };
 
-$('setupAdminBtn').onclick=async()=>{
+if($('setupAdminBtn')) $('setupAdminBtn').onclick=async()=>{
   try{
     const email=normEmail($('email').value),pw=$('password').value;
     if(!email||!pw)return alert('Nhập email và mật khẩu');
@@ -186,7 +186,7 @@ $('setupAdminBtn').onclick=async()=>{
   finally{creatingAdmin=false}
 };
 
-$('signupStaffBtn').onclick=async()=>{
+if($('signupStaffBtn')) $('signupStaffBtn').onclick=async()=>{
   try{
     const email=normEmail($('email').value),pw=$('password').value;
     if(!email||!pw)return alert('Nhập email và mật khẩu');

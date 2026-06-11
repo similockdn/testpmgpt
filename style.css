@@ -9,3 +9,12 @@ body{background:radial-gradient(circle at top left,#e0f2fe 0,#f7fbff 34%,#eef6ff
 
 .danger-zone{border:1px solid rgba(220,38,38,.25);background:linear-gradient(135deg,rgba(254,242,242,.95),rgba(255,255,255,.95));border-radius:18px;padding:18px;margin-top:12px}
 .danger-zone h3{color:#b91c1c;margin-top:0}.danger-zone p{color:#7f1d1d}
+
+
+/* Login clean Similock brand update */
+:root{--primary:#00A651;--primary2:#008F45;}
+.login-page{background:linear-gradient(135deg,#06231a,#007a3d 52%,#00A651)!important;}
+.brand-mark,.logo span{background:linear-gradient(135deg,#00A651,#39D353)!important;}
+.login-card .btn.primary,#loginBtn.btn.primary{background:#00A651!important;color:#fff!important;box-shadow:0 12px 28px rgba(0,166,81,.26);}
+.login-card .btn.primary:hover,#loginBtn.btn.primary:hover{background:#008F45!important;}
+.login-card .hint{margin-top:10px;text-align:center;}
