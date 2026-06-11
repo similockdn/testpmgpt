@@ -149,14 +149,15 @@
 
       <section id="inventory" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📦 Chứng từ kho</h3><div><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
+          <div class="panel-head"><h3>📦 Chứng từ kho</h3><div><button class="btn ghost" onclick="setStockMode('IN')">Nhập kho</button><button class="btn ghost" onclick="setStockMode('OUT')">Xuất kho</button><button class="btn ghost" onclick="setStockMode('ADJUST')">Điều chỉnh kho</button><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
           <div class="grid form-grid">
             <div><label>Mã phiếu</label><input id="stockCode" readonly /></div>
             <div><label>Ngày</label><input id="stockDate" type="date" /></div>
             <div><label>Loại chứng từ</label><select id="stockType"><option value="IN">Phiếu nhập kho</option><option value="OUT">Phiếu xuất kho</option><option value="ADJUST">Phiếu điều chỉnh</option><option value="CHECK">Phiếu kiểm kê</option></select></div>
             <div><label>Kho</label><input id="stockWarehouse" value="Kho SIMILOCK" /></div>
-            <div class="span2"><label>Lý do/Ghi chú</label><input id="stockNote" /></div>
+            <div class="span2"><label>Lý do/Ghi chú</label><input id="stockNote" placeholder="VD: xuất bảo hành, chuyển kho, kiểm kê lệch, hàng lỗi..." /></div>
           </div>
+          <p class="muted">Xuất kho thủ công dùng khi xuất không qua đơn hàng. Điều chỉnh kho cho phép nhập số âm/dương để cộng hoặc trừ tồn.</p>
           <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá vốn</th><th>Ghi chú</th><th></th></tr></thead><tbody id="stockItems"></tbody></table>
           <button class="btn ghost" onclick="addStockItem()">+ Thêm mã hàng</button>
         </div>
