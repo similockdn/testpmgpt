@@ -95,3 +95,5 @@ body{background:#f0f2f5!important;}
 #appPage[style*="display:none"]{
   display:none!important;
 }
+.checkline{display:flex!important;align-items:center;gap:8px;height:44px;padding:0 12px;border:1px solid #dfe3ea;border-radius:10px;background:#fff;font-weight:700;color:#334155}
+.checkline input{width:auto!important;height:auto!important}

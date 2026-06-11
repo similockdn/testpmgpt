@@ -103,6 +103,7 @@
             <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" readonly /></div>
             <div><label>VAT</label><select id="saleVatMode"><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option><option value="included8">Giá đã gồm VAT 8%</option></select></div>
             <div><label>Đã thu</label><input id="salePaid" type="number" value="0" /></div>
+            <div><label>Kho</label><label class="checkline"><input id="saleExportStock" type="checkbox" /> Kiêm xuất kho</label></div>
             <div class="span2"><label>Ghi chú</label><input id="saleNote" /></div>
           </div>
           <h4>Chi tiết hàng bán</h4>
@@ -110,13 +111,25 @@
           <button class="btn ghost" onclick="addSaleItem()">+ Thêm dòng hàng</button>
           <div class="total-box"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
         </div>
-        <div class="panel"><div class="panel-head"><h3>Danh sách phiếu bán</h3><input class="search" id="saleSearch" placeholder="Tìm mã phiếu/khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng</th><th class="view-cost">Lợi nhuận</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><h3>Danh sách phiếu bán</h3><input class="search" id="saleSearch" placeholder="Tìm mã phiếu/khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng</th><th class="view-cost">Lợi nhuận</th><th>Trạng thái</th><th>Kho</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
       </section>
 
 
       <section id="commissions" class="page">
+        <div class="panel wide">
+          <div class="panel-head"><h3>🔎 Lọc báo cáo hoa hồng</h3><button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel</button></div>
+          <div class="grid form-grid">
+            <div><label>Tìm kiếm</label><input id="commissionSearch" placeholder="Tên nhân viên / mã đơn / khách hàng" oninput="renderCommissions()" /></div>
+            <div><label>Phòng ban</label><select id="commissionDept" onchange="renderCommissions()"><option value="">Tất cả</option><option value="Sale">Sale</option><option value="Kỹ thuật">Kỹ thuật</option></select></div>
+            <div><label>Nhân viên</label><select id="commissionStaff" onchange="renderCommissions()"><option value="">Tất cả nhân viên</option></select></div>
+            <div><label>Kỳ xem</label><select id="commissionPeriod" onchange="renderCommissions()"><option value="all">Tất cả</option><option value="day">Hôm nay</option><option value="week">Tuần này</option><option value="month">Tháng này</option><option value="year">Năm này</option><option value="custom">Tùy chọn</option></select></div>
+            <div><label>Từ ngày</label><input type="date" id="commissionFrom" onchange="document.getElementById('commissionPeriod').value='custom';renderCommissions()" /></div>
+            <div><label>Đến ngày</label><input type="date" id="commissionTo" onchange="document.getElementById('commissionPeriod').value='custom';renderCommissions()" /></div>
+          </div>
+          <div class="total-box" id="commissionSummary"><div>Tổng doanh thu: <b>0đ</b></div><div>Hoa hồng Sale: <b>0đ</b></div><div>Công kỹ thuật: <b>0đ</b></div><div>Tổng chi: <b>0đ</b></div></div>
+        </div>
         <div class="panel">
-          <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3><button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel</button></div>
+          <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3></div>
           <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn</th><th>Doanh thu</th><th>Hoa hồng Sale</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
         </div>
         <div class="panel">
@@ -125,7 +138,7 @@
         </div>
         <div class="panel wide">
           <div class="panel-head"><h3>🧾 Hoa hồng / công kỹ thuật theo từng đơn hàng</h3></div>
-          <table><thead><tr><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
+          <table><thead><tr><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tổng chi</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
         </div>
       </section>
 
@@ -145,7 +158,7 @@
 
       <section id="debts" class="page">
         <div class="panel"><div class="panel-head"><h3>💳 Công nợ phải thu</h3><button class="btn primary" onclick="openReceiptForm()">+ Phiếu thu</button></div><table><thead><tr><th>Mã KH</th><th>Khách hàng</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th><th>Hành động</th></tr></thead><tbody id="debtTable"></tbody></table></div>
-        <div class="panel"><div class="panel-head"><h3>Phiếu thu</h3></div><div class="grid form-grid"><div><label>Khách hàng</label><select id="receiptCustomer"></select></div><div><label>Số tiền thu</label><input id="receiptAmount" type="number" /></div><div><label>Ngày thu</label><input id="receiptDate" type="date" /></div><div><label>Ghi chú</label><input id="receiptNote" /></div></div><button class="btn primary" onclick="saveReceipt()">Lưu phiếu thu</button><table><thead><tr><th>Ngày</th><th>Khách</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="receiptTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><h3>Phiếu thu</h3><div><button class="btn ghost" onclick="resetReceiptForm()">Phiếu mới</button><button class="btn primary" onclick="saveReceipt()">Lưu phiếu thu</button></div></div><div class="grid form-grid"><div><label>Khách hàng</label><select id="receiptCustomer"></select></div><div><label>Số tiền thu</label><input id="receiptAmount" type="number" /></div><div><label>Ngày thu</label><input id="receiptDate" type="date" /></div><div><label>Ghi chú</label><input id="receiptNote" /></div></div><table><thead><tr><th>Mã PT</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Số tiền</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="receiptTable"></tbody></table></div>
       </section>
 
       <section id="inventory" class="page">
@@ -169,7 +182,7 @@
 
       <section id="warranty" class="page">
         <div class="panel"><div class="panel-head"><h3>🛡️ Quản lý bảo hành</h3><div><input type="file" id="importWarranties" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'warranties')"><button class="btn ghost" onclick="downloadTemplateExcel('warranties')">Mẫu Excel</button><button class="btn ghost" onclick="importWarranties.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('warranties')">Xuất Excel</button><button class="btn primary" onclick="saveWarranty()">Lưu bảo hành</button></div></div><div class="grid form-grid"><div><label>Mã phiếu bán</label><select id="wSale"></select></div><div><label>Khách hàng</label><input id="wCustomer" /></div><div><label>SĐT</label><input id="wPhone" /></div><div><label>Model/Serial</label><input id="wSerial" /></div><div><label>Ngày lắp</label><input id="wStart" type="date" /></div><div><label>Thời hạn tháng</label><input id="wMonths" type="number" value="24" /></div><div><label>Trạng thái</label><select id="wStatus"><option>Còn bảo hành</option><option>Đang xử lý</option><option>Hết bảo hành</option></select></div><div><label>Ghi chú</label><input id="wNote" /></div></div></div>
-        <div class="panel"><div class="panel-head"><h3>Danh sách bảo hành</h3><input class="search" id="wSearch" placeholder="Tìm SĐT/serial/model" oninput="renderWarranties()" /></div><table><thead><tr><th>Khách</th><th>SĐT</th><th>Serial/Model</th><th>Ngày lắp</th><th>Hết hạn</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="warrantyTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><h3>Danh sách bảo hành</h3><input class="search" id="wSearch" placeholder="Tìm SĐT/serial/model" oninput="renderWarranties()" /></div><table><thead><tr><th>Khách</th><th>SĐT</th><th>Serial/Model</th><th>Ngày lắp</th><th>Hết hạn</th><th>Trạng thái</th><th>Kho</th><th>Hành động</th></tr></thead><tbody id="warrantyTable"></tbody></table></div>
       </section>
 
       <section id="customers" class="page"><div class="panel"><div class="panel-head"><h3>👥 Danh mục khách hàng</h3><div><input type="file" id="importCustomers" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'customers')"><button class="btn ghost" onclick="downloadTemplateExcel('customers')">Mẫu Excel</button><button class="btn ghost" onclick="importCustomers.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('customers')">Xuất Excel</button><button class="btn primary" onclick="saveCustomer()">Lưu</button></div></div><div class="grid form-grid"><input id="cId" hidden><div><label>Mã khách hàng</label><input id="cCode" placeholder="VD: KL0902950816"></div><div><label>Tên khách</label><input id="cName"></div><div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div><div><label>SĐT</label><input id="cPhone"></div><div><label>Địa chỉ</label><input id="cAddress"></div><div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0"></div><div><label>Công nợ đầu kỳ</label><input id="cOpeningDebt" type="number" value="0"></div></div><table><thead><tr><th>Mã KH</th><th>Tên</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>CK</th><th>Hành động</th></tr></thead><tbody id="customerTable"></tbody></table></div></section>
