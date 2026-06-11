@@ -1,4 +1,4 @@
-BẢN FIX ĐĂNG NHẬP SIMILOCK ERP
+BẢN FIX ĐĂNG NHẬP Similock Đà Nẵng
 
 Admin chính đã cấu hình cố định:
 Email: similockdn@gmail.com

@@ -1,4 +1,4 @@
-BẢN FIX UID - SIMILOCK ERP
+BẢN FIX UID - Similock Đà Nẵng
 
 Đã sửa toàn bộ luồng phân quyền từ users/{email} sang users/{Firebase Auth UID}.
 

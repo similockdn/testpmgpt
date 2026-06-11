@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-config.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
@@ -9,7 +9,7 @@ const userDocRef = (u)=>doc(db,'users',u.uid);
 const userProfileData = (u, extra={})=>({uid:u.uid,email:normEmail(u.email),...extra});
 let currentUser=null,currentPerm={role:'Admin',perms:[]},creatingAdmin=false;let editingSale=null,editingStock=null,editingWarranty=null,editingExpense=null;
 const data={customers:[],products:[],staff:[],prices:[],sales:[],stockVouchers:[],receipts:[],warranties:[],expenses:[],users:[],logs:[]};
-const modules=['dashboard','sales','commissions','expenses','debts','inventory','stockbook','warranty','customers','products','prices','staff','reports','permissions'];
+const modules=['dashboard','sales','commissions','expenses','debts','inventory','stockbook','warranty','customers','products','prices','staff','reports','permissions','system'];
 const permissionMap={
  Admin:modules.concat(['viewCost','editSales','deleteSales','editStock','deleteStock','audit']),
  Sale:['dashboard','sales','commissions','customers','products','warranty'],
@@ -17,7 +17,7 @@ const permissionMap={
  Kho:['dashboard','inventory','stockbook','products'],
  'Kế toán':['dashboard','expenses','commissions','debts','reports','sales','customers','products']
 };
-const permLabels={dashboard:'Dashboard',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',viewCost:'Xem giá vốn/lợi nhuận',editSales:'Sửa đơn bán',deleteSales:'Xóa đơn bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký'};
+const permLabels={dashboard:'Dashboard',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận',editSales:'Sửa đơn bán',deleteSales:'Xóa đơn bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký'};
 
 function has(p){return currentPerm.role==='Admin'||(currentPerm.perms||[]).includes(p)}
 function col(n){return collection(db,n)}
@@ -240,8 +240,8 @@ onAuthStateChanged(auth,async u=>{
 
 function applyPermissions(){document.querySelectorAll('#menu button[data-page]').forEach(b=>{b.style.display=has(b.dataset.page)?'block':'none'});document.querySelectorAll('#menu .menu-group').forEach(g=>{const visible=[...g.querySelectorAll('button[data-page]')].some(b=>b.style.display!=='none');g.style.display=visible?'block':'none';});document.querySelectorAll('.view-cost').forEach(x=>x.classList.toggle('hidden',!has('viewCost')));}
 document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn.closest('.menu-group').classList.toggle('open'));document.querySelectorAll('#menu button[data-page]').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page));
-function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));const activeBtn=document.querySelector(`#menu button[data-page="${id}"]`);if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='SIMILOCK ERP - Quản lý bán hàng, kho, công nợ, bảo hành'}
-function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí vận hành',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền'}[id]||id)}
+function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));const activeBtn=document.querySelector(`#menu button[data-page="${id}"]`);if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='Similock Đà Nẵng - Quản lý bán hàng, kho, công nợ, bảo hành'}
+function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí vận hành',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống'}[id]||id)}
 
 function renderAll(){try{applyPermissions();renderSelectors();renderDashboard();renderCustomers();renderProducts();renderPrices();renderStaff();renderSales();renderCommissions();renderExpenses();renderDebts();renderReceipts();renderStock();renderStockBook();renderWarranties();renderReports();renderPermissions();staffDeptChanged();resetSaleForm();resetStockForm();}catch(e){console.error('RENDER ERROR:',e);alert('Đăng nhập được nhưng lỗi khi tải màn hình: '+(e.message||e));}}
 function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>x.dept==='Sale'||x.dept==='Quản lý'),x=>x.name);fillSelect($('saleTech'),data.staff.filter(x=>x.dept==='Kỹ thuật'),x=>x.name);fillSelect($('priceProduct'),data.products,x=>`${x.code} - ${x.name}`,x=>x.code);fillSelect($('receiptCustomer'),data.customers,x=>`${x.name} - ${x.phone||''}`);fillSelect($('wSale'),data.sales,x=>`${x.code} - ${x.customerName||''}`);$('customerList').innerHTML=data.customers.map(c=>`<option value="${c.name} | ${c.phone||''}"></option>`).join('')}
@@ -555,5 +555,36 @@ window.importCSV=async(e,type)=>{
 
 window.exportBackup=()=>{
   const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,expenses:data.expenses,users:data.users};
-  let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));a.download='similock-erp-backup-'+today()+'.json';a.click()
+  let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));a.download='similock-da-nang-backup-'+today()+'.json';a.click()
+}
+
+
+async function deleteCollectionDocs(collectionName){
+  const snap=await getDocs(col(collectionName));
+  for(const d of snap.docs){ await deleteDoc(doc(db,collectionName,d.id)); }
+  return snap.size;
+}
+window.clearAllData=async()=>{
+  if(!has('system')&&!has('audit')) return alert('Chỉ Admin mới được Clear Data');
+  const first=confirm('⚠️ CẢNH BÁO LẦN 1\n\nBạn sắp xóa toàn bộ dữ liệu vận hành của hệ thống. Hành động này không thể hoàn tác.\n\nTiếp tục?');
+  if(!first) return;
+  const confirmText=prompt('⚠️ XÁC NHẬN LẦN 2\n\nNhập đúng: XOA_TOAN_BO_DU_LIEU');
+  if(confirmText!=='XOA_TOAN_BO_DU_LIEU') return alert('Đã hủy. Mã xác nhận không đúng.');
+  const password=prompt('🔐 Nhập mật khẩu Admin để xác thực lần cuối:');
+  if(!password) return alert('Đã hủy. Chưa nhập mật khẩu Admin.');
+  try{
+    const credential=EmailAuthProvider.credential(auth.currentUser.email,password);
+    await reauthenticateWithCredential(auth.currentUser,credential);
+    const collectionsToClear=['customers','products','prices','staff','sales','stockVouchers','receipts','warranties','expenses','logs'];
+    let result=[];
+    for(const name of collectionsToClear){
+      const count=await deleteCollectionDocs(name);
+      result.push(`${name}: ${count}`);
+    }
+    await logAction('Clear Data','Đã xóa dữ liệu vận hành: '+result.join(', '));
+    await loadAll();
+    alert('Đã Clear Data thành công. Không xóa users/settings/roles/permissions.');
+  }catch(e){
+    alert('Clear Data thất bại: '+authMsg(e));
+  }
 }

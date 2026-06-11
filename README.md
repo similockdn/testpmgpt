@@ -1,4 +1,4 @@
-# SIMILOCK ERP COMPLETE - bản hoàn thiện
+# Similock Đà Nẵng COMPLETE - bản hoàn thiện
 
 ## Các nâng cấp chính
 - Kho theo quy trình chuẩn: phiếu nhập, phiếu xuất, điều chỉnh, kiểm kê. Một chứng từ có nhiều dòng hàng.

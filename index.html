@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIMILOCK ERP</title>
+  <title>Similock Đà Nẵng</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div id="loginPage" class="login-page">
     <div class="login-card">
       <div class="brand-mark">S</div>
-      <h1>SIMILOCK ERP</h1>
+      <h1>Similock Đà Nẵng</h1>
       <p>Quản trị bán hàng • kho • công nợ • bảo hành</p>
       <label>Email</label><input id="email" type="email" placeholder="admin@similock.vn" />
       <label>Mật khẩu</label><input id="password" type="password" placeholder="Tối thiểu 6 ký tự" />
@@ -24,7 +24,7 @@
 
   <div id="appPage" class="app" style="display:none">
     <aside class="sidebar">
-      <div class="logo"><span>S</span><div><b>SIMILOCK</b><small>ERP COMPLETE</small></div></div>
+      <div class="logo"><span>S</span><div><b>Similock</b><small>Đà Nẵng</small></div></div>
       <nav id="menu" class="nav-menu">
         <div class="menu-group open">
           <button type="button" class="menu-toggle">📊 Tổng quan</button>
@@ -63,6 +63,7 @@
           <div class="submenu">
             <button data-page="staff">Nhân viên</button>
             <button data-page="permissions">Phân quyền</button>
+            <button data-page="system">Clear Data</button>
           </div>
         </div>
       </nav>
@@ -236,6 +237,23 @@
         <div class="panel wide view-cost">
           <div class="panel-head"><h3>🧾 Chi tiết chi phí trong kỳ</h3></div>
           <table><thead><tr><th>Ngày</th><th>Loại chi phí</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="reportExpenseDetailTable"></tbody></table>
+        </div>
+      </section>
+
+
+
+      <section id="system" class="page">
+        <div class="panel">
+          <div class="panel-head"><h3>⚙️ Hệ thống</h3><button class="btn ghost" onclick="exportBackup()">Sao lưu dữ liệu JSON</button></div>
+          <div class="danger-zone">
+            <h3>🗑️ Clear Data</h3>
+            <p>Chức năng này xóa dữ liệu vận hành để làm mới hệ thống. Không xóa tài khoản, phân quyền và cấu hình.</p>
+            <div class="grid form-grid">
+              <div><label>Sẽ xóa</label><input readonly value="Khách hàng, sản phẩm, bảng giá, đơn hàng, kho, công nợ, bảo hành, chi phí, nhật ký"></div>
+              <div><label>Không xóa</label><input readonly value="users, settings, roles, permissions"></div>
+            </div>
+            <button class="btn danger" onclick="clearAllData()">🗑️ Clear Data</button>
+          </div>
         </div>
       </section>
 
