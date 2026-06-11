@@ -74,7 +74,7 @@
             <div><label>Nhân viên sale</label><select id="saleStaff"></select></div>
             <div><label>Kỹ thuật</label><select id="saleTech"></select></div>
             <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
-            <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" /></div>
+            <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" readonly /></div>
             <div><label>VAT</label><select id="saleVatMode"><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option><option value="included8">Giá đã gồm VAT 8%</option></select></div>
             <div><label>Đã thu</label><input id="salePaid" type="number" value="0" /></div>
             <div class="span2"><label>Ghi chú</label><input id="saleNote" /></div>
@@ -90,12 +90,16 @@
 
       <section id="commissions" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>💰 Hoa hồng theo nhân viên</h3><button class="btn ghost" onclick="exportCSV('commissions')">Export CSV</button></div>
-          <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
+          <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3><button class="btn ghost" onclick="exportCSV('commissions')">Export CSV</button></div>
+          <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn</th><th>Doanh thu</th><th>Hoa hồng Sale</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
         </div>
         <div class="panel">
-          <div class="panel-head"><h3>🧾 Hoa hồng theo từng đơn hàng</h3></div>
-          <table><thead><tr><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Doanh thu</th><th>%</th><th>Hoa hồng</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
+          <div class="panel-head"><h3>🛠️ Công kỹ thuật theo nhân viên</h3></div>
+          <table><thead><tr><th>Nhân viên kỹ thuật</th><th>Số đơn lắp</th><th>Doanh thu phụ trách</th><th>Công kỹ thuật</th></tr></thead><tbody id="commissionByTech"></tbody></table>
+        </div>
+        <div class="panel wide">
+          <div class="panel-head"><h3>🧾 Hoa hồng / công kỹ thuật theo từng đơn hàng</h3></div>
+          <table><thead><tr><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
         </div>
       </section>
 
@@ -174,7 +178,7 @@
         </div>
       </section>
 
-      <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><button class="btn primary" onclick="saveStaff()">Lưu</button></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div><div><label>Hoa hồng mặc định %</label><input id="eCommissionPercent" type="number" value="5"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
+      <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><button class="btn primary" onclick="saveStaff()">Lưu</button></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept" onchange="staffDeptChanged()"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div><div id="saleCommissionBox"><label>Hoa hồng Sale mặc định %</label><input id="eCommissionPercent" type="number" value="5"></div><div id="techFeeBox"><label>Công kỹ thuật mặc định / đơn</label><input id="eTechFee" type="number" value="100000"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
 
       <section id="reports" class="page"><div class="panel"><div class="panel-head"><h3>📈 Báo cáo nhanh</h3><div><button class="btn ghost" onclick="exportCSV('sales')">Export bán hàng</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div><div id="reportBox" class="report-grid"></div></div></section>
 

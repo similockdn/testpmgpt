@@ -14,3 +14,9 @@ Cách dùng:
 Lưu ý:
 - Firestore collection users phải dùng Document ID là UID Firebase Auth.
 - Không dùng Document ID là email nữa.
+
+CAP NHAT HOA HONG - CONG KY THUAT
+- Nhan vien Sale: nhap commissionPercent (%) khi tao/sua nhan vien.
+- Nhan vien Ky thuat: nhap techFee (so tien cong / don) khi tao/sua nhan vien.
+- Khi tao don hang: chon Sale se tu lay % hoa hong; chon Ky thuat se tu lay tien cong ky thuat.
+- Loi nhuan don = Gia ban - Gia von - Hoa hong Sale - Cong ky thuat.
