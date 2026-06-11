@@ -237,9 +237,9 @@ onAuthStateChanged(auth,async u=>{
   }
 });
 
-function applyPermissions(){document.querySelectorAll('#menu button').forEach(b=>{b.style.display=has(b.dataset.page)?'block':'none'});document.querySelectorAll('.view-cost').forEach(x=>x.classList.toggle('hidden',!has('viewCost')));}
-document.querySelectorAll('#menu button').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page));
-function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='SIMILOCK ERP - Quản lý bán hàng, kho, công nợ, bảo hành'}
+function applyPermissions(){document.querySelectorAll('#menu button[data-page]').forEach(b=>{b.style.display=has(b.dataset.page)?'block':'none'});document.querySelectorAll('#menu .menu-group').forEach(g=>{const visible=[...g.querySelectorAll('button[data-page]')].some(b=>b.style.display!=='none');g.style.display=visible?'block':'none';});document.querySelectorAll('.view-cost').forEach(x=>x.classList.toggle('hidden',!has('viewCost')));}
+document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn.closest('.menu-group').classList.toggle('open'));document.querySelectorAll('#menu button[data-page]').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page));
+function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));const activeBtn=document.querySelector(`#menu button[data-page="${id}"]`);if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='SIMILOCK ERP - Quản lý bán hàng, kho, công nợ, bảo hành'}
 function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí vận hành',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền'}[id]||id)}
 
 function renderAll(){try{applyPermissions();renderSelectors();renderDashboard();renderCustomers();renderProducts();renderPrices();renderStaff();renderSales();renderCommissions();renderExpenses();renderDebts();renderReceipts();renderStock();renderStockBook();renderWarranties();renderReports();renderPermissions();staffDeptChanged();resetSaleForm();resetStockForm();}catch(e){console.error('RENDER ERROR:',e);alert('Đăng nhập được nhưng lỗi khi tải màn hình: '+(e.message||e));}}
@@ -393,13 +393,91 @@ window.saveWarranty=async()=>{let start=$('wStart').value||today();let end=new D
 function renderWarranties(){let q=($('wSearch')?.value||'').toLowerCase();$('warrantyTable').innerHTML=data.warranties.filter(w=>(w.customer+w.phone+w.serial).toLowerCase().includes(q)).map(w=>`<tr><td>${w.customer}</td><td>${w.phone||''}</td><td>${w.serial||''}</td><td>${w.start}</td><td>${w.end}</td><td><span class="badge green">${w.status}</span></td><td><button class="btn ghost" onclick="editWarranty('${w.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('warranties','${w.id}')">Xóa</button></td></tr>`).join('')}
 window.editWarranty=id=>{let w=data.warranties.find(x=>x.id===id);editingWarranty=id;$('wSale').value=w.saleId||'';$('wCustomer').value=w.customer;$('wPhone').value=w.phone||'';$('wSerial').value=w.serial||'';$('wStart').value=w.start;$('wMonths').value=w.months||24;$('wStatus').value=w.status;$('wNote').value=w.note||''}
 
-function renderReports(){
-  let rev=data.sales.reduce((a,s)=>a+(+s.grand||0),0),grossProfit=data.sales.reduce((a,s)=>a+(+s.profit||0),0),op=expenseTotal(),profit=grossProfit-op,debt=calcDebts().reduce((a,d)=>a+d.debt,0),stock=data.products.reduce((a,p)=>a+stockOf(p.code),0),comm=data.sales.reduce((a,s)=>a+(+s.saleCommission||0),0),tech=data.sales.reduce((a,s)=>a+(+s.techCost||0),0);
-  let logs=(data.logs||[]).slice().sort((a,b)=>String(b.at?.seconds||b.at||'').localeCompare(String(a.at?.seconds||a.at||''))).slice(0,20);
-  $('reportBox').innerHTML=`<div class="report-card">Tổng doanh thu<b>${money(rev)}</b></div><div class="report-card view-cost">Lợi nhuận đơn hàng<b>${money(grossProfit)}</b></div><div class="report-card view-cost">Chi phí vận hành<b>${money(op)}</b></div><div class="report-card view-cost">Lợi nhuận ròng<b>${money(profit)}</b></div><div class="report-card view-cost">Hoa hồng Sale<b>${money(comm)}</b></div><div class="report-card view-cost">Công kỹ thuật<b>${money(tech)}</b></div><div class="report-card">Công nợ<b>${money(debt)}</b></div><div class="report-card">Tổng tồn kho<b>${stock}</b></div>`+
-  `<div class="panel span2"><div class="panel-head"><h3>🧾 Nhật ký hệ thống gần nhất</h3><button class="btn ghost" onclick="exportBackup()">Backup JSON</button></div><table><thead><tr><th>Tài khoản</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>${logs.map(l=>`<tr><td>${l.email||''}</td><td>${l.action||''}</td><td>${l.detail||''}</td></tr>`).join('')||'<tr><td colspan="3">Chưa có nhật ký</td></tr>'}</tbody></table></div>`;
-  applyPermissions()
+function reportDateValue(v){return String(v||'').slice(0,10)}
+function dateAdd(d,days){let x=new Date(d);x.setDate(x.getDate()+days);return x.toISOString().slice(0,10)}
+function monthStart(d=today()){return String(d).slice(0,7)+'-01'}
+function monthEnd(d=today()){let x=new Date(String(d).slice(0,7)+'-01');x.setMonth(x.getMonth()+1);x.setDate(0);return x.toISOString().slice(0,10)}
+function yearStart(d=today()){return String(d).slice(0,4)+'-01-01'}
+function yearEnd(d=today()){return String(d).slice(0,4)+'-12-31'}
+function weekRange(d=today()){let x=new Date(d);let day=x.getDay()||7;x.setDate(x.getDate()-day+1);let from=x.toISOString().slice(0,10);x.setDate(x.getDate()+6);return{from,to:x.toISOString().slice(0,10)}}
+window.setReportQuickRange=()=>{
+  if(!$('reportPeriod'))return;
+  let p=$('reportPeriod').value, ref=$('reportFrom')?.value||today(), from=today(), to=today();
+  if(p==='day'){from=to=ref}
+  else if(p==='week'){let r=weekRange(ref);from=r.from;to=r.to}
+  else if(p==='month'){from=monthStart(ref);to=monthEnd(ref)}
+  else if(p==='year'){from=yearStart(ref);to=yearEnd(ref)}
+  else return;
+  $('reportFrom').value=from;$('reportTo').value=to;
 }
+function reportRange(){
+  if($('reportFrom')&&!$('reportFrom').value)setReportQuickRange();
+  let from=$('reportFrom')?.value||monthStart(),to=$('reportTo')?.value||monthEnd();
+  if(from>to){let t=from;from=to;to=t}
+  return{from,to,period:$('reportPeriod')?.value||'month'}
+}
+function inReportRange(date,from,to){let d=reportDateValue(date);return d&&d>=from&&d<=to}
+function weekKey(date){let r=weekRange(date);return `${r.from} → ${r.to}`}
+function groupKeyByPeriod(date,period){
+  let d=reportDateValue(date);
+  if(period==='year')return d.slice(0,4);
+  if(period==='month')return d.slice(0,7);
+  if(period==='week')return weekKey(d);
+  return d;
+}
+function renderReports(){
+  if(!$('reportBox'))return;
+  if($('reportFrom')&&!$('reportFrom').value)setReportQuickRange();
+  const {from,to,period}=reportRange();
+  const productQ=($('reportProductSearch')?.value||'').trim().toLowerCase();
+  const sales=data.sales.filter(s=>inReportRange(s.date,from,to));
+  const expenses=data.expenses.filter(e=>inReportRange(e.date,from,to));
+  const rev=sales.reduce((a,s)=>a+(+s.grand||0),0);
+  const paid=sales.reduce((a,s)=>a+(+s.paid||0),0);
+  const debt=sales.reduce((a,s)=>a+(+s.debt||0),0);
+  const grossProfit=sales.reduce((a,s)=>a+(+s.profit||0),0);
+  const op=expenses.reduce((a,e)=>a+(+e.amount||0),0);
+  const profit=grossProfit-op;
+  const comm=sales.reduce((a,s)=>a+(+s.saleCommission||0),0);
+  const tech=sales.reduce((a,s)=>a+(+s.techCost||0),0);
+  const qty=sales.reduce((a,s)=>a+(s.items||[]).reduce((b,it)=>b+(+it.qty||0),0),0);
+  $('reportBox').innerHTML=`
+    <div class="report-card">Doanh thu kỳ này<small>${from} → ${to}</small><b>${money(rev)}</b></div>
+    <div class="report-card">Số đơn / Sản phẩm<b>${sales.length} đơn / ${qty} SP</b></div>
+    <div class="report-card">Đã thu<b>${money(paid)}</b></div>
+    <div class="report-card">Còn nợ<b>${money(debt)}</b></div>
+    <div class="report-card view-cost">Lợi nhuận đơn hàng<b>${money(grossProfit)}</b></div>
+    <div class="report-card view-cost">Chi phí trong kỳ<b>${money(op)}</b></div>
+    <div class="report-card view-cost">Lợi nhuận ròng<b>${money(profit)}</b></div>
+    <div class="report-card view-cost">Sale + Kỹ thuật<b>${money(comm+tech)}</b></div>`;
+
+  const byProduct={};
+  sales.forEach(s=>(s.items||[]).forEach(it=>{
+    const code=it.code||''; const p=data.products.find(x=>x.code===code)||{};
+    const name=it.name||p.name||'';
+    const line=(+it.qty||0)*(+it.price||0)*(1-(+it.discount||0)/100);
+    const cost=(+p.cost||0)*(+it.qty||0);
+    byProduct[code]=byProduct[code]||{code,name,qty:0,revenue:0,cost:0};
+    byProduct[code].qty+=+it.qty||0;byProduct[code].revenue+=line;byProduct[code].cost+=cost;
+  }));
+  let productRows=Object.values(byProduct).filter(x=>(x.code+' '+x.name).toLowerCase().includes(productQ)).sort((a,b)=>b.qty-a.qty||b.revenue-a.revenue);
+  if($('reportProductTable'))$('reportProductTable').innerHTML=productRows.map(x=>`<tr><td><b>${x.code}</b></td><td>${x.name}</td><td>${x.qty}</td><td>${money(x.revenue)}</td><td class="view-cost">${money(x.cost)}</td><td class="view-cost">${money(x.revenue-x.cost)}</td></tr>`).join('')||'<tr><td colspan="6">Chưa có sản phẩm bán ra trong kỳ</td></tr>';
+
+  const byTime={};
+  sales.forEach(s=>{
+    const k=groupKeyByPeriod(s.date,period);
+    byTime[k]=byTime[k]||{key:k,orders:0,qty:0,revenue:0,paid:0,debt:0,comm:0,tech:0,profit:0};
+    byTime[k].orders++;byTime[k].qty+=(s.items||[]).reduce((a,it)=>a+(+it.qty||0),0);byTime[k].revenue+=+s.grand||0;byTime[k].paid+=+s.paid||0;byTime[k].debt+=+s.debt||0;byTime[k].comm+=+s.saleCommission||0;byTime[k].tech+=+s.techCost||0;byTime[k].profit+=+s.profit||0;
+  });
+  if($('reportRevenueTable'))$('reportRevenueTable').innerHTML=Object.values(byTime).sort((a,b)=>String(b.key).localeCompare(String(a.key))).map(x=>`<tr><td><b>${x.key}</b></td><td>${x.orders}</td><td>${x.qty}</td><td>${money(x.revenue)}</td><td>${money(x.paid)}</td><td>${money(x.debt)}</td><td class="view-cost">${money(x.comm)}</td><td class="view-cost">${money(x.tech)}</td><td class="view-cost">${money(x.profit)}</td></tr>`).join('')||'<tr><td colspan="9">Chưa có doanh thu trong kỳ</td></tr>';
+
+  const byCat={};
+  expenses.forEach(e=>{const k=e.category||'Khác';byCat[k]=byCat[k]||{category:k,count:0,amount:0};byCat[k].count++;byCat[k].amount+=+e.amount||0});
+  if($('reportExpenseCategoryTable'))$('reportExpenseCategoryTable').innerHTML=Object.values(byCat).sort((a,b)=>b.amount-a.amount).map(x=>`<tr><td>${x.category}</td><td>${x.count}</td><td><b>${money(x.amount)}</b></td></tr>`).join('')||'<tr><td colspan="3">Chưa có chi phí trong kỳ</td></tr>';
+  if($('reportExpenseDetailTable'))$('reportExpenseDetailTable').innerHTML=expenses.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(e=>`<tr><td>${e.date||''}</td><td>${e.category||''}</td><td>${money(e.amount)}</td><td>${e.note||''}</td></tr>`).join('')||'<tr><td colspan="4">Chưa có chi phí trong kỳ</td></tr>';
+  applyPermissions();
+}
+window.renderReports=renderReports;
 function renderPermissions(){
   if(!$('uUid')) $('uEmail').insertAdjacentHTML('beforebegin','<input id="uUid" type="hidden">');
   let keys=Object.keys(permLabels);

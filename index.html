@@ -25,21 +25,46 @@
   <div id="appPage" class="app" style="display:none">
     <aside class="sidebar">
       <div class="logo"><span>S</span><div><b>SIMILOCK</b><small>ERP COMPLETE</small></div></div>
-      <nav id="menu">
-        <button data-page="dashboard" class="active">📊 Điều hành</button>
-        <button data-page="sales">🛒 Bán hàng</button>
-        <button data-page="commissions">💰 Hoa hồng</button>
-        <button data-page="expenses">📒 Chi phí</button>
-        <button data-page="debts">💳 Công nợ</button>
-        <button data-page="inventory">📦 Kho hàng</button>
-        <button data-page="stockbook">📘 Sổ kho</button>
-        <button data-page="warranty">🛡️ Bảo hành</button>
-        <button data-page="customers">👥 Khách hàng</button>
-        <button data-page="products">🔐 Sản phẩm</button>
-        <button data-page="prices">💵 Bảng giá</button>
-        <button data-page="staff">👨‍💼 Nhân viên</button>
-        <button data-page="reports">📈 Báo cáo</button>
-        <button data-page="permissions">🔑 Phân quyền</button>
+      <nav id="menu" class="nav-menu">
+        <div class="menu-group open">
+          <button type="button" class="menu-toggle">📊 Tổng quan</button>
+          <div class="submenu">
+            <button data-page="dashboard" class="active">Điều hành</button>
+            <button data-page="reports">Báo cáo</button>
+          </div>
+        </div>
+        <div class="menu-group open">
+          <button type="button" class="menu-toggle">🛒 Kinh doanh</button>
+          <div class="submenu">
+            <button data-page="sales">Bán hàng</button>
+            <button data-page="customers">Khách hàng</button>
+            <button data-page="debts">Công nợ</button>
+          </div>
+        </div>
+        <div class="menu-group open">
+          <button type="button" class="menu-toggle">💰 Tài chính</button>
+          <div class="submenu">
+            <button data-page="commissions">Hoa hồng</button>
+            <button data-page="expenses">Chi phí</button>
+          </div>
+        </div>
+        <div class="menu-group">
+          <button type="button" class="menu-toggle">📦 Kho & sản phẩm</button>
+          <div class="submenu">
+            <button data-page="inventory">Kho hàng</button>
+            <button data-page="stockbook">Sổ kho</button>
+            <button data-page="products">Sản phẩm</button>
+            <button data-page="prices">Bảng giá</button>
+            <button data-page="warranty">Bảo hành</button>
+          </div>
+        </div>
+        <div class="menu-group">
+          <button type="button" class="menu-toggle">⚙️ Hệ thống</button>
+          <div class="submenu">
+            <button data-page="staff">Nhân viên</button>
+            <button data-page="permissions">Phân quyền</button>
+          </div>
+        </div>
       </nav>
     </aside>
 
@@ -180,7 +205,38 @@
 
       <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><button class="btn primary" onclick="saveStaff()">Lưu</button></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept" onchange="staffDeptChanged()"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div><div id="saleCommissionBox"><label>Hoa hồng Sale mặc định %</label><input id="eCommissionPercent" type="number" value="5"></div><div id="techFeeBox"><label>Công kỹ thuật mặc định / đơn</label><input id="eTechFee" type="number" value="100000"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>
 
-      <section id="reports" class="page"><div class="panel"><div class="panel-head"><h3>📈 Báo cáo nhanh</h3><div><button class="btn ghost" onclick="exportCSV('sales')">Export bán hàng</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div><div id="reportBox" class="report-grid"></div></div></section>
+      <section id="reports" class="page">
+        <div class="panel">
+          <div class="panel-head"><h3>📈 Báo cáo doanh thu - chi phí - lợi nhuận</h3><div><button class="btn ghost" onclick="exportCSV('sales')">Export bán hàng</button><button class="btn ghost" onclick="exportCSV('expenses')">Export chi phí</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div>
+          <div class="grid form-grid">
+            <div><label>Kiểu xem</label><select id="reportPeriod" onchange="setReportQuickRange();renderReports()"><option value="day">Theo ngày</option><option value="week">Theo tuần</option><option value="month" selected>Theo tháng</option><option value="year">Theo năm</option><option value="custom">Tùy chọn ngày</option></select></div>
+            <div><label>Từ ngày</label><input id="reportFrom" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
+            <div><label>Đến ngày</label><input id="reportTo" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
+            <div><label>Tìm model/sản phẩm</label><input id="reportProductSearch" placeholder="VD: F07, S01, 569..." oninput="renderReports()"></div>
+          </div>
+          <div id="reportBox" class="report-grid"></div>
+        </div>
+
+        <div class="panel wide">
+          <div class="panel-head"><h3>🔐 Tổng sản phẩm bán ra</h3><span>Tìm theo model hoặc tên sản phẩm</span></div>
+          <table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>Số lượng</th><th>Doanh thu</th><th class="view-cost">Giá vốn</th><th class="view-cost">Lãi gộp SP</th></tr></thead><tbody id="reportProductTable"></tbody></table>
+        </div>
+
+        <div class="panel wide">
+          <div class="panel-head"><h3>📊 Doanh thu theo thời gian</h3><span>Ngày / tuần / tháng / năm</span></div>
+          <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công kỹ thuật</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
+        </div>
+
+        <div class="panel wide view-cost">
+          <div class="panel-head"><h3>📒 Báo cáo chi phí theo danh mục</h3><span>Điện, nước, internet, thuê nhà, vận chuyển, lương cố định, khác</span></div>
+          <table><thead><tr><th>Loại chi phí</th><th>Số phiếu</th><th>Tổng tiền</th></tr></thead><tbody id="reportExpenseCategoryTable"></tbody></table>
+        </div>
+
+        <div class="panel wide view-cost">
+          <div class="panel-head"><h3>🧾 Chi tiết chi phí trong kỳ</h3></div>
+          <table><thead><tr><th>Ngày</th><th>Loại chi phí</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="reportExpenseDetailTable"></tbody></table>
+        </div>
+      </section>
 
       <section id="permissions" class="page"><div class="panel"><div class="panel-head"><h3>🔑 Bảng phân quyền chuẩn</h3><button class="btn primary" onclick="saveUserPermission()">Lưu phân quyền</button></div><div class="grid form-grid"><div><label>Email nhân viên</label><input id="uEmail" type="email"></div><div><label>Họ tên</label><input id="uName"></div><div><label>Vai trò</label><select id="uRole"><option>Admin</option><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kế toán</option></select></div></div><div id="permBox" class="permission-grid"></div><table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Quyền</th><th>Hành động</th></tr></thead><tbody id="permissionTable"></tbody></table></div></section>
     </main>
