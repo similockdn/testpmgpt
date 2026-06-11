@@ -1,26 +1,22 @@
-SIMILOCK ERP - BẢN FIX ĐĂNG NHẬP
+BẢN FIX ĐĂNG NHẬP SIMILOCK ERP
 
-Đã sửa:
-1. Chuẩn hóa email về chữ thường khi đăng nhập/tạo tài khoản/phân quyền.
-2. Sửa luồng Tạo Admin lần đầu để không bị treo ở lỗi "chưa phân quyền".
-3. Nếu nhân viên chưa được phân quyền, hệ thống tự đăng xuất và báo đúng email cần thêm.
-4. Thêm thông báo trạng thái khi đăng nhập để dễ biết đang lỗi ở Auth, Firestore hay phân quyền.
-5. Render màn hình có bắt lỗi rõ ràng, tránh đăng nhập được nhưng trắng trang.
-6. Cập nhật firestore.rules kèm trong bộ file.
+Admin chính đã cấu hình cố định:
+Email: similockdn@gmail.com
 
-Cách cập nhật trên GitHub Pages:
-1. Giải nén file zip.
-2. Upload đè toàn bộ file lên repository cũ: index.html, app.js, firebase-config.js, style.css, firestore.rules...
-3. Vào Firebase Console > Authentication > Sign-in method > bật Email/Password.
-4. Vào Firebase Console > Authentication > Settings > Authorized domains:
-   - thêm domain GitHub Pages của anh, ví dụ: lampham1685.github.io
-5. Vào Firebase Console > Firestore Database > Rules:
-   - copy nội dung file firestore.rules
-   - bấm Publish.
-6. Mở web, nhập email/mật khẩu Admin, bấm "Tạo Admin lần đầu".
+Việc đã sửa:
+1. App tự tạo/cập nhật document users/similockdn@gmail.com với role Admin.
+2. Không còn phụ thuộc vào các document users đang bị lưu sai theo UID.
+3. Firestore Rules cho phép email similockdn@gmail.com tự khôi phục quyền Admin.
+4. Email phân quyền nhân viên được tự chuyển về chữ thường.
 
-Nếu vẫn lỗi:
-- auth/unauthorized-domain: thiếu Authorized domains.
-- operation-not-allowed: chưa bật Email/Password.
-- invalid-credential: sai mật khẩu hoặc tài khoản chưa tồn tại.
-- permission-denied: chưa Publish Firestore Rules.
+Cách cập nhật:
+1. Upload toàn bộ file trong thư mục này lên GitHub Pages.
+2. Vào Firebase > Firestore Database > Rules.
+3. Copy toàn bộ nội dung file firestore.rules và bấm Publish.
+4. Vào Authentication > Users, kiểm tra tài khoản similockdn@gmail.com đã tồn tại.
+5. Mở web, nhập similockdn@gmail.com và mật khẩu.
+6. Nếu chưa có tài khoản, bấm Tạo Admin lần đầu.
+
+Lưu ý:
+- Collection users nên có document ID đúng là: similockdn@gmail.com
+- Các document ID dạng UID cũ có thể để nguyên, không ảnh hưởng sau bản fix này.

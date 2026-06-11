@@ -4,25 +4,31 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function myEmail() { return request.auth.token.email.lower(); }
+    function isMainAdminEmail() { return signedIn() && myEmail() == 'similockdn@gmail.com'; }
     function myUserPath() { return /databases/$(database)/documents/users/$(myEmail()); }
     function myUserExists() { return signedIn() && exists(myUserPath()); }
     function myUser() { return get(myUserPath()).data; }
     function isAdmin() { return myUserExists() && myUser().role == 'Admin'; }
 
-    // Cho phép tài khoản đăng nhập đầu tiên tự tạo hồ sơ Admin.
-    // Sau đó chỉ Admin mới sửa bảng phân quyền.
     match /users/{email} {
       allow read: if signedIn();
-      allow create: if signedIn() && (
+
+      // Admin chính: similockdn@gmail.com được tự tạo/cập nhật hồ sơ Admin,
+      // kể cả khi trước đó collection users đang lưu sai theo UID.
+      allow create, update: if signedIn() && (
         isAdmin() ||
-        (email == myEmail() && request.resource.data.role == 'Admin')
+        (
+          email == myEmail() &&
+          request.resource.data.role == 'Admin' &&
+          (isMainAdminEmail() || !exists(/databases/$(database)/documents/users/$(email)))
+        )
       );
-      allow update, delete: if isAdmin();
+
+      allow delete: if isAdmin();
     }
 
-    // Dữ liệu ERP: chỉ tài khoản đã đăng nhập và có hồ sơ phân quyền mới được dùng.
     match /{document=**} {
-      allow read, write: if signedIn() && myUserExists();
+      allow read, write: if signedIn() && (myUserExists() || isMainAdminEmail());
     }
   }
 }

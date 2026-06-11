@@ -3,6 +3,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, on
 import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
+const ADMIN_EMAIL='similockdn@gmail.com';
 let currentUser=null,currentPerm={role:'Admin',perms:[]},creatingAdmin=false;let editingSale=null,editingStock=null,editingWarranty=null;
 const data={customers:[],products:[],staff:[],prices:[],sales:[],stockVouchers:[],receipts:[],warranties:[],users:[],logs:[]};
 const modules=['dashboard','sales','debts','inventory','stockbook','warranty','customers','products','prices','staff','reports','permissions'];
@@ -94,10 +95,18 @@ async function loadUserProfile(u){
     const p=await getDoc(pRef);
     if(p.exists()) return p.data();
 
+    // FIX: Admin chính thức của SIMILOCK.
+    // Dù collection users đang có document UID cũ, email này vẫn được tự tạo/cập nhật quyền Admin.
+    if(email===ADMIN_EMAIL){
+      const admin={email,name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+      await setDoc(pRef,admin,{merge:true});
+      return admin;
+    }
+
     // Trường hợp dữ liệu mới hoàn toàn: người đăng nhập đầu tiên tự động thành Admin.
     const snap=await getDocs(col('users'));
     if(snap.empty){
-      const admin={email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+      const admin={email,name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
       await setDoc(pRef,admin,{merge:true});
       return admin;
     }
@@ -129,7 +138,7 @@ $('setupAdminBtn').onclick=async()=>{
       if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
       else throw e;
     }
-    await setDoc(doc(db,'users',email),{email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+    await setDoc(doc(db,'users',email),{email,name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
     alert('Đã tạo/cập nhật Admin thành công.');
   }catch(e){alert(authMsg(e)+'\n\nCần kiểm tra 3 mục: Authentication đã bật Email/Password, Authorized domains có domain GitHub Pages, Firestore Rules đã Publish.');setLoginBusy(false)}
   finally{creatingAdmin=false}
@@ -305,7 +314,7 @@ function renderReports(){
 }
 function renderPermissions(){let keys=Object.keys(permLabels);$('permBox').innerHTML=keys.map(k=>`<label><input type="checkbox" value="${k}"> ${permLabels[k]}</label>`).join('');$('permissionTable').innerHTML=data.users.map(u=>`<tr><td>${u.email}</td><td>${u.name||''}</td><td>${u.role}</td><td>${(u.perms||[]).map(p=>permLabels[p]||p).join(', ')}</td><td><button class="btn ghost" onclick="editPermission('${u.email}')">Sửa</button></td></tr>`).join('')}
 $('uRole')?.addEventListener('change',()=>{document.querySelectorAll('#permBox input').forEach(i=>i.checked=(permissionMap[$('uRole').value]||[]).includes(i.value))});
-window.saveUserPermission=async()=>{let email=$('uEmail').value.trim(),role=$('uRole').value;if(!email)return alert('Nhập email');let perms=[...document.querySelectorAll('#permBox input:checked')].map(i=>i.value);await setDoc(doc(db,'users',email),{email,name:$('uName').value,role,perms,updatedAt:serverTimestamp()});await loadAll()}
+window.saveUserPermission=async()=>{let email=normEmail($('uEmail').value),role=$('uRole').value;if(!email)return alert('Nhập email');let perms=[...document.querySelectorAll('#permBox input:checked')].map(i=>i.value);await setDoc(doc(db,'users',email),{email,name:$('uName').value,role,perms,updatedAt:serverTimestamp()});await loadAll()}
 window.editPermission=email=>{let u=data.users.find(x=>x.email===email);$('uEmail').value=u.email;$('uName').value=u.name||'';$('uRole').value=u.role;document.querySelectorAll('#permBox input').forEach(i=>i.checked=(u.perms||[]).includes(i.value))}
 
 window.removeDoc=async(name,id)=>{
