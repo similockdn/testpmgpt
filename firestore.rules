@@ -5,30 +5,35 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function myEmail() { return request.auth.token.email.lower(); }
     function isMainAdminEmail() { return signedIn() && myEmail() == 'similockdn@gmail.com'; }
-    function myUserPath() { return /databases/$(database)/documents/users/$(myEmail()); }
+    function myUserPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
     function myUserExists() { return signedIn() && exists(myUserPath()); }
     function myUser() { return get(myUserPath()).data; }
     function isAdmin() { return myUserExists() && myUser().role == 'Admin'; }
+    function hasProfile() { return myUserExists() && myUser().role != 'Chưa phân quyền'; }
 
-    match /users/{email} {
+    // CHUẨN MỚI: users/{UID Firebase Auth}
+    match /users/{uid} {
       allow read: if signedIn();
 
-      // Admin chính: similockdn@gmail.com được tự tạo/cập nhật hồ sơ Admin,
-      // kể cả khi trước đó collection users đang lưu sai theo UID.
-      allow create, update: if signedIn() && (
+      // User được tạo hồ sơ của chính UID mình.
+      // Admin chính similockdn@gmail.com được tự tạo/cập nhật quyền Admin cho chính UID của mình.
+      allow create: if signedIn() && (
+        uid == request.auth.uid ||
         isAdmin() ||
-        (
-          email == myEmail() &&
-          request.resource.data.role == 'Admin' &&
-          (isMainAdminEmail() || !exists(/databases/$(database)/documents/users/$(email)))
-        )
+        (isMainAdminEmail() && uid == request.auth.uid && request.resource.data.role == 'Admin')
+      );
+
+      allow update: if signedIn() && (
+        isAdmin() ||
+        (isMainAdminEmail() && uid == request.auth.uid && request.resource.data.role == 'Admin') ||
+        (uid == request.auth.uid && request.resource.data.role == resource.data.role && request.resource.data.perms == resource.data.perms)
       );
 
       allow delete: if isAdmin();
     }
 
     match /{document=**} {
-      allow read, write: if signedIn() && (myUserExists() || isMainAdminEmail());
+      allow read, write: if signedIn() && (hasProfile() || isMainAdminEmail());
     }
   }
 }

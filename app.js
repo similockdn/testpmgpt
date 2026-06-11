@@ -4,6 +4,8 @@ import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc,
 
 const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
 const ADMIN_EMAIL='similockdn@gmail.com';
+const userDocRef = (u)=>doc(db,'users',u.uid);
+const userProfileData = (u, extra={})=>({uid:u.uid,email:normEmail(u.email),...extra});
 let currentUser=null,currentPerm={role:'Admin',perms:[]},creatingAdmin=false;let editingSale=null,editingStock=null,editingWarranty=null;
 const data={customers:[],products:[],staff:[],prices:[],sales:[],stockVouchers:[],receipts:[],warranties:[],users:[],logs:[]};
 const modules=['dashboard','sales','debts','inventory','stockbook','warranty','customers','products','prices','staff','reports','permissions'];
@@ -68,20 +70,24 @@ function authMsg(e){
 }
 async function ensureFirstAdmin(u){
   try{
-    const snap = await getDocs(col('users'));
-    const pRef = doc(db,'users',u.email);
+    const pRef = userDocRef(u);
     const p = await getDoc(pRef);
-    if(!p.exists() && snap.empty){
-      await setDoc(pRef,{email:u.email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
-      return {role:'Admin',perms:permissionMap.Admin,email:u.email,name:'Admin'};
-    }
     if(p.exists()) return p.data();
-    return {role:'Chưa phân quyền',perms:[],email:u.email};
+    const snap = await getDocs(col('users'));
+    if(snap.empty || normEmail(u.email)===ADMIN_EMAIL){
+      const admin=userProfileData(u,{name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+      await setDoc(pRef,admin,{merge:true});
+      return admin;
+    }
+    const pending=userProfileData(u,{name:'',role:'Chưa phân quyền',perms:[],createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    await setDoc(pRef,pending,{merge:true});
+    return pending;
   }catch(e){
     alert('Đăng nhập Auth thành công nhưng Firestore đang lỗi. Chi tiết: '+authMsg(e));
-    return {role:'Admin',perms:permissionMap.Admin,email:u.email};
+    return {role:'Admin',perms:permissionMap.Admin,email:normEmail(u.email),uid:u.uid};
   }
 }
+
 
 function setLoginBusy(isBusy, msg=''){
   ['loginBtn','setupAdminBtn','signupStaffBtn'].forEach(id=>{ if($(id)) $(id).disabled=!!isBusy; });
@@ -90,31 +96,35 @@ function setLoginBusy(isBusy, msg=''){
 }
 async function loadUserProfile(u){
   const email=normEmail(u.email);
-  const pRef=doc(db,'users',email);
+  const pRef=userDocRef(u);
   try{
     const p=await getDoc(pRef);
-    if(p.exists()) return p.data();
+    if(p.exists()) return {uid:u.uid,...p.data()};
 
-    // FIX: Admin chính thức của SIMILOCK.
-    // Dù collection users đang có document UID cũ, email này vẫn được tự tạo/cập nhật quyền Admin.
+    // Chuẩn UID: document users/{uid}. Admin chính tự được cấp quyền.
     if(email===ADMIN_EMAIL){
-      const admin={email,name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+      const admin=userProfileData(u,{name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
       await setDoc(pRef,admin,{merge:true});
       return admin;
     }
 
-    // Trường hợp dữ liệu mới hoàn toàn: người đăng nhập đầu tiên tự động thành Admin.
+    // Dữ liệu mới hoàn toàn: tài khoản đầu tiên là Admin.
     const snap=await getDocs(col('users'));
     if(snap.empty){
-      const admin={email,name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+      const admin=userProfileData(u,{name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
       await setDoc(pRef,admin,{merge:true});
       return admin;
     }
-    return {email,role:'Chưa phân quyền',perms:[]};
+
+    // Nhân viên tự tạo hồ sơ chờ phân quyền bằng UID để Admin sửa sau.
+    const pending=userProfileData(u,{name:'',role:'Chưa phân quyền',perms:[],createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    await setDoc(pRef,pending,{merge:true});
+    return pending;
   }catch(e){
     throw new Error(authMsg(e));
   }
 }
+
 
 $('loginBtn').onclick=async()=>{
   try{
@@ -138,7 +148,7 @@ $('setupAdminBtn').onclick=async()=>{
       if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
       else throw e;
     }
-    await setDoc(doc(db,'users',email),{email,name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+    await setDoc(userDocRef(auth.currentUser),userProfileData(auth.currentUser,{name:'Admin Similock',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),{merge:true});
     alert('Đã tạo/cập nhật Admin thành công.');
   }catch(e){alert(authMsg(e)+'\n\nCần kiểm tra 3 mục: Authentication đã bật Email/Password, Authorized domains có domain GitHub Pages, Firestore Rules đã Publish.');setLoginBusy(false)}
   finally{creatingAdmin=false}
@@ -156,13 +166,13 @@ $('signupStaffBtn').onclick=async()=>{
       if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
       else throw e;
     }
-    const p=await getDoc(doc(db,'users',email));
+    const pRef=userDocRef(auth.currentUser);
+    const p=await getDoc(pRef);
     if(!p.exists()){
-      await signOut(auth);
-      alert('Tài khoản Auth đã tạo, nhưng email này chưa được Admin phân quyền. Admin vào mục Phân quyền, thêm đúng email: '+email);
-      return;
+      await setDoc(pRef,userProfileData(auth.currentUser,{name:'',role:'Chưa phân quyền',perms:[],createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),{merge:true});
     }
-    alert('Tạo/đăng nhập tài khoản nhân viên thành công.');
+    await signOut(auth);
+    alert('Tài khoản nhân viên đã tạo hồ sơ UID. Admin vào mục Phân quyền, tìm email '+email+' rồi cấp quyền.');
   }catch(e){alert(authMsg(e)+'\n\nLưu ý: Admin phải vào mục Phân quyền và lưu email nhân viên trước.');setLoginBusy(false)}
 };
 $('logoutBtn').onclick=()=>signOut(auth);
@@ -176,7 +186,7 @@ onAuthStateChanged(auth,async u=>{
     if(currentPerm.role==='Chưa phân quyền' && creatingAdmin){
       const email=normEmail(u.email);
       currentPerm={email,name:'Admin',role:'Admin',perms:permissionMap.Admin};
-      await setDoc(doc(db,'users',email),{...currentPerm,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+      await setDoc(userDocRef(u),userProfileData(u,{...currentPerm,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}),{merge:true});
     }
     if(currentPerm.role==='Chưa phân quyền'){
       await signOut(auth);
@@ -312,10 +322,30 @@ function renderReports(){
   `<div class="panel span2"><div class="panel-head"><h3>🧾 Nhật ký hệ thống gần nhất</h3><button class="btn ghost" onclick="exportBackup()">Backup JSON</button></div><table><thead><tr><th>Tài khoản</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>${logs.map(l=>`<tr><td>${l.email||''}</td><td>${l.action||''}</td><td>${l.detail||''}</td></tr>`).join('')||'<tr><td colspan="3">Chưa có nhật ký</td></tr>'}</tbody></table></div>`;
   applyPermissions()
 }
-function renderPermissions(){let keys=Object.keys(permLabels);$('permBox').innerHTML=keys.map(k=>`<label><input type="checkbox" value="${k}"> ${permLabels[k]}</label>`).join('');$('permissionTable').innerHTML=data.users.map(u=>`<tr><td>${u.email}</td><td>${u.name||''}</td><td>${u.role}</td><td>${(u.perms||[]).map(p=>permLabels[p]||p).join(', ')}</td><td><button class="btn ghost" onclick="editPermission('${u.email}')">Sửa</button></td></tr>`).join('')}
+function renderPermissions(){
+  if(!$('uUid')) $('uEmail').insertAdjacentHTML('beforebegin','<input id="uUid" type="hidden">');
+  let keys=Object.keys(permLabels);
+  $('permBox').innerHTML=keys.map(k=>`<label><input type="checkbox" value="${k}"> ${permLabels[k]}</label>`).join('');
+  $('permissionTable').innerHTML=data.users.map(u=>`<tr><td>${u.email||''}<br><small>UID: ${u.id}</small></td><td>${u.name||''}</td><td>${u.role||''}</td><td>${(u.perms||[]).map(p=>permLabels[p]||p).join(', ')}</td><td><button class="btn ghost" onclick="editPermission('${u.id}')">Sửa</button></td></tr>`).join('')
+}
 $('uRole')?.addEventListener('change',()=>{document.querySelectorAll('#permBox input').forEach(i=>i.checked=(permissionMap[$('uRole').value]||[]).includes(i.value))});
-window.saveUserPermission=async()=>{let email=normEmail($('uEmail').value),role=$('uRole').value;if(!email)return alert('Nhập email');let perms=[...document.querySelectorAll('#permBox input:checked')].map(i=>i.value);await setDoc(doc(db,'users',email),{email,name:$('uName').value,role,perms,updatedAt:serverTimestamp()});await loadAll()}
-window.editPermission=email=>{let u=data.users.find(x=>x.email===email);$('uEmail').value=u.email;$('uName').value=u.name||'';$('uRole').value=u.role;document.querySelectorAll('#permBox input').forEach(i=>i.checked=(u.perms||[]).includes(i.value))}
+window.saveUserPermission=async()=>{
+  let email=normEmail($('uEmail').value),role=$('uRole').value;
+  if(!email)return alert('Nhập email');
+  let existing=data.users.find(x=>x.id===$('uUid')?.value)||data.users.find(x=>normEmail(x.email)===email);
+  if(!existing)return alert('Chưa có UID cho email này. Hãy bấm Tạo tài khoản nhân viên bằng email đó trước, sau đó quay lại Phân quyền để cấp quyền.');
+  let perms=[...document.querySelectorAll('#permBox input:checked')].map(i=>i.value);
+  await setDoc(doc(db,'users',existing.id),{uid:existing.id,email,name:$('uName').value,role,perms,updatedAt:serverTimestamp()},{merge:true});
+  $('uUid').value=existing.id;
+  await loadAll()
+}
+window.editPermission=id=>{
+  let u=data.users.find(x=>x.id===id);
+  if(!u)return alert('Không tìm thấy user UID: '+id);
+  $('uUid').value=u.id;$('uEmail').value=u.email||'';$('uName').value=u.name||'';$('uRole').value=u.role||'Sale';
+  document.querySelectorAll('#permBox input').forEach(i=>i.checked=(u.perms||[]).includes(i.value))
+}
+
 
 window.removeDoc=async(name,id)=>{
   const label={sales:'đơn bán',stockVouchers:'phiếu kho',customers:'khách hàng',products:'sản phẩm',prices:'bảng giá',staff:'nhân viên',warranties:'bảo hành'}[name]||name;
