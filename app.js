@@ -2,8 +2,8 @@ import { auth, db } from './firebase-config.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
-const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);
-let currentUser=null,currentPerm={role:'Admin',perms:[]};let editingSale=null,editingStock=null,editingWarranty=null;
+const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
+let currentUser=null,currentPerm={role:'Admin',perms:[]},creatingAdmin=false;let editingSale=null,editingStock=null,editingWarranty=null;
 const data={customers:[],products:[],staff:[],prices:[],sales:[],stockVouchers:[],receipts:[],warranties:[],users:[],logs:[]};
 const modules=['dashboard','sales','debts','inventory','stockbook','warranty','customers','products','prices','staff','reports','permissions'];
 const permissionMap={
@@ -51,64 +51,139 @@ function normalizePhone(v){return String(v||'').replace(/\D/g,'')}
 function validateDate(v){return !v || /^\d{4}-\d{2}-\d{2}$/.test(v)}
 function calcSaleTotals(items,vatMode,paid){let subtotal=items.reduce((a,it)=>a+(+it.qty||0)*(+it.price||0)*(1-(+it.discount||0)/100),0);let rate=vatMode?.includes('10') ? 0.10 : (vatMode?.includes('8') ? 0.08 : 0);let vat=0,grand=subtotal;if(vatMode?.startsWith('add')){vat=subtotal*rate;grand=subtotal+vat}else if(vatMode?.startsWith('included')){vat=subtotal-subtotal/(1+rate);grand=subtotal}return{subtotal,vat,grand,debt:grand-(+paid||0)}}
 
-function authMsg(e){const m=e?.code||e?.message||'';if(m.includes('invalid-credential'))return 'Email hoặc mật khẩu không đúng';if(m.includes('user-not-found'))return 'Email chưa tồn tại';if(m.includes('wrong-password'))return 'Mật khẩu không đúng';if(m.includes('email-already-in-use'))return 'Email này đã được tạo tài khoản rồi. Hãy bấm Đăng nhập.';if(m.includes('weak-password'))return 'Mật khẩu phải tối thiểu 6 ký tự';if(m.includes('operation-not-allowed'))return 'Firebase chưa bật Email/Password Authentication';return e.message||String(e)}
+function authMsg(e){
+  const m=String(e?.code||e?.message||e||'');
+  console.error('AUTH/FIRESTORE ERROR:', e);
+  if(m.includes('invalid-api-key'))return 'Sai Firebase apiKey hoặc firebase-config.js chưa được cập nhật đúng.';
+  if(m.includes('auth/unauthorized-domain')||m.includes('unauthorized-domain'))return 'Domain web chưa được thêm trong Firebase Authentication > Settings > Authorized domains. Hãy thêm domain GitHub Pages của bạn.';
+  if(m.includes('operation-not-allowed'))return 'Firebase chưa bật Email/Password. Vào Authentication > Sign-in method > bật Email/Password.';
+  if(m.includes('invalid-credential'))return 'Email hoặc mật khẩu không đúng, hoặc tài khoản chưa tồn tại.';
+  if(m.includes('user-not-found'))return 'Email chưa tồn tại. Hãy bấm Tạo Admin lần đầu hoặc Tạo tài khoản nhân viên.';
+  if(m.includes('wrong-password'))return 'Mật khẩu không đúng.';
+  if(m.includes('email-already-in-use'))return 'Email này đã được tạo tài khoản rồi. Hãy bấm Đăng nhập.';
+  if(m.includes('weak-password'))return 'Mật khẩu phải tối thiểu 6 ký tự.';
+  if(m.includes('permission-denied')||m.includes('Missing or insufficient permissions'))return 'Firestore Rules đang chặn đọc/ghi. Hãy dùng Rules cơ bản và bấm Publish.';
+  return m;
+}
+async function ensureFirstAdmin(u){
+  try{
+    const snap = await getDocs(col('users'));
+    const pRef = doc(db,'users',u.email);
+    const p = await getDoc(pRef);
+    if(!p.exists() && snap.empty){
+      await setDoc(pRef,{email:u.email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+      return {role:'Admin',perms:permissionMap.Admin,email:u.email,name:'Admin'};
+    }
+    if(p.exists()) return p.data();
+    return {role:'Chưa phân quyền',perms:[],email:u.email};
+  }catch(e){
+    alert('Đăng nhập Auth thành công nhưng Firestore đang lỗi. Chi tiết: '+authMsg(e));
+    return {role:'Admin',perms:permissionMap.Admin,email:u.email};
+  }
+}
+
+function setLoginBusy(isBusy, msg=''){
+  ['loginBtn','setupAdminBtn','signupStaffBtn'].forEach(id=>{ if($(id)) $(id).disabled=!!isBusy; });
+  const box=$('loginStatus');
+  if(box){ box.textContent=msg||''; box.style.display=msg?'block':'none'; }
+}
+async function loadUserProfile(u){
+  const email=normEmail(u.email);
+  const pRef=doc(db,'users',email);
+  try{
+    const p=await getDoc(pRef);
+    if(p.exists()) return p.data();
+
+    // Trường hợp dữ liệu mới hoàn toàn: người đăng nhập đầu tiên tự động thành Admin.
+    const snap=await getDocs(col('users'));
+    if(snap.empty){
+      const admin={email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+      await setDoc(pRef,admin,{merge:true});
+      return admin;
+    }
+    return {email,role:'Chưa phân quyền',perms:[]};
+  }catch(e){
+    throw new Error(authMsg(e));
+  }
+}
+
 $('loginBtn').onclick=async()=>{
   try{
-    const email=$('email').value.trim(),pw=$('password').value;
+    const email=normEmail($('email').value),pw=$('password').value;
     if(!email||!pw)return alert('Nhập email và mật khẩu');
+    setLoginBusy(true,'Đang đăng nhập...');
     await signInWithEmailAndPassword(auth,email,pw);
-  }catch(e){alert(authMsg(e))}
+  }catch(e){alert(authMsg(e));setLoginBusy(false)}
 };
 
 $('setupAdminBtn').onclick=async()=>{
   try{
-    const email=$('email').value.trim(),pw=$('password').value;
+    const email=normEmail($('email').value),pw=$('password').value;
     if(!email||!pw)return alert('Nhập email và mật khẩu');
+    if(pw.length<6)return alert('Mật khẩu phải tối thiểu 6 ký tự');
+    setLoginBusy(true,'Đang tạo/cập nhật Admin...');
+    creatingAdmin=true;
     try{
       await createUserWithEmailAndPassword(auth,email,pw);
     }catch(e){
-      if((e.code||'').includes('email-already-in-use')){
-        await signInWithEmailAndPassword(auth,email,pw);
-      }else throw e;
+      if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
+      else throw e;
     }
     await setDoc(doc(db,'users',email),{email,name:'Admin',role:'Admin',perms:permissionMap.Admin,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
-    alert('Đã tạo/cập nhật Admin thành công. Nếu chưa vào màn hình chính, bấm Đăng nhập lại.');
-  }catch(e){alert(authMsg(e)+'\n\nNếu vẫn lỗi, hãy kiểm tra Firestore Rules đã Publish và Email/Password đã bật trong Firebase Authentication.')}
+    alert('Đã tạo/cập nhật Admin thành công.');
+  }catch(e){alert(authMsg(e)+'\n\nCần kiểm tra 3 mục: Authentication đã bật Email/Password, Authorized domains có domain GitHub Pages, Firestore Rules đã Publish.');setLoginBusy(false)}
+  finally{creatingAdmin=false}
 };
 
 $('signupStaffBtn').onclick=async()=>{
   try{
-    const email=$('email').value.trim(),pw=$('password').value;
+    const email=normEmail($('email').value),pw=$('password').value;
     if(!email||!pw)return alert('Nhập email và mật khẩu');
-    // Không đọc Firestore trước khi tạo user, vì Rules chỉ cho đọc sau khi đã đăng nhập.
+    if(pw.length<6)return alert('Mật khẩu phải tối thiểu 6 ký tự');
+    setLoginBusy(true,'Đang tạo tài khoản nhân viên...');
     try{
       await createUserWithEmailAndPassword(auth,email,pw);
     }catch(e){
-      if((e.code||'').includes('email-already-in-use')){
-        await signInWithEmailAndPassword(auth,email,pw);
-      }else throw e;
+      if((e.code||'').includes('email-already-in-use')) await signInWithEmailAndPassword(auth,email,pw);
+      else throw e;
     }
     const p=await getDoc(doc(db,'users',email));
     if(!p.exists()){
-      alert('Tài khoản Auth đã tạo, nhưng email này chưa được Admin phân quyền trong mục Phân quyền. Hãy đăng nhập Admin và thêm email này.');
+      await signOut(auth);
+      alert('Tài khoản Auth đã tạo, nhưng email này chưa được Admin phân quyền. Admin vào mục Phân quyền, thêm đúng email: '+email);
       return;
     }
     alert('Tạo/đăng nhập tài khoản nhân viên thành công.');
-  }catch(e){alert(authMsg(e)+'\n\nLưu ý: Admin phải vào mục Phân quyền và lưu email nhân viên trước.')}
+  }catch(e){alert(authMsg(e)+'\n\nLưu ý: Admin phải vào mục Phân quyền và lưu email nhân viên trước.');setLoginBusy(false)}
 };
 $('logoutBtn').onclick=()=>signOut(auth);
+
 onAuthStateChanged(auth,async u=>{
-  if(!u){$('loginPage').style.display='grid';$('appPage').style.display='none';return}
-  currentUser=u;$('loginPage').style.display='none';$('appPage').style.display='flex';$('currentUser').textContent=u.email;
+  if(!u){currentUser=null;currentPerm={role:'Admin',perms:[]};$('loginPage').style.display='grid';$('appPage').style.display='none';setLoginBusy(false);return}
   try{
-    const p=await getDoc(doc(db,'users',u.email));
-    if(p.exists()) currentPerm=p.data();
-    else currentPerm={role:'Chưa phân quyền',perms:[]};
+    setLoginBusy(true,'Đang tải phân quyền...');
+    currentUser=u;
+    currentPerm = await loadUserProfile(u);
+    if(currentPerm.role==='Chưa phân quyền' && creatingAdmin){
+      const email=normEmail(u.email);
+      currentPerm={email,name:'Admin',role:'Admin',perms:permissionMap.Admin};
+      await setDoc(doc(db,'users',email),{...currentPerm,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+    }
+    if(currentPerm.role==='Chưa phân quyền'){
+      await signOut(auth);
+      alert('Đăng nhập Auth thành công nhưng email này chưa được Admin phân quyền: '+normEmail(u.email));
+      return;
+    }
+    $('currentUser').textContent=normEmail(u.email)+' • '+(currentPerm.role||'');
+    $('loginPage').style.display='none';$('appPage').style.display='flex';
+    applyPermissions();
+    await loadAll();
+    showPage(has('dashboard')?'dashboard':((currentPerm.perms||[])[0]||'dashboard'));
+    setLoginBusy(false);
   }catch(e){
-    alert('Đăng nhập Firebase thành công nhưng Firestore đang chặn đọc dữ liệu. Hãy cập nhật Firestore Rules trong file firestore.rules rồi bấm Publish.\n\nLỗi: '+authMsg(e));
-    currentPerm={role:'Chưa phân quyền',perms:[]};
+    $('loginPage').style.display='grid';$('appPage').style.display='none';setLoginBusy(false);
+    alert('Đăng nhập chưa hoàn tất: '+authMsg(e));
   }
-  applyPermissions();await loadAll();
 });
 
 function applyPermissions(){document.querySelectorAll('#menu button').forEach(b=>{b.style.display=has(b.dataset.page)?'block':'none'});document.querySelectorAll('.view-cost').forEach(x=>x.classList.toggle('hidden',!has('viewCost')));}
@@ -116,7 +191,7 @@ document.querySelectorAll('#menu button').forEach(btn=>btn.onclick=()=>showPage(
 function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='SIMILOCK ERP - Quản lý bán hàng, kho, công nợ, bảo hành'}
 function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền'}[id]||id)}
 
-function renderAll(){applyPermissions();renderSelectors();renderDashboard();renderCustomers();renderProducts();renderPrices();renderStaff();renderSales();renderDebts();renderReceipts();renderStock();renderStockBook();renderWarranties();renderReports();renderPermissions();resetSaleForm();resetStockForm();}
+function renderAll(){try{applyPermissions();renderSelectors();renderDashboard();renderCustomers();renderProducts();renderPrices();renderStaff();renderSales();renderDebts();renderReceipts();renderStock();renderStockBook();renderWarranties();renderReports();renderPermissions();resetSaleForm();resetStockForm();}catch(e){console.error('RENDER ERROR:',e);alert('Đăng nhập được nhưng lỗi khi tải màn hình: '+(e.message||e));}}
 function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>x.dept==='Sale'||x.dept==='Quản lý'),x=>x.name);fillSelect($('saleTech'),data.staff.filter(x=>x.dept==='Kỹ thuật'),x=>x.name);fillSelect($('priceProduct'),data.products,x=>`${x.code} - ${x.name}`,x=>x.code);fillSelect($('receiptCustomer'),data.customers,x=>`${x.name} - ${x.phone||''}`);fillSelect($('wSale'),data.sales,x=>`${x.code} - ${x.customerName||''}`);$('customerList').innerHTML=data.customers.map(c=>`<option value="${c.name} | ${c.phone||''}"></option>`).join('')}
 function renderDashboard(){let month=new Date().toISOString().slice(0,7);let sales=data.sales.filter(s=>String(s.date||'').startsWith(month));let rev=sales.reduce((a,s)=>a+(+s.grand||0),0);let profit=sales.reduce((a,s)=>a+(+s.profit||0),0);let debt=calcDebts().reduce((a,d)=>a+d.debt,0);let low=data.products.filter(p=>stockOf(p.code)<=(+p.minStock||3));$('kpiRevenue').textContent=money(rev);$('kpiProfit').textContent=money(profit);$('kpiDebt').textContent=money(debt);$('kpiLowStock').textContent=low.length;const best={};data.sales.forEach(s=>(s.items||[]).forEach(it=>best[it.code]=(best[it.code]||0)+(+it.qty||0)));let rows=Object.entries(best).sort((a,b)=>b[1]-a[1]).slice(0,8);let max=Math.max(1,...rows.map(r=>r[1]));$('bestProducts').innerHTML=rows.length?rows.map(([code,qty])=>{let p=data.products.find(x=>x.code===code)||{};return `<div class="bar-row"><b>${code}</b><div><small>${p.name||''}</small><div class="bar"><i style="width:${qty/max*100}%"></i></div></div><b>${qty}</b></div>`}).join(''):'Chưa có dữ liệu';const st={};data.sales.forEach(s=>{let n=data.staff.find(x=>x.id===s.staffId)?.name||'Khác';st[n]=st[n]||{rev:0,count:0};st[n].rev+=+s.grand||0;st[n].count++});$('topStaff').innerHTML=Object.entries(st).sort((a,b)=>b[1].rev-a[1].rev).slice(0,5).map(([n,v])=>`<tr><td>${n}</td><td>${money(v.rev)}</td><td>${v.count}</td></tr>`).join('');$('latestSales').innerHTML=data.sales.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(s=>`<tr><td>${s.code}</td><td>${s.customerName||''}</td><td>${money(s.grand)}</td></tr>`).join('');$('lowStockRows').innerHTML=low.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td><span class="badge red">${stockOf(p.code)}</span></td></tr>`).join('')||'<tr><td colspan="3">Kho ổn định</td></tr>'}
 

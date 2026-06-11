@@ -2,12 +2,27 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function myUserPath() { return /databases/$(database)/documents/users/$(myEmail()); }
+    function myUserExists() { return signedIn() && exists(myUserPath()); }
+    function myUser() { return get(myUserPath()).data; }
+    function isAdmin() { return myUserExists() && myUser().role == 'Admin'; }
 
-    // SIMILOCK ERP - bản vận hành ổn định
-    // Chỉ tài khoản đã đăng nhập Firebase Authentication mới được đọc/ghi dữ liệu.
-    // Phân quyền chi tiết Admin/Sale/Kho/Kế toán/Kỹ thuật được xử lý trong app.js.
+    // Cho phép tài khoản đăng nhập đầu tiên tự tạo hồ sơ Admin.
+    // Sau đó chỉ Admin mới sửa bảng phân quyền.
+    match /users/{email} {
+      allow read: if signedIn();
+      allow create: if signedIn() && (
+        isAdmin() ||
+        (email == myEmail() && request.resource.data.role == 'Admin')
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    // Dữ liệu ERP: chỉ tài khoản đã đăng nhập và có hồ sơ phân quyền mới được dùng.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if signedIn() && myUserExists();
     }
   }
 }
