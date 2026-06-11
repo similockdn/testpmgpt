@@ -83,3 +83,15 @@ body{background:#f0f2f5!important;}
 .login-card .btn.primary:hover,#loginBtn:hover{background:var(--fb-dark)!important;}
 .login-card .hint{margin-top:12px!important;text-align:center!important;color:#d93025!important;font-weight:700!important;}
 @media(max-width:520px){.login-card{padding:22px!important}.login-card h1{font-size:28px!important}.login-card p{font-size:14px!important}}
+
+/* ===== FIX LOGIN VISIBILITY =====
+   Khi đã đăng nhập, app.js set #loginPage display:none.
+   Quy tắc này ép ẩn màn hình đăng nhập để không bị CSS Facebook override. */
+#loginPage[style*="display: none"],
+#loginPage[style*="display:none"]{
+  display:none!important;
+}
+#appPage[style*="display: none"],
+#appPage[style*="display:none"]{
+  display:none!important;
+}
