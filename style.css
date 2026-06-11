@@ -97,3 +97,6 @@ body{background:#f0f2f5!important;}
 }
 .checkline{display:flex!important;align-items:center;gap:8px;height:44px;padding:0 12px;border:1px solid #dfe3ea;border-radius:10px;background:#fff;font-weight:700;color:#334155}
 .checkline input{width:auto!important;height:auto!important}
+
+/* ===== Sales UI + sale detail modal ===== */
+.sale-layout{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}.sale-main-box,.sale-side-box{border:1px solid var(--line);background:#f8fafc;border-radius:18px;padding:16px}.sale-main-box h4,.sale-side-box h4{margin:0 0 12px;color:#0f172a}.sale-side-box p{color:#475569;line-height:1.55;margin:0 0 12px}.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:grid;place-items:center;padding:20px}.modal-card{width:min(980px,96vw);max-height:92vh;overflow:auto;background:white;border-radius:22px;border:1px solid var(--line);box-shadow:0 24px 70px rgba(2,6,23,.28);padding:18px}.sale-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}.sale-detail-grid>div{background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:14px}.sale-detail-grid p{margin:8px 0 0;line-height:1.55;color:#475569}@media(max-width:900px){.sale-layout,.sale-detail-grid{grid-template-columns:1fr}}

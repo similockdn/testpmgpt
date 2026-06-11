@@ -91,31 +91,45 @@
       </section>
 
       <section id="sales" class="page">
-        <div class="panel">
-          <div class="panel-head"><h3>🛒 Phiếu bán hàng nhiều sản phẩm</h3><div><button class="btn ghost" onclick="resetSaleForm()">Phiếu mới</button><button class="btn primary" onclick="saveSale()">Lưu phiếu bán</button></div></div>
-          <div class="grid form-grid">
-            <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
-            <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
-            <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm theo tên/SĐT hoặc nhập khách mới" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button></div><datalist id="customerList"></datalist></div>
-            <div><label>Nhân viên sale</label><select id="saleStaff"></select></div>
-            <div><label>Kỹ thuật</label><select id="saleTech"></select></div>
-            <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
-            <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" readonly /></div>
-            <div><label>VAT</label><select id="saleVatMode"><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option><option value="included8">Giá đã gồm VAT 8%</option></select></div>
-            <div><label>Đã thu</label><input id="salePaid" type="number" value="0" /></div>
-            <div><label>Kho</label><label class="checkline"><input id="saleExportStock" type="checkbox" /> Kiêm xuất kho</label></div>
-            <div class="span2"><label>Ghi chú</label><input id="saleNote" /></div>
+        <div class="panel sale-form-panel">
+          <div class="panel-head">
+            <div><h3>🛒 Bán hàng / Phiếu bán</h3><span>Tạo đơn, theo dõi công nợ và chọn kiêm xuất kho khi cần trừ tồn kho.</span></div>
+            <div><button class="btn ghost" onclick="resetSaleForm()">Phiếu mới</button><button class="btn primary" onclick="saveSale()">Lưu phiếu bán</button></div>
+          </div>
+          <div class="sale-layout">
+            <div class="sale-main-box">
+              <h4>Thông tin đơn hàng</h4>
+              <div class="grid form-grid">
+                <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
+                <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
+                <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm mã KH / tên / SĐT hoặc nhập khách mới" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button></div><datalist id="customerList"></datalist></div>
+                <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
+                <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
+                <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
+                <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" readonly /></div>
+                <div><label>VAT</label><select id="saleVatMode"><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option><option value="included8">Giá đã gồm VAT 8%</option></select></div>
+                <div><label>Thanh toán ngay</label><input id="salePaid" type="number" value="0" /></div>
+                <div><label>Xuất kho</label><label class="checkline"><input id="saleExportStock" type="checkbox" /> Kiêm xuất kho</label></div>
+                <div class="span2"><label>Ghi chú</label><input id="saleNote" placeholder="VD: khách thanh toán sau, lắp đặt chiều nay..." /></div>
+              </div>
+            </div>
+            <div class="sale-side-box">
+              <h4>Trạng thái nhanh</h4>
+              <p><b>Công nợ:</b> nếu thu đủ, đơn chuyển sang <span class="badge green">Đã thu tiền</span>. Nếu thu một phần sẽ hiện <span class="badge orange">Thanh toán một phần</span>.</p>
+              <p><b>Kho:</b> chỉ trừ tồn khi tick <b>Kiêm xuất kho</b>. Khi đã xuất, chi tiết đơn sẽ kèm phiếu xuất kho.</p>
+            </div>
           </div>
           <h4>Chi tiết hàng bán</h4>
           <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK %</th><th>Thành tiền</th><th></th></tr></thead><tbody id="saleItems"></tbody></table>
           <button class="btn ghost" onclick="addSaleItem()">+ Thêm dòng hàng</button>
           <div class="total-box"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
         </div>
-        <div class="panel"><div class="panel-head"><h3>Danh sách phiếu bán</h3><input class="search" id="saleSearch" placeholder="Tìm mã phiếu/khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng</th><th class="view-cost">Lợi nhuận</th><th>Trạng thái</th><th>Kho</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><div><h3>Danh sách phiếu bán</h3><span>Bấm Chi tiết để xem công nợ và phiếu xuất kho liên quan.</span></div><input class="search" id="saleSearch" placeholder="Tìm mã phiếu / mã KH / SĐT / khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng</th><th class="view-cost">Lợi nhuận</th><th>Công nợ</th><th>Kho</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
       </section>
 
 
-      <section id="commissions" class="page">
+      
+<section id="commissions" class="page">
         <div class="panel wide">
           <div class="panel-head"><h3>🔎 Lọc báo cáo hoa hồng</h3><button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel</button></div>
           <div class="grid form-grid">
