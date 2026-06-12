@@ -575,11 +575,9 @@ window.printSale=id=>{
   <table><thead><tr><th>STT</th><th>Model</th><th>Tên SP</th><th>SL</th><th>Đơn giá</th><th>CK</th><th>Thành tiền</th></tr></thead><tbody>${(s.items||[]).map((it,i)=>`<tr><td>${i+1}</td><td>${it.code||''}</td><td>${it.name||''}</td><td>${it.qty||0}</td><td>${money(it.price||0)}</td><td>${it.discount||0}%</td><td>${money((+it.qty||0)*(+it.price||0)*(1-(+it.discount||0)/100))}</td></tr>`).join('')}</tbody></table>
   <div style="display:flex;justify-content:flex-end;margin-top:10px">
     <div style="min-width:230px;line-height:1.65">
-      <div style="display:flex;justify-content:space-between"><b>Tiền hàng:</b><span>${money(s.subtotal)}</span></div>
-      <div style="display:flex;justify-content:space-between"><b>Giảm giá/VAT:</b><span>${money(s.vat)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-weight:bold;border-top:1px dashed #999;padding-top:4px"><span>Tổng thanh toán:</span><span>${money(s.grand)}</span></div>
-      <div style="display:flex;justify-content:space-between"><b>Đã thu:</b><span>${money(pay.paidTotal)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-weight:bold"><span>Còn nợ:</span><span>${money(pay.debtLeft)}</span></div>
+      <div style="display:flex;justify-content:space-between"><b>Tiền hàng:</b><span>${money(s.subtotal||s.grand)}</span></div>
+      ${(s.discountTotal||0)>0?`<div style="display:flex;justify-content:space-between"><b>Giảm giá:</b><span>${money(s.discountTotal)}</span></div>`:''}
+      <div style="display:flex;justify-content:space-between;font-weight:bold;border-top:1px dashed #999;padding-top:4px;margin-top:4px"><span>Tổng thanh toán:</span><span>${money(s.grand)}</span></div>
     </div>
   </div>
   <div style="border:1px solid #999;border-radius:4px;margin-top:12px;padding:10px;min-height:44px;line-height:1.5">
@@ -1004,7 +1002,7 @@ window.removeDoc=async(name,id)=>{
   await deleteDoc(doc(db,name,id));await logAction('Xóa '+label,id);await loadAll();
   if(customerToRefresh){await updatePaymentStatusesForCustomer(customerToRefresh);await loadAll()}
 }
-function doPrint(html){let w=window.open('','PRINT','width=800,height=900');w.document.write(`<!doctype html><html><head><title>In phiếu</title><style>body{font-family:Arial;margin:0;color:#111}.print-a5{width:148mm;min-height:210mm;padding:8mm;font-size:12px;box-sizing:border-box}table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #222;padding:5px;text-align:left;vertical-align:top}th{background:#f1f5f9}p{line-height:1.45}.print-a5 h2{font-size:18px}@page{size:A5;margin:0}</style></head><body>${html}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);w.document.close()}
+function doPrint(html){let w=window.open('','PRINT','width=800,height=900');w.document.write(`<!doctype html><html><head><title>In phiếu</title><style>body{font-family:Arial;margin:0;color:#111}.print-a5{width:148mm;min-height:210mm;padding:7mm 8mm;font-size:11.5px;box-sizing:border-box;page-break-after:always}table{width:100%;border-collapse:collapse;margin-top:6px;table-layout:fixed}th,td{border:1px solid #222;padding:4px;text-align:left;vertical-align:top;word-break:break-word}th{background:#f1f5f9}p{line-height:1.4}.print-a5 h2{font-size:17px;margin:3px 0 7px}@page{size:A5 portrait;margin:0}@media print{html,body{width:148mm;min-height:210mm}.print-a5{width:148mm;min-height:210mm}}</style></head><body>${html}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);w.document.close()}
 
 function excelReady(){return !!window.XLSX}
 function assertExcel(){if(!excelReady())throw new Error('Thư viện Excel chưa tải xong. Kiểm tra Internet hoặc tải lại trang.');}
