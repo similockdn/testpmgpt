@@ -241,3 +241,15 @@ body{background:#f0f2f5!important;}
   padding:12px!important;
 }
 @media(max-width:1000px){#sales .sale-layout{grid-template-columns:1fr!important}#sales .sale-stock-action{grid-column:span 1}}
+
+/* ===== Debt UI refresh: active debts -> receipts -> settled debts ===== */
+.debt-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.debt-card{border-radius:22px;padding:18px;border:1px solid rgba(14,165,233,.16);background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.055);position:relative;overflow:hidden}
+.debt-card:after{content:"";position:absolute;width:130px;height:130px;border-radius:50%;right:-48px;top:-48px;background:rgba(14,165,233,.10)}
+.debt-card span{display:block;color:#64748b;font-size:13px;font-weight:900}.debt-card b{display:block;font-size:28px;margin:7px 0;color:#0f172a}.debt-card small{color:#64748b;font-weight:700}
+.debt-card.active{background:linear-gradient(135deg,#fff7ed,#ffffff)}.debt-card.active b{color:#c2410c}.debt-card.money{background:linear-gradient(135deg,#eff6ff,#ffffff)}.debt-card.money b{color:#0369a1}.debt-card.paid{background:linear-gradient(135deg,#ecfdf5,#ffffff)}.debt-card.paid b{color:#15803d}
+.debt-active-panel{border-color:rgba(249,115,22,.22);background:linear-gradient(180deg,#ffffff,#fffaf5)}
+.receipt-panel{border-color:rgba(14,165,233,.22);background:linear-gradient(180deg,#ffffff,#f8fbff)}
+.settled-panel{opacity:.94;background:linear-gradient(180deg,#ffffff,#f8fafc)}
+.debt-big-btn,.debt-action{font-size:15px;padding:12px 18px}.debt-money{font-size:16px;color:#dc2626}.receipt-form{background:#f8fafc;border:1px dashed rgba(14,165,233,.28);border-radius:18px;padding:14px;margin-bottom:12px}.settled-row td{background:#fbfdfc;color:#475569}
+@media(max-width:900px){.debt-summary-grid{grid-template-columns:1fr}.debt-big-btn,.debt-action{width:100%}}
