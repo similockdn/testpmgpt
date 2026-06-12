@@ -105,11 +105,11 @@
                 <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm mã KH / tên / SĐT hoặc nhập khách mới" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button></div><datalist id="customerList"></datalist></div>
                 <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
                 <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
-                <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
+                <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select><small class="field-note">Tính trên giá trước thuế VAT</small></div>
                 <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" readonly /></div>
-                <div><label>VAT</label><select id="saleVatMode"><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option><option value="included8">Giá đã gồm VAT 8%</option></select></div>
+                <div><label>VAT</label><select id="saleVatMode"><option value="included8" selected>Giá đã gồm VAT 8%</option><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option></select></div>
                 <div><label>Thanh toán ngay</label><input id="salePaid" type="number" value="0" /></div>
-                <div><label>Xuất kho</label><label class="checkline"><input id="saleExportStock" type="checkbox" /> Kiêm xuất kho</label></div>
+                <div class="sale-stock-action"><label>Kiêm kiểm kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
                 <div class="span2"><label>Ghi chú</label><input id="saleNote" placeholder="VD: khách thanh toán sau, lắp đặt chiều nay..." /></div>
               </div>
             </div>
