@@ -269,3 +269,57 @@ body{background:#f0f2f5!important;}
 #sales .sticky-check{background:#ecfeff;border:1px solid rgba(14,165,233,.22);border-radius:16px;padding:12px 14px;font-weight:900;color:#075985}
 #sales .big-save{font-size:16px!important;font-weight:900!important;padding:14px 22px!important}
 @media(max-width:760px){#sales .sale-sticky-actions{position:fixed;left:10px;right:10px;bottom:10px}.app-main{padding-bottom:135px!important}#sales .sticky-total{width:100%}}
+
+
+/* ===== FINAL UX: Thu gọn tổng tiền và bỏ Kiêm PXK ở thanh dưới ===== */
+#sales .sale-total-main{
+  justify-content:flex-end!important;
+  gap:8px!important;
+  padding:8px 10px!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+  background:#f8fafc!important;
+}
+#sales .sale-total-main div{
+  min-width:104px!important;
+  padding:6px 9px!important;
+  border-radius:11px!important;
+  font-size:12px!important;
+  line-height:1.15!important;
+  text-align:left!important;
+}
+#sales .sale-total-main b{
+  display:inline!important;
+  margin-left:4px!important;
+  margin-top:0!important;
+  font-size:13px!important;
+  color:#0369a1!important;
+}
+#sales .sale-total-main div:nth-child(3) b,
+#sales .sale-total-main div:nth-child(4) b{
+  font-size:14px!important;
+  font-weight:900!important;
+}
+#sales .sale-stock-action{grid-column:span 1!important}
+#sales .big-stock-check{
+  min-height:22px!important;
+  padding:3px 8px!important;
+  border-radius:10px!important;
+  border:1px solid rgba(14,165,233,.35)!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  justify-content:flex-start!important;
+  box-shadow:none!important;
+  background:#f0f9ff!important;
+  display:inline-flex!important;
+  width:auto!important;
+}
+#sales .big-stock-check:hover{transform:none!important;box-shadow:none!important}
+#sales .big-stock-check input{
+  width:13px!important;
+  height:13px!important;
+  min-height:13px!important;
+}
+#sales .big-stock-check span{letter-spacing:0!important}
+#sales .sale-sticky-actions{gap:8px!important}
+#sales .sticky-check{display:none!important}
