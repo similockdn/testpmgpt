@@ -3,7 +3,48 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, on
 import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
-function numberToVietnamese(n){n=Math.round(Number(n)||0);if(n===0)return 'Không đồng';const dv=['','nghìn','triệu','tỷ','nghìn tỷ','triệu tỷ'];const cs=['không','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];function read3(num,full){let tr=Math.floor(num/100),ch=Math.floor((num%100)/10),dvn=num%10,out=[];if(full||tr>0){out.push(cs[tr]+' trăm');if(ch===0&&dvn>0)out.push('lẻ')}if(ch>1){out.push(cs[ch]+' mươi');if(dvn===1)out.push('mốt');else if(dvn===5)out.push('lăm');else if(dvn>0)out.push(cs[dvn])}else if(ch===1){out.push('mười');if(dvn===5)out.push('lăm');else if(dvn>0)out.push(cs[dvn])}else if(ch===0&&dvn>0){out.push(cs[dvn])}return out.join(' ')}let parts=[],i=0;while(n>0){let block=n%1000;if(block>0){parts.unshift(read3(block,parts.length>0)+' '+dv[i])}n=Math.floor(n/1000);i++}let text=parts.join(' ').replace(/\s+/g,' ').trim();return text.charAt(0).toUpperCase()+text.slice(1)+' đồng'}
+function numberToVietnamese(n){
+  n=Math.round(Number(n)||0);
+  if(n===0) return 'Không đồng';
+  const negative=n<0; n=Math.abs(n);
+  const units=['','nghìn','triệu','tỷ','nghìn tỷ','triệu tỷ'];
+  const digit=['không','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+  function readBlock(num,full){
+    const hundred=Math.floor(num/100), ten=Math.floor((num%100)/10), one=num%10;
+    const out=[];
+    if(full||hundred>0){
+      out.push(digit[hundred]+' trăm');
+      if(ten===0&&one>0) out.push('lẻ');
+    }
+    if(ten>1){
+      out.push(digit[ten]+' mươi');
+      if(one===1) out.push('mốt');
+      else if(one===4) out.push('tư');
+      else if(one===5) out.push('lăm');
+      else if(one>0) out.push(digit[one]);
+    }else if(ten===1){
+      out.push('mười');
+      if(one===5) out.push('lăm');
+      else if(one>0) out.push(digit[one]);
+    }else if(one>0){
+      out.push(digit[one]);
+    }
+    return out.join(' ');
+  }
+  const blocks=[];
+  while(n>0){blocks.unshift(n%1000);n=Math.floor(n/1000)}
+  const parts=[];
+  blocks.forEach((block,idx)=>{
+    if(block===0) return;
+    const unitIndex=blocks.length-1-idx;
+    const hasHigher=idx>0;
+    const full=hasHigher&&block<100;
+    parts.push((readBlock(block,full)+' '+units[unitIndex]).trim());
+  });
+  let text=parts.join(' ').replace(/\s+/g,' ').trim();
+  text=(negative?'Âm ':'')+text.charAt(0).toUpperCase()+text.slice(1)+' đồng';
+  return text;
+}
 const ADMIN_EMAIL='similockdn@gmail.com';
 const userDocRef = (u)=>doc(db,'users',u.uid);
 const userProfileData = (u, extra={})=>({uid:u.uid,email:normEmail(u.email),...extra});
@@ -566,7 +607,7 @@ window.printSale=id=>{
       <div><b>Mã KH:</b> ${s.customerCode||''}</div>
     </div>
     <div>
-      <div><b>Địa chỉ:</b> ${s.customerAddress||''}</div>
+      <div><b>Đ/c:</b> ${s.customerAddress||''}</div>
       <div><b>Loại khách:</b> ${customerType||''}</div>
       <div><b>Sale:</b> ${staff.name||''}</div>
       <div><b>Kỹ thuật:</b> ${tech.name||''}</div>
