@@ -172,7 +172,8 @@
       </section>
 
       <section id="debts" class="page">
-        <div class="panel"><div class="panel-head"><h3>💳 Công nợ phải thu</h3><button class="btn primary" onclick="openReceiptForm()">+ Phiếu thu</button></div><table><thead><tr><th>Mã KH</th><th>Khách hàng</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th><th>Hành động</th></tr></thead><tbody id="debtTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><div><h3>💳 Công nợ phải thu</h3><span>Chỉ hiển thị khách còn nợ. Thu đủ sẽ tự chuyển xuống lịch sử đã tất toán.</span></div><button class="btn primary" onclick="openReceiptForm()">+ Phiếu thu</button></div><table><thead><tr><th>Mã KH</th><th>Khách hàng</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th><th>Hành động</th></tr></thead><tbody id="debtTable"></tbody></table></div>
+        <div class="panel"><div class="panel-head"><div><h3>✅ Công nợ đã tất toán</h3><span>Lưu lịch sử khách đã thu đủ tiền để tra cứu, không hiện nút thu tiền.</span></div></div><table><thead><tr><th>Mã KH</th><th>Khách hàng</th><th>Tổng mua</th><th>Đã thu</th><th>Trạng thái</th></tr></thead><tbody id="settledDebtTable"></tbody></table></div>
         <div class="panel"><div class="panel-head"><h3>Phiếu thu</h3><div><button class="btn primary" onclick="saveReceipt()">Lưu phiếu thu</button></div></div><div class="grid form-grid"><div><label>Khách hàng</label><select id="receiptCustomer"></select></div><div><label>Số tiền thu</label><input id="receiptAmount" type="number" /></div><div><label>Ngày thu</label><input id="receiptDate" type="date" /></div><div><label>Ghi chú</label><input id="receiptNote" /></div></div><table><thead><tr><th>Mã PT</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Số tiền</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="receiptTable"></tbody></table></div>
       </section>
 
