@@ -549,8 +549,49 @@ window.viewSaleDetail=id=>{
   document.body.insertAdjacentHTML('beforeend',html);
 }
 window.editSale=id=>{let s=data.sales.find(x=>x.id===id);if(saleLocked(s)&&currentPerm.role!=='Admin')return alert('Đơn đã thu tiền hoặc đã xuất kho. Chỉ Admin được mở khóa/sửa để tránh lệch công nợ và tồn kho.');editingSale=id;$('saleCode').value=s.code;$('saleDate').value=s.date;$('saleCustomerSearch').value=`${s.customerCode||''} | ${s.customerName} | ${s.customerPhone||''}`;$('saleStaff').value=s.staffId||'';$('saleTech').value=s.techId||'';if($('saleWarehouse'))$('saleWarehouse').value=s.warehouse||stockVoucherForSale(s)?.warehouse||defaultWarehouse();$('saleVatMode').value=s.vatMode||'none';$('salePaid').value=s.paid||0;if($('saleCommissionPercent'))$('saleCommissionPercent').value=s.commissionPercent??salePercentDefault(s.staffId);if($('saleTechCost'))$('saleTechCost').value=s.techCost??techFeeDefault(s.techId);if($('saleExportStock'))$('saleExportStock').checked=!!s.stockExported;if($('saleExportStockSticky'))$('saleExportStockSticky').checked=!!s.stockExported;$('saleNote').value=s.note||'';$('saleItems').innerHTML='';(s.items||[]).forEach(addSaleItem);updateSaleTotals();showPage('sales')}
-window.printSale=id=>{let s=data.sales.find(x=>x.id===id);let pay=salePaymentInfo(s);let sv=stockVoucherForSale(s);let staff=data.staff.find(x=>x.id===s.staffId)||{};let tech=data.staff.find(x=>x.id===s.techId)||{};let customerType=s.customerType||s.customerGroup||'';let html=`<div class="print-a5">${printHeader('PHIẾU BÁN HÀNG')}<p><b>Mã phiếu:</b> ${s.code} &nbsp; <b>Ngày:</b> ${s.date}<br><b>Khách hàng:</b> ${s.customerName||''} - ${s.customerPhone||''}<br><b>Mã KH:</b> ${s.customerCode||''} &nbsp; <b>Loại khách:</b> ${customerType||''}<br><b>Địa chỉ:</b> ${s.customerAddress||''}<br><b>Sale:</b> ${staff.name||''} &nbsp; <b>Kỹ thuật:</b> ${tech.name||''}<br><b>Trạng thái thanh toán:</b> ${pay.paymentStatus} &nbsp; <b>Trạng thái kho:</b> ${sv?'Đã xuất kho':'Chưa xuất kho'}<br><b>Kho xuất:</b> ${sv?voucherWarehouse(sv):(s.warehouse||'')} ${sv?`&nbsp; <b>PXK:</b> ${sv.code||''}`:''}</p><table><thead><tr><th>STT</th><th>Model</th><th>Tên SP</th><th>SL</th><th>Đơn giá</th><th>CK</th><th>Thành tiền</th></tr></thead><tbody>${(s.items||[]).map((it,i)=>`<tr><td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${it.qty}</td><td>${money(it.price)}</td><td>${it.discount||0}%</td><td>${money(it.qty*it.price*(1-(it.discount||0)/100))}</td></tr>`).join('')}</tbody></table><p style="text-align:right"><b>Tiền hàng:</b> ${money(s.subtotal)}<br><b>Giảm giá/VAT:</b> ${money(s.vat)}<br><b>Tổng thanh toán:</b> ${money(s.grand)}<br><b>Số tiền bằng chữ:</b> ${numberToVietnamese(s.grand)}<br><b>Đã thu:</b> ${money(pay.paidTotal)}<br><b>Còn nợ:</b> ${money(pay.debtLeft)}</p><p><b>Ghi chú lắp đặt:</b> ${s.note||''}</p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Khách hàng<br><br><br></div><div>Người bán<br><br><br></div><div>Kỹ thuật<br><br><br></div></div></div>`;doPrint(html)}
-
+window.printSale=id=>{
+  let s=data.sales.find(x=>x.id===id);
+  if(!s) return alert('Không tìm thấy phiếu bán');
+  let pay=salePaymentInfo(s);
+  let staff=data.staff.find(x=>x.id===s.staffId)||{};
+  let tech=data.staff.find(x=>x.id===s.techId)||{};
+  let customerType=s.customerType||s.customerGroup||'';
+  let html=`<div class="print-a5">${printHeader('PHIẾU BÁN HÀNG')}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;border-bottom:1px solid #999;padding-bottom:8px;margin-bottom:8px;line-height:1.55">
+    <div>
+      <div><b>Mã phiếu:</b> ${s.code||''}</div>
+      <div><b>Ngày:</b> ${s.date||''}</div>
+      <div><b>Khách hàng:</b> ${s.customerName||''}</div>
+      <div><b>SĐT:</b> ${s.customerPhone||''}</div>
+      <div><b>Mã KH:</b> ${s.customerCode||''}</div>
+    </div>
+    <div>
+      <div><b>Địa chỉ:</b> ${s.customerAddress||''}</div>
+      <div><b>Loại khách:</b> ${customerType||''}</div>
+      <div><b>Sale:</b> ${staff.name||''}</div>
+      <div><b>Kỹ thuật:</b> ${tech.name||''}</div>
+    </div>
+  </div>
+  <table><thead><tr><th>STT</th><th>Model</th><th>Tên SP</th><th>SL</th><th>Đơn giá</th><th>CK</th><th>Thành tiền</th></tr></thead><tbody>${(s.items||[]).map((it,i)=>`<tr><td>${i+1}</td><td>${it.code||''}</td><td>${it.name||''}</td><td>${it.qty||0}</td><td>${money(it.price||0)}</td><td>${it.discount||0}%</td><td>${money((+it.qty||0)*(+it.price||0)*(1-(+it.discount||0)/100))}</td></tr>`).join('')}</tbody></table>
+  <div style="display:flex;justify-content:flex-end;margin-top:10px">
+    <div style="min-width:230px;line-height:1.65">
+      <div style="display:flex;justify-content:space-between"><b>Tiền hàng:</b><span>${money(s.subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between"><b>Giảm giá/VAT:</b><span>${money(s.vat)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:bold;border-top:1px dashed #999;padding-top:4px"><span>Tổng thanh toán:</span><span>${money(s.grand)}</span></div>
+      <div style="display:flex;justify-content:space-between"><b>Đã thu:</b><span>${money(pay.paidTotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:bold"><span>Còn nợ:</span><span>${money(pay.debtLeft)}</span></div>
+    </div>
+  </div>
+  <div style="border:1px solid #999;border-radius:4px;margin-top:12px;padding:10px;min-height:44px;line-height:1.5">
+    <b>Số tiền bằng chữ:</b> ${numberToVietnamese(s.grand)}
+  </div>
+  <div style="display:flex;justify-content:space-between;text-align:center;margin-top:35px">
+    <div>Khách hàng<br><small>(Ký, ghi rõ họ tên)</small><br><br><br></div>
+    <div>Người bán<br><small>(Ký, ghi rõ họ tên)</small><br><br><br></div>
+    <div>Kỹ thuật<br><small>(Ký, ghi rõ họ tên)</small><br><br><br></div>
+  </div></div>`;
+  doPrint(html)
+}
 
 function periodRange(period){
   const d=new Date();
