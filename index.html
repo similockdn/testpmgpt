@@ -238,6 +238,32 @@
           <div class="hint price-template">File Excel import cần cột: <b>code,type,price,validFrom,validTo,active,note</b>. Ví dụ: S01,Khách lẻ,2350000,2026-06-01,2026-06-30,true,Giá tháng 6</div>
           <table><thead><tr><th>Model</th><th>Nhóm khách</th><th>Giá</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table>
         </div>
+        <div class="panel view-cost">
+          <div class="panel-head">
+            <div>
+              <h3>🔒 Bảng giá vốn theo thời gian</h3>
+              <span>Chỉ Admin được xem/sửa. Dùng để tính lợi nhuận đúng theo tháng khi giá vốn thay đổi.</span>
+            </div>
+            <div>
+              <input type="file" id="importCostPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'costPrices')">
+              <button class="btn ghost" onclick="downloadTemplateExcel('costPrices')">Mẫu Excel</button>
+              <button class="btn ghost" onclick="importCostPrices.click()">Nhập Excel</button>
+              <button class="btn ghost" onclick="exportExcel('costPrices')">Xuất Excel</button>
+              <button class="btn primary" onclick="saveCostPrice()">Lưu giá vốn</button>
+            </div>
+          </div>
+          <div class="grid form-grid">
+            <input id="costId" hidden>
+            <div><label>Model</label><select id="costProduct"></select></div>
+            <div><label>Giá vốn</label><input id="costValue" type="number"></div>
+            <div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div>
+            <div><label>Hiệu lực đến</label><input id="costTo" type="date"></div>
+            <div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
+            <div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div>
+          </div>
+          <div class="hint price-template">File Excel import giá vốn cần cột: <b>code,cost,validFrom,validTo,active,note</b>. Nhân viên thường không nhìn thấy phần này.</div>
+          <table><thead><tr><th>Model</th><th>Giá vốn</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="costPriceTable"></tbody></table>
+        </div>
       </section>
 
       <section id="staff" class="page"><div class="panel"><div class="panel-head"><h3>👨‍💼 Nhân viên</h3><div><input type="file" id="importStaff" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'staff')"><button class="btn ghost" onclick="downloadTemplateExcel('staff')">Mẫu Excel</button><button class="btn ghost" onclick="importStaff.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('staff')">Xuất Excel</button><button class="btn primary" onclick="saveStaff()">Lưu</button></div></div><div class="grid form-grid"><input id="eId" hidden><div><label>Tên</label><input id="eName"></div><div><label>Phòng ban</label><select id="eDept" onchange="staffDeptChanged()"><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kho Chính</option><option>Kho Văn Phòng</option><option>Kế toán</option><option>Quản lý</option></select></div><div><label>SĐT</label><input id="ePhone"></div><div id="saleCommissionBox"><label>Hoa hồng Sale mặc định %</label><input id="eCommissionPercent" type="number" value="5"></div><div id="techFeeBox"><label>Công kỹ thuật mặc định / đơn</label><input id="eTechFee" type="number" value="100000"></div></div><table><thead><tr><th>Tên</th><th>Phòng ban</th><th>SĐT</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Hành động</th></tr></thead><tbody id="staffTable"></tbody></table></div></section>

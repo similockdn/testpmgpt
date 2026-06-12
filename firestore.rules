@@ -38,6 +38,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Bảng giá vốn: chỉ Admin được đọc/ghi để nhân viên không xem được giá vốn.
+    match /costPrices/{id} {
+      allow read, write: if isAdmin() || isMainAdminEmail();
+    }
+
     // Dữ liệu ERP: chỉ tài khoản đã có hồ sơ hợp lệ mới truy cập.
     // Email Admin chính được phép khởi tạo hệ thống lần đầu.
     match /{document=**} {
