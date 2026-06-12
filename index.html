@@ -120,10 +120,27 @@
               <p><b>Kho:</b> chỉ trừ tồn khi tick <b>Kiêm xuất kho</b>. Khi đã xuất, chi tiết đơn sẽ kèm phiếu xuất kho.</p>
             </div>
           </div>
-          <h4>Chi tiết hàng bán</h4>
+          <div class="sale-items-head">
+            <h4>Chi tiết hàng bán</h4>
+            <div class="quick-models">
+              <span>Thêm nhanh:</span>
+              <button class="btn ghost" onclick="addQuickSaleModel('S01')">+ S01</button>
+              <button class="btn ghost" onclick="addQuickSaleModel('F07')">+ F07</button>
+              <button class="btn ghost" onclick="addQuickSaleModel('F08')">+ F08</button>
+              <button class="btn ghost" onclick="addQuickSaleModel('569')">+ 569</button>
+              <button class="btn ghost" onclick="addQuickSaleModel('S40')">+ S40</button>
+            </div>
+          </div>
           <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK %</th><th>Thành tiền</th><th></th></tr></thead><tbody id="saleItems"></tbody></table>
           <button class="btn ghost" onclick="addSaleItem()">+ Thêm dòng hàng</button>
-          <div class="total-box"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
+          <div class="total-box sale-total-main"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
+          <div class="sale-sticky-actions">
+            <div class="sticky-total"><span>Tổng tiền</span><b id="saleGrandSticky">0</b><small>Còn nợ: <strong id="saleDebtSticky">0</strong></small></div>
+            <label class="checkline sticky-check"><input id="saleExportStockSticky" type="checkbox" onchange="syncSaleExportStockFromSticky()"> Kiêm xuất kho</label>
+            <button class="btn primary big-save" onclick="saveSale()">Lưu phiếu bán</button>
+            <button class="btn ghost" onclick="saveSaleAndPrint()">Lưu & In A5</button>
+            <button class="btn ghost" onclick="resetSaleForm()">Phiếu mới</button>
+          </div>
         </div>
         <div class="panel"><div class="panel-head"><div><h3>Danh sách phiếu bán</h3><span>Bấm Chi tiết để xem công nợ và phiếu xuất kho liên quan.</span></div><input class="search" id="saleSearch" placeholder="Tìm mã phiếu / mã KH / SĐT / khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng</th><th class="view-cost">Lợi nhuận</th><th>Công nợ</th><th>Kho</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
       </section>
