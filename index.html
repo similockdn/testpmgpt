@@ -199,11 +199,11 @@
 
       <section id="inventory" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📦 Chứng từ kho</h3><div><input type="file" id="importStock" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'stockVouchers')"><button class="btn ghost" onclick="downloadTemplateExcel('stockVouchers')">Mẫu Excel</button><button class="btn ghost" onclick="importStock.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất Excel</button><button class="btn ghost" onclick="setStockMode('IN')">Nhập kho</button><button class="btn ghost" onclick="setStockMode('OUT')">Xuất kho</button><button class="btn ghost" onclick="setStockMode('TRANSFER')">Chuyển kho</button><button class="btn ghost" onclick="setStockMode('ADJUST')">Điều chỉnh kho</button><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
+          <div class="panel-head"><h3>📦 Chứng từ kho</h3><div><input type="file" id="importStock" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'stockVouchers')"><button class="btn ghost" onclick="downloadTemplateExcel('stockVouchers')">Mẫu Excel</button><button class="btn ghost" onclick="importStock.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất Excel</button><button class="btn ghost" onclick="setStockMode('IN')">Nhập kho</button><button class="btn ghost" onclick="setStockMode('OUT')">Xuất kho</button><button class="btn ghost" onclick="setStockMode('RETURN')">Trả hàng bán</button><button class="btn ghost" onclick="setStockMode('TRANSFER')">Chuyển kho</button><button class="btn ghost" onclick="setStockMode('ADJUST')">Điều chỉnh kho</button><button class="btn ghost" onclick="resetStockForm()">Phiếu mới</button><button class="btn primary" onclick="saveStockVoucher()">Lưu chứng từ kho</button></div></div>
           <div class="grid form-grid">
             <div><label>Mã phiếu</label><input id="stockCode" readonly /></div>
             <div><label>Ngày</label><input id="stockDate" type="date" /></div>
-            <div><label>Loại chứng từ</label><select id="stockType"><option value="IN">Phiếu nhập kho</option><option value="OUT">Phiếu xuất kho</option><option value="TRANSFER">Phiếu chuyển kho</option><option value="ADJUST">Phiếu điều chỉnh</option><option value="CHECK">Phiếu kiểm kê</option></select></div>
+            <div><label>Loại chứng từ</label><select id="stockType"><option value="IN">Phiếu nhập kho</option><option value="OUT">Phiếu xuất kho</option><option value="RETURN">Phiếu trả lại hàng bán</option><option value="TRANSFER">Phiếu chuyển kho</option><option value="ADJUST">Phiếu điều chỉnh</option><option value="CHECK">Phiếu kiểm kê</option></select></div>
             <div><label id="stockWarehouseLabel">Kho</label><select id="stockWarehouse"></select></div><div id="stockToWarehouseWrap" style="display:none"><label>Kho nhận</label><select id="stockToWarehouse"></select></div>
             <div class="span2"><label>Lý do/Ghi chú</label><input id="stockNote" placeholder="VD: xuất bảo hành, chuyển kho, kiểm kê lệch, hàng lỗi..." /></div>
           </div>
@@ -303,7 +303,7 @@
 
       <section id="reports" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📈 Báo cáo doanh thu - chi phí - lợi nhuận</h3><div><button class="btn ghost" onclick="exportExcel('sales')">Xuất bán hàng</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất chi phí</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div>
+          <div class="panel-head"><h3>📈 Báo cáo doanh thu - chi phí - lợi nhuận</h3><div><button class="btn ghost" onclick="exportExcel('sales')">Xuất bán hàng</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất chi phí</button><button class="btn ghost" onclick="exportExcel('returns')">Xuất hàng trả</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div>
           <div class="grid form-grid">
             <div><label>Kiểu xem</label><select id="reportPeriod" onchange="setReportQuickRange();renderReports()"><option value="day">Theo ngày</option><option value="week">Theo tuần</option><option value="month" selected>Theo tháng</option><option value="year">Theo năm</option><option value="custom">Tùy chọn ngày</option></select></div>
             <div><label>Từ ngày</label><input id="reportFrom" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
@@ -323,6 +323,12 @@
           <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công kỹ thuật</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
         </div>
 
+
+        <div class="panel wide">
+          <div class="panel-head"><h3>↩️ Danh sách hàng bán bị trả lại</h3><span>Theo dõi phiếu TH, số lượng trả, nhập lại kho và hướng xử lý tiền dư.</span></div>
+          <div id="reportReturnSummary" class="report-grid"></div>
+          <table><thead><tr><th>Ngày</th><th>Phiếu TH</th><th>Đơn bán</th><th>Khách hàng</th><th>Kho nhập lại</th><th>Model</th><th>SL trả</th><th>Giá trị</th><th>Xử lý tiền</th><th>Ghi chú</th></tr></thead><tbody id="reportReturnTable"></tbody></table>
+        </div>
         <div class="panel wide view-cost">
           <div class="panel-head"><h3>📒 Báo cáo chi phí theo danh mục</h3><span>Điện, nước, internet, thuê nhà, vận chuyển, lương cố định, khác</span></div>
           <table><thead><tr><th>Loại chi phí</th><th>Số phiếu</th><th>Tổng tiền</th></tr></thead><tbody id="reportExpenseCategoryTable"></tbody></table>

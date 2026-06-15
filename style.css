@@ -331,3 +331,22 @@ body{background:#f0f2f5!important;}
 .stock-summary-card span{display:block;color:#64748b;font-size:12px;font-weight:800}.stock-summary-card b{display:block;margin-top:6px;font-size:22px;color:#075985}
 @media(max-width:1100px){.stock-summary-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:720px){.stock-summary-grid{grid-template-columns:1fr}}
+
+/* UI standardization: prevent table/layout break on mobile and Android WebView */
+.panel,.sale-main-box,.sale-side-box,.modal-card{overflow-x:auto;max-width:100%;}
+.table-responsive{width:100%;overflow-x:auto;}
+table{max-width:100%;}
+@media(max-width:760px){
+  table{min-width:720px;}
+  .editable{min-width:720px;}
+  .modal-card{width:96vw;padding:14px;}
+  input,select,textarea,button{max-width:100%;}
+  .inline{flex-wrap:wrap;}
+  .inline input,.inline select,.inline button{flex:1 1 160px;}
+  .btn{white-space:normal;}
+  .search{max-width:100%;width:100%;}
+}
+@media print{
+  .panel,.sale-main-box,.sale-side-box,.modal-card{overflow:visible!important;}
+  table,.editable{min-width:0!important;}
+}
