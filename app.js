@@ -872,34 +872,75 @@ window.saveStockVoucher=async()=>{
 function renderStock(){$('stockVoucherTable').innerHTML=data.stockVouchers.filter(canAccessVoucher).sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(v=>`<tr><td>${v.code}</td><td>${v.date}</td><td>${stockTypeName(v.type)}</td><td>${v.type==='TRANSFER'?`${v.fromWarehouse||v.warehouse||''} → ${v.toWarehouse||''}`:voucherWarehouse(v)}</td><td>${(v.items||[]).length}</td><td>${has('viewCost')?money(v.value):'Ẩn'}</td><td><button class="btn ghost" onclick="printStock('${v.id}')">In A5</button> ${has('editStock')?`<button class="btn ghost" onclick="editStock('${v.id}')">Sửa</button>`:''} ${has('deleteStock')?`<button class="btn danger" onclick="removeDoc('stockVouchers','${v.id}')">Xóa</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7">Không có chứng từ thuộc kho được phân quyền</td></tr>'}
 window.editStock=id=>{let v=data.stockVouchers.find(x=>x.id===id);if(!canAccessVoucher(v))return alert('Bạn không có quyền xem/sửa phiếu kho này');if(stockVoucherLocked(v)&&currentPerm.role!=='Admin')return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được sửa.');editingStock=id;$('stockCode').value=v.code;$('stockDate').value=v.date;$('stockType').value=v.type;$('stockWarehouse').value=v.fromWarehouse||v.warehouse||'';if($('stockToWarehouse'))$('stockToWarehouse').value=v.toWarehouse||'Kho Văn Phòng';$('stockNote').value=v.note||'';$('stockItems').innerHTML='';(v.items||[]).forEach(addStockItem);updateStockHeader();showPage('inventory')}
 window.printStock=id=>{let v=data.stockVouchers.find(x=>x.id===id);if(!canAccessVoucher(v))return alert('Bạn không có quyền in phiếu kho này');let title=stockTypeName(v.type).toUpperCase();let isCheck=v.type==='CHECK';let isTransfer=v.type==='TRANSFER';let isAdjust=v.type==='ADJUST';let html=`<div class="print-a5">${printHeader(title)}<p><b>Mã phiếu:</b> ${v.code} &nbsp; <b>Ngày:</b> ${v.date}<br>${isTransfer?`<b>Kho nguồn:</b> ${v.fromWarehouse||v.warehouse||''} &nbsp; <b>Kho đích:</b> ${v.toWarehouse||''}`:`<b>Kho:</b> ${v.warehouse||''}`}<br><b>Liên kết đơn bán:</b> ${v.saleCode||''}<br><b>Lý do/Ghi chú:</b> ${v.note||''}</p><table><thead><tr><th>STT</th><th>Model</th><th>Tên SP</th>${isCheck||isAdjust?'<th>Tồn trước</th><th>Điều chỉnh/Thực tế</th><th>Tồn sau</th>':'<th>SL</th><th>Ghi chú</th>'}</tr></thead><tbody>${(v.items||[]).map((it,i)=>{if(isCheck){return `<tr><td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${it.systemQty??''}</td><td>${it.actualQty??''}</td><td>${(it.systemQty??0)+(+it.qty||0)}</td></tr>`}if(isAdjust){let before=stockOf(it.code,v.id,voucherWarehouse(v));let after=before+(+it.qty||0);return `<tr><td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${before}</td><td>${it.qty}</td><td>${after}<br><small>${it.note||''}</small></td></tr>`}return `<tr><td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${it.qty}</td><td>${it.note||''}</td></tr>`}).join('')}</tbody></table>${has('viewCost')?`<p style="text-align:right"><b>Giá trị:</b> ${money(v.value)}</p>`:''}<div style="display:flex;justify-content:space-between;text-align:center;margin-top:35px"><div>Người lập<br><br><br></div><div>Người giao/Thủ kho<br><br><br></div><div>Người nhận<br><br><br></div></div></div>`;doPrint(html)}
-function renderStockBook(){
-  const ledgerBody=$('stockLedgerTable');
-  if(ledgerBody){ledgerBody.innerHTML=stockLedgerRows().slice(0,300).map(r=>`<tr><td>${r.date||''}</td><td>${r.code||''}</td><td>${r.type||''}</td><td>${r.warehouse||''}</td><td>${r.product||''}</td><td>${r.name||''}</td><td><b>${r.qty>0?'+':''}${r.qty}</b></td><td>${r.note||''}</td></tr>`).join('')||'<tr><td colspan="8">Chưa có phát sinh kho</td></tr>'}
+function stockBookRows(){
   const allowed=userWarehouses();
-  const showMain=allowed.includes('Kho Chính');
-  const showOffice=allowed.includes('Kho Văn Phòng');
-  const head=document.querySelector('#stockbook thead tr');
-  if(head)head.innerHTML=`<th>Model</th><th>Sản phẩm</th><th>Nhập</th><th>Xuất</th><th>Chuyển kho</th><th>Điều chỉnh</th>${showMain?'<th>Kho Chính</th>':''}${showOffice?'<th>Kho Văn Phòng</th>':''}<th>Tổng tồn được xem</th>`;
-  $('stockBookTable').innerHTML=data.products.map(p=>{
+  return data.products.map(p=>{
     let totalIn=0,totalOut=0,totalAdj=0,totalTransfer=0,byWh={};WAREHOUSES.forEach(w=>byWh[w]=0);
     data.stockVouchers.forEach(v=>(v.items||[]).forEach(it=>{
       if(it.code!==p.code)return; const q=+it.qty||0;
       if(v.type==='TRANSFER'){
         const from=v.fromWarehouse||v.warehouse||'Kho Chính', to=v.toWarehouse||'Kho Văn Phòng';
-        if(canAccessWarehouse(from)||canAccessWarehouse(to))totalTransfer+=q;
+        if(canAccessWarehouse(from)||canAccessWarehouse(to))totalTransfer+=Math.abs(q);
         byWh[from]=(byWh[from]||0)-q; byWh[to]=(byWh[to]||0)+q;
       }else{
         const w=voucherWarehouse(v);
         if(!canAccessWarehouse(w))return;
         if(v.type==='IN'){totalIn+=q;byWh[w]=(byWh[w]||0)+q}
-        else if(v.type==='OUT'){totalOut+=q;byWh[w]=(byWh[w]||0)-q}
+        else if(v.type==='OUT'){totalOut+=Math.abs(q);byWh[w]=(byWh[w]||0)-q}
         else{totalAdj+=q;byWh[w]=(byWh[w]||0)+q}
       }
     }));
     const total=allowed.reduce((a,w)=>a+(byWh[w]||0),0);
-    return`<tr><td>${p.code}</td><td>${p.name}</td><td>${totalIn}</td><td>${totalOut}</td><td>${totalTransfer}</td><td>${totalAdj}</td>${showMain?`<td><b>${byWh['Kho Chính']||0}</b></td>`:''}${showOffice?`<td><b>${byWh['Kho Văn Phòng']||0}</b></td>`:''}<td><b>${total}</b></td></tr>`
-  }).join('')
+    const cost=+p.cost||0;
+    return {code:p.code||'',name:p.name||'',minStock:+p.minStock||3,totalIn,totalOut,totalTransfer,totalAdj,khoChinh:byWh['Kho Chính']||0,khoVanPhong:byWh['Kho Văn Phòng']||0,stock:total,cost,value:total*cost};
+  });
 }
+function stockStatusBadge(qty,minStock){
+  if(qty<=0)return '<span class="badge red">Hết hàng</span>';
+  if(qty<=minStock)return '<span class="badge orange">Sắp hết</span>';
+  return '<span class="badge green">Còn hàng</span>';
+}
+function renderStockBook(){
+  const ledgerBody=$('stockLedgerTable');
+  if(ledgerBody){ledgerBody.innerHTML=stockLedgerRows().slice(0,300).map(r=>`<tr><td>${r.date||''}</td><td>${r.code||''}</td><td>${r.type||''}</td><td>${r.warehouse||''}</td><td>${r.product||''}</td><td>${r.name||''}</td><td><b>${r.qty>0?'+':''}${r.qty}</b></td><td>${r.note||''}</td></tr>`).join('')||'<tr><td colspan="8">Chưa có phát sinh kho</td></tr>'}
+  const allowed=userWarehouses();
+  const whFilter=$('stockBookWarehouse')?.value||'ALL';
+  if(whFilter!=='ALL' && !allowed.includes(whFilter)){
+    $('stockBookWarehouse').value='ALL';
+  }
+  const activeWh=$('stockBookWarehouse')?.value||'ALL';
+  const q=($('stockBookSearch')?.value||'').trim().toLowerCase();
+  const status=$('stockBookStatus')?.value||'ALL';
+  const showMain=allowed.includes('Kho Chính') && (activeWh==='ALL'||activeWh==='Kho Chính');
+  const showOffice=allowed.includes('Kho Văn Phòng') && (activeWh==='ALL'||activeWh==='Kho Văn Phòng');
+  const head=$('stockBookHead')||document.querySelector('#stockbook thead tr');
+  if(head)head.innerHTML=`<th>Model</th><th>Sản phẩm</th><th>Nhập</th><th>Xuất</th><th>Chuyển kho</th><th>Điều chỉnh</th>${showMain?'<th>Kho Chính</th>':''}${showOffice?'<th>Kho Văn Phòng</th>':''}<th>Tổng tồn</th><th>Trạng thái</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th>`;
+  let rows=stockBookRows().map(r=>{
+    let visibleStock=activeWh==='Kho Chính'?r.khoChinh:(activeWh==='Kho Văn Phòng'?r.khoVanPhong:r.stock);
+    return {...r,visibleStock,visibleValue:visibleStock*r.cost};
+  }).filter(r=>{
+    const text=(r.code+' '+r.name).toLowerCase();
+    if(q && !text.includes(q))return false;
+    if(status==='IN_STOCK' && !(r.visibleStock>0))return false;
+    if(status==='LOW' && !(r.visibleStock>0 && r.visibleStock<=r.minStock))return false;
+    if(status==='OUT' && r.visibleStock!==0)return false;
+    return true;
+  });
+  const sumModel=rows.length;
+  const sumMain=rows.reduce((a,r)=>a+r.khoChinh,0);
+  const sumOffice=rows.reduce((a,r)=>a+r.khoVanPhong,0);
+  const sumStock=rows.reduce((a,r)=>a+r.visibleStock,0);
+  const sumValue=rows.reduce((a,r)=>a+r.visibleValue,0);
+  if($('stockBookSummary'))$('stockBookSummary').innerHTML=`
+    <div class="stock-summary-card"><span>Tổng model</span><b>${sumModel}</b></div>
+    ${showMain?`<div class="stock-summary-card"><span>Kho Chính</span><b>${sumMain}</b></div>`:''}
+    ${showOffice?`<div class="stock-summary-card"><span>Kho Văn Phòng</span><b>${sumOffice}</b></div>`:''}
+    <div class="stock-summary-card"><span>Tổng tồn đang xem</span><b>${sumStock}</b></div>
+    ${has('viewCost')?`<div class="stock-summary-card"><span>Giá trị tồn</span><b>${money(sumValue)}</b></div>`:''}`;
+  $('stockBookTable').innerHTML=rows.map(r=>`<tr><td><b>${r.code}</b></td><td>${r.name}</td><td>${r.totalIn}</td><td>${r.totalOut}</td><td>${r.totalTransfer}</td><td>${r.totalAdj}</td>${showMain?`<td><b>${r.khoChinh}</b></td>`:''}${showOffice?`<td><b>${r.khoVanPhong}</b></td>`:''}<td><b>${r.visibleStock}</b></td><td>${stockStatusBadge(r.visibleStock,r.minStock)}</td><td class="view-cost">${money(r.cost)}</td><td class="view-cost"><b>${money(r.visibleValue)}</b></td></tr>`).join('')||'<tr><td colspan="12">Không tìm thấy tồn kho phù hợp</td></tr>';
+  applyPermissions();
+}
+
 
 
 window.saveWarranty=async()=>{let start=$('wStart').value||today();let end=new Date(start);end.setMonth(end.getMonth()+(+$('wMonths').value||24));let o={saleId:$('wSale').value,customer:$('wCustomer').value,phone:$('wPhone').value,serial:$('wSerial').value,start,end:end.toISOString().slice(0,10),months:+$('wMonths').value||24,status:$('wStatus').value,note:$('wNote').value};if(editingWarranty)await updateDoc(doc(db,'warranties',editingWarranty),o);else await addDoc(col('warranties'),o);editingWarranty=null;['wCustomer','wPhone','wSerial','wNote'].forEach(i=>$(i).value='');await loadAll()};$('wSale').addEventListener('change',()=>{let s=data.sales.find(x=>x.id===$('wSale').value);if(s){$('wCustomer').value=s.customerName;$('wPhone').value=s.customerPhone||'';$('wSerial').value=(s.items||[]).map(i=>i.code).join(', ');$('wStart').value=s.date||today()}});
@@ -1071,7 +1112,7 @@ function exportRows(type){let rows=[];
   if(type==='stockVouchers')rows=data.stockVouchers.flatMap(v=>(v.items||[]).map(it=>({code:v.code,date:v.date,type:v.type,warehouse:voucherWarehouse(v),productCode:it.code,productName:it.name,qty:it.actualQty??it.inputQty??it.qty,cost:it.cost,note:it.note||v.note||''})));
   if(type==='sales')rows=data.sales.map(s=>({code:s.code,date:s.date,customerCode:s.customerCode||'',customerName:s.customerName,customerPhone:s.customerPhone||'',staffName:s.staffName,techName:s.techName,grand:s.grand,paid:s.paid,debt:s.debt,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,profit:s.profit,itemsJson:JSON.stringify(s.items||[]),note:s.note||''}));
   if(type==='commissions')rows=data.sales.map(s=>({date:s.date,code:s.code,customer:s.customerName,saleStaff:s.staffName,techStaff:s.techName,grand:s.grand,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,totalCommission:(+s.saleCommission||0)+(+s.techCost||0)}));
-  if(type==='stockbook')rows=data.products.map(p=>({code:p.code,name:p.name,inQty:stockQtyByType(p.code,'IN'),outQty:Math.abs(stockQtyByType(p.code,'OUT')),transferQty:stockQtyByType(p.code,'TRANSFER'),adjustQty:stockQtyByType(p.code,'ADJUST')+stockQtyByType(p.code,'CHECK'),khoChinh:canAccessWarehouse('Kho Chính')?stockOf(p.code,'','Kho Chính'):'Ẩn',khoVanPhong:canAccessWarehouse('Kho Văn Phòng')?stockOf(p.code,'','Kho Văn Phòng'):'Ẩn',stock:userWarehouses().reduce((a,w)=>a+stockOf(p.code,'',w),0)}));
+  if(type==='stockbook')rows=stockBookRows().map(r=>({model:r.code,sanPham:r.name,nhap:r.totalIn,xuat:r.totalOut,chuyenKho:r.totalTransfer,dieuChinh:r.totalAdj,khoChinh:canAccessWarehouse('Kho Chính')?r.khoChinh:'Ẩn',khoVanPhong:canAccessWarehouse('Kho Văn Phòng')?r.khoVanPhong:'Ẩn',tongTon:r.stock,giaVon:has('viewCost')?r.cost:'Ẩn',giaTriTon:has('viewCost')?r.value:'Ẩn'}));
   return rows;
 }
 function stockQtyByType(code,type){let q=0;data.stockVouchers.forEach(v=>{if(v.type!==type)return;(v.items||[]).forEach(it=>{if(it.code===code)q+=+it.qty||0})});return q}
