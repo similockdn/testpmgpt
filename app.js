@@ -872,27 +872,48 @@ window.saveStockVoucher=async()=>{
 function renderStock(){$('stockVoucherTable').innerHTML=data.stockVouchers.filter(canAccessVoucher).sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(v=>`<tr><td>${v.code}</td><td>${v.date}</td><td>${stockTypeName(v.type)}</td><td>${v.type==='TRANSFER'?`${v.fromWarehouse||v.warehouse||''} → ${v.toWarehouse||''}`:voucherWarehouse(v)}</td><td>${(v.items||[]).length}</td><td>${has('viewCost')?money(v.value):'Ẩn'}</td><td><button class="btn ghost" onclick="printStock('${v.id}')">In A5</button> ${has('editStock')?`<button class="btn ghost" onclick="editStock('${v.id}')">Sửa</button>`:''} ${has('deleteStock')?`<button class="btn danger" onclick="removeDoc('stockVouchers','${v.id}')">Xóa</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7">Không có chứng từ thuộc kho được phân quyền</td></tr>'}
 window.editStock=id=>{let v=data.stockVouchers.find(x=>x.id===id);if(!canAccessVoucher(v))return alert('Bạn không có quyền xem/sửa phiếu kho này');if(stockVoucherLocked(v)&&currentPerm.role!=='Admin')return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được sửa.');editingStock=id;$('stockCode').value=v.code;$('stockDate').value=v.date;$('stockType').value=v.type;$('stockWarehouse').value=v.fromWarehouse||v.warehouse||'';if($('stockToWarehouse'))$('stockToWarehouse').value=v.toWarehouse||'Kho Văn Phòng';$('stockNote').value=v.note||'';$('stockItems').innerHTML='';(v.items||[]).forEach(addStockItem);updateStockHeader();showPage('inventory')}
 window.printStock=id=>{let v=data.stockVouchers.find(x=>x.id===id);if(!canAccessVoucher(v))return alert('Bạn không có quyền in phiếu kho này');let title=stockTypeName(v.type).toUpperCase();let isCheck=v.type==='CHECK';let isTransfer=v.type==='TRANSFER';let isAdjust=v.type==='ADJUST';let html=`<div class="print-a5">${printHeader(title)}<p><b>Mã phiếu:</b> ${v.code} &nbsp; <b>Ngày:</b> ${v.date}<br>${isTransfer?`<b>Kho nguồn:</b> ${v.fromWarehouse||v.warehouse||''} &nbsp; <b>Kho đích:</b> ${v.toWarehouse||''}`:`<b>Kho:</b> ${v.warehouse||''}`}<br><b>Liên kết đơn bán:</b> ${v.saleCode||''}<br><b>Lý do/Ghi chú:</b> ${v.note||''}</p><table><thead><tr><th>STT</th><th>Model</th><th>Tên SP</th>${isCheck||isAdjust?'<th>Tồn trước</th><th>Điều chỉnh/Thực tế</th><th>Tồn sau</th>':'<th>SL</th><th>Ghi chú</th>'}</tr></thead><tbody>${(v.items||[]).map((it,i)=>{if(isCheck){return `<tr><td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${it.systemQty??''}</td><td>${it.actualQty??''}</td><td>${(it.systemQty??0)+(+it.qty||0)}</td></tr>`}if(isAdjust){let before=stockOf(it.code,v.id,voucherWarehouse(v));let after=before+(+it.qty||0);return `<tr><td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${before}</td><td>${it.qty}</td><td>${after}<br><small>${it.note||''}</small></td></tr>`}return `<tr><td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${it.qty}</td><td>${it.note||''}</td></tr>`}).join('')}</tbody></table>${has('viewCost')?`<p style="text-align:right"><b>Giá trị:</b> ${money(v.value)}</p>`:''}<div style="display:flex;justify-content:space-between;text-align:center;margin-top:35px"><div>Người lập<br><br><br></div><div>Người giao/Thủ kho<br><br><br></div><div>Người nhận<br><br><br></div></div></div>`;doPrint(html)}
-function stockBookRows(){
+function stockDateInRange(date,from,to){
+  const d=String(date||'').slice(0,10);
+  if(from && (!d || d<from))return false;
+  if(to && (!d || d>to))return false;
+  return true;
+}
+function stockBookDateFilter(){
+  let from=$('stockBookFrom')?.value||'';
+  let to=$('stockBookTo')?.value||'';
+  if(from && to && from>to){ const t=from; from=to; to=t; }
+  return {from,to,active:!!(from||to)};
+}
+window.clearStockBookDateFilter=()=>{
+  if($('stockBookFrom'))$('stockBookFrom').value='';
+  if($('stockBookTo'))$('stockBookTo').value='';
+  renderStockBook();
+};
+function stockBookRows(from='',to=''){
   const allowed=userWarehouses();
+  const hasDateFilter=!!(from||to);
   return data.products.map(p=>{
-    let totalIn=0,totalOut=0,totalAdj=0,totalTransfer=0,byWh={};WAREHOUSES.forEach(w=>byWh[w]=0);
+    let totalIn=0,totalOut=0,totalAdj=0,totalTransfer=0,byWh={}, periodMovement=0;WAREHOUSES.forEach(w=>byWh[w]=0);
     data.stockVouchers.forEach(v=>(v.items||[]).forEach(it=>{
       if(it.code!==p.code)return; const q=+it.qty||0;
+      const inPeriod=stockDateInRange(v.date,from,to);
       if(v.type==='TRANSFER'){
-        const from=v.fromWarehouse||v.warehouse||'Kho Chính', to=v.toWarehouse||'Kho Văn Phòng';
-        if(canAccessWarehouse(from)||canAccessWarehouse(to))totalTransfer+=Math.abs(q);
-        byWh[from]=(byWh[from]||0)-q; byWh[to]=(byWh[to]||0)+q;
+        const fromWh=v.fromWarehouse||v.warehouse||'Kho Chính', toWh=v.toWarehouse||'Kho Văn Phòng';
+        if(canAccessWarehouse(fromWh)||canAccessWarehouse(toWh)){
+          byWh[fromWh]=(byWh[fromWh]||0)-q; byWh[toWh]=(byWh[toWh]||0)+q;
+          if(inPeriod){totalTransfer+=Math.abs(q); periodMovement+=Math.abs(q)}
+        }
       }else{
         const w=voucherWarehouse(v);
         if(!canAccessWarehouse(w))return;
-        if(v.type==='IN'){totalIn+=q;byWh[w]=(byWh[w]||0)+q}
-        else if(v.type==='OUT'){totalOut+=Math.abs(q);byWh[w]=(byWh[w]||0)-q}
-        else{totalAdj+=q;byWh[w]=(byWh[w]||0)+q}
+        if(v.type==='IN'){byWh[w]=(byWh[w]||0)+q; if(inPeriod){totalIn+=q;periodMovement+=Math.abs(q)}}
+        else if(v.type==='OUT'){byWh[w]=(byWh[w]||0)-q; if(inPeriod){totalOut+=Math.abs(q);periodMovement+=Math.abs(q)}}
+        else{byWh[w]=(byWh[w]||0)+q; if(inPeriod){totalAdj+=q;periodMovement+=Math.abs(q)}}
       }
     }));
     const total=allowed.reduce((a,w)=>a+(byWh[w]||0),0);
     const cost=+p.cost||0;
-    return {code:p.code||'',name:p.name||'',minStock:+p.minStock||3,totalIn,totalOut,totalTransfer,totalAdj,khoChinh:byWh['Kho Chính']||0,khoVanPhong:byWh['Kho Văn Phòng']||0,stock:total,cost,value:total*cost};
+    return {code:p.code||'',name:p.name||'',minStock:+p.minStock||3,totalIn,totalOut,totalTransfer,totalAdj,periodMovement,hasDateFilter,khoChinh:byWh['Kho Chính']||0,khoVanPhong:byWh['Kho Văn Phòng']||0,stock:total,cost,value:total*cost};
   });
 }
 function stockStatusBadge(qty,minStock){
@@ -901,8 +922,10 @@ function stockStatusBadge(qty,minStock){
   return '<span class="badge green">Còn hàng</span>';
 }
 function renderStockBook(){
+  const dateFilter=stockBookDateFilter();
+  const ledgerRows=stockLedgerRows().filter(r=>stockDateInRange(r.date,dateFilter.from,dateFilter.to));
   const ledgerBody=$('stockLedgerTable');
-  if(ledgerBody){ledgerBody.innerHTML=stockLedgerRows().slice(0,300).map(r=>`<tr><td>${r.date||''}</td><td>${r.code||''}</td><td>${r.type||''}</td><td>${r.warehouse||''}</td><td>${r.product||''}</td><td>${r.name||''}</td><td><b>${r.qty>0?'+':''}${r.qty}</b></td><td>${r.note||''}</td></tr>`).join('')||'<tr><td colspan="8">Chưa có phát sinh kho</td></tr>'}
+  if(ledgerBody){ledgerBody.innerHTML=ledgerRows.slice(0,300).map(r=>`<tr><td>${r.date||''}</td><td>${r.code||''}</td><td>${r.type||''}</td><td>${r.warehouse||''}</td><td>${r.product||''}</td><td>${r.name||''}</td><td><b>${r.qty>0?'+':''}${r.qty}</b></td><td>${r.note||''}</td></tr>`).join('')||'<tr><td colspan="8">Chưa có phát sinh kho</td></tr>'}
   const allowed=userWarehouses();
   const whFilter=$('stockBookWarehouse')?.value||'ALL';
   if(whFilter!=='ALL' && !allowed.includes(whFilter)){
@@ -915,7 +938,7 @@ function renderStockBook(){
   const showOffice=allowed.includes('Kho Văn Phòng') && (activeWh==='ALL'||activeWh==='Kho Văn Phòng');
   const head=$('stockBookHead')||document.querySelector('#stockbook thead tr');
   if(head)head.innerHTML=`<th>Model</th><th>Sản phẩm</th><th>Nhập</th><th>Xuất</th><th>Chuyển kho</th><th>Điều chỉnh</th>${showMain?'<th>Kho Chính</th>':''}${showOffice?'<th>Kho Văn Phòng</th>':''}<th>Tổng tồn</th><th>Trạng thái</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th>`;
-  let rows=stockBookRows().map(r=>{
+  let rows=stockBookRows(dateFilter.from,dateFilter.to).map(r=>{
     let visibleStock=activeWh==='Kho Chính'?r.khoChinh:(activeWh==='Kho Văn Phòng'?r.khoVanPhong:r.stock);
     return {...r,visibleStock,visibleValue:visibleStock*r.cost};
   }).filter(r=>{
@@ -924,6 +947,7 @@ function renderStockBook(){
     if(status==='IN_STOCK' && !(r.visibleStock>0))return false;
     if(status==='LOW' && !(r.visibleStock>0 && r.visibleStock<=r.minStock))return false;
     if(status==='OUT' && r.visibleStock!==0)return false;
+    if(dateFilter.active && !r.periodMovement)return false;
     return true;
   });
   const sumModel=rows.length;
@@ -933,6 +957,7 @@ function renderStockBook(){
   const sumValue=rows.reduce((a,r)=>a+r.visibleValue,0);
   if($('stockBookSummary'))$('stockBookSummary').innerHTML=`
     <div class="stock-summary-card"><span>Tổng model</span><b>${sumModel}</b></div>
+    ${dateFilter.active?`<div class="stock-summary-card"><span>Khoảng ngày</span><b>${dateFilter.from||'...'} → ${dateFilter.to||'...'}</b></div>`:''}
     ${showMain?`<div class="stock-summary-card"><span>Kho Chính</span><b>${sumMain}</b></div>`:''}
     ${showOffice?`<div class="stock-summary-card"><span>Kho Văn Phòng</span><b>${sumOffice}</b></div>`:''}
     <div class="stock-summary-card"><span>Tổng tồn đang xem</span><b>${sumStock}</b></div>
@@ -1112,7 +1137,7 @@ function exportRows(type){let rows=[];
   if(type==='stockVouchers')rows=data.stockVouchers.flatMap(v=>(v.items||[]).map(it=>({code:v.code,date:v.date,type:v.type,warehouse:voucherWarehouse(v),productCode:it.code,productName:it.name,qty:it.actualQty??it.inputQty??it.qty,cost:it.cost,note:it.note||v.note||''})));
   if(type==='sales')rows=data.sales.map(s=>({code:s.code,date:s.date,customerCode:s.customerCode||'',customerName:s.customerName,customerPhone:s.customerPhone||'',staffName:s.staffName,techName:s.techName,grand:s.grand,paid:s.paid,debt:s.debt,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,profit:s.profit,itemsJson:JSON.stringify(s.items||[]),note:s.note||''}));
   if(type==='commissions')rows=data.sales.map(s=>({date:s.date,code:s.code,customer:s.customerName,saleStaff:s.staffName,techStaff:s.techName,grand:s.grand,commissionPercent:s.commissionPercent,saleCommission:s.saleCommission,techCost:s.techCost,totalCommission:(+s.saleCommission||0)+(+s.techCost||0)}));
-  if(type==='stockbook')rows=stockBookRows().map(r=>({model:r.code,sanPham:r.name,nhap:r.totalIn,xuat:r.totalOut,chuyenKho:r.totalTransfer,dieuChinh:r.totalAdj,khoChinh:canAccessWarehouse('Kho Chính')?r.khoChinh:'Ẩn',khoVanPhong:canAccessWarehouse('Kho Văn Phòng')?r.khoVanPhong:'Ẩn',tongTon:r.stock,giaVon:has('viewCost')?r.cost:'Ẩn',giaTriTon:has('viewCost')?r.value:'Ẩn'}));
+  if(type==='stockbook'){const df=stockBookDateFilter();rows=stockBookRows(df.from,df.to).filter(r=>!df.active||r.periodMovement).map(r=>({tuNgay:df.from||'',denNgay:df.to||'',model:r.code,sanPham:r.name,nhap:r.totalIn,xuat:r.totalOut,chuyenKho:r.totalTransfer,dieuChinh:r.totalAdj,khoChinh:canAccessWarehouse('Kho Chính')?r.khoChinh:'Ẩn',khoVanPhong:canAccessWarehouse('Kho Văn Phòng')?r.khoVanPhong:'Ẩn',tongTonHienTai:r.stock,giaVon:has('viewCost')?r.cost:'Ẩn',giaTriTon:has('viewCost')?r.value:'Ẩn'}));}
   return rows;
 }
 function stockQtyByType(code,type){let q=0;data.stockVouchers.forEach(v=>{if(v.type!==type)return;(v.items||[]).forEach(it=>{if(it.code===code)q+=+it.qty||0})});return q}
