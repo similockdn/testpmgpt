@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-config.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
 function createMissingElement(id){
@@ -1385,7 +1385,8 @@ function renderPermissions(){
   let keys=Object.keys(permLabels);
   $('permBox').innerHTML=keys.map(k=>`<label><input type="checkbox" value="${k}"> ${permLabels[k]}</label>`).join('');
   if($('warehouseAccessBox'))$('warehouseAccessBox').innerHTML=WAREHOUSES.map(w=>`<label><input type="checkbox" value="${w}"> ${w}</label>`).join('');
-  $('permissionTable').innerHTML=data.users.map(u=>`<tr><td>${u.email||''}<br><small>UID: ${u.id}</small></td><td>${u.name||''}</td><td>${u.role||''}</td><td>${(u.perms||[]).map(p=>permLabels[p]||p).join(', ')}</td><td>${(u.warehouseAccess||[]).join(', ')||'Không giới hạn/Chưa chọn'}</td><td><button class="btn ghost" onclick="editPermission('${u.id}')">Sửa</button></td></tr>`).join('')
+  $('permissionTable').innerHTML=data.users.map(u=>`<tr><td>${u.email||''}<br><small>UID: ${u.id}</small></td><td>${u.name||''}</td><td>${u.role||''}</td><td>${(u.perms||[]).map(p=>permLabels[p]||p).join(', ')}</td><td>${(u.warehouseAccess||[]).join(', ')||'Không giới hạn/Chưa chọn'}</td><td><button class="btn ghost" onclick="editPermission('${u.id}')">Sửa</button> <button class="btn ghost admin-only" onclick="adminSendPasswordReset('${u.id}')">Reset mật khẩu</button></td></tr>`).join('')
+  applyPermissions();
 }
 $('uRole')?.addEventListener('change',()=>{const role=$('uRole').value;document.querySelectorAll('#permBox input').forEach(i=>i.checked=(permissionMap[role]||[]).includes(i.value));document.querySelectorAll('#warehouseAccessBox input').forEach(i=>{i.checked=role==='Admin'||(role==='Kho Chính'&&i.value==='Kho Chính')||(role==='Kho Văn Phòng'&&i.value==='Kho Văn Phòng')})});
 window.saveUserPermission=async()=>{
@@ -1408,6 +1409,22 @@ window.editPermission=id=>{
   document.querySelectorAll('#permBox input').forEach(i=>i.checked=(u.perms||[]).includes(i.value));
   document.querySelectorAll('#warehouseAccessBox input').forEach(i=>i.checked=((u.warehouseAccess||[]).includes(i.value) || u.role==='Admin'))
 }
+
+
+window.adminSendPasswordReset=async(id)=>{
+  try{
+    if(currentPerm.role!=='Admin') return alert('Chỉ Admin mới được gửi yêu cầu reset mật khẩu.');
+    const u=data.users.find(x=>x.id===id);
+    const email=normEmail(u?.email||'');
+    if(!email) return alert('User này chưa có email để reset mật khẩu.');
+    if(!confirm('Gửi email reset mật khẩu cho '+email+'?')) return;
+    await sendPasswordResetEmail(auth,email);
+    await logAction('Admin reset mật khẩu','Gửi email reset mật khẩu cho '+email);
+    alert('Đã gửi email reset mật khẩu cho '+email+'. Nhân viên mở email và tự đặt mật khẩu mới.');
+  }catch(e){
+    alert('Không gửi được email reset mật khẩu: '+authMsg(e));
+  }
+};
 
 
 window.removeDoc=async(name,id)=>{
