@@ -299,18 +299,30 @@
               <button class="btn primary" onclick="savePrice()">Lưu bảng giá</button>
             </div>
           </div>
-          <div class="grid form-grid">
+          <div class="price-workspace">
             <input id="priceId" hidden>
             <input id="priceProduct" hidden>
-            <div class="span2"><label>Chọn Model áp dụng giá bán</label><div class="inline"><input id="priceProductSearch" placeholder="Tìm model / tên sản phẩm để chọn nhiều" oninput="renderPriceProductPicker()"><button type="button" class="btn ghost" onclick="selectAllPriceProducts()">Chọn tất cả</button><button type="button" class="btn ghost" onclick="clearPriceProducts()">Bỏ chọn</button></div><div id="priceProductPicker" class="multi-model-box"></div><div id="priceSelectedHint" class="hint"></div></div>
-            <div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div>
-            <div><label>Giá bán</label><input id="priceValue" type="number"></div>
-            <div><label>Hiệu lực từ</label><input id="priceFrom" type="date"></div>
-            <div><label>Hiệu lực đến</label><input id="priceTo" type="date"></div>
-            <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
-            <div class="span2"><label>Ghi chú</label><input id="priceNote" placeholder="VD: Giá đại lý tháng 6, giá CTKM..."></div>
+            <div class="price-model-card">
+              <label>1. Tìm và chọn Model</label>
+              <div class="price-search-row"><input id="priceProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderPriceProductPicker()"></div>
+              <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllPriceProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearPriceProducts()">Bỏ chọn</button></div>
+              <div id="priceSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
+              <div id="priceProductPicker" class="multi-model-box price-model-box"></div>
+            </div>
+            <div class="price-form-card">
+              <label>2. Nhập thông tin bảng giá bán</label>
+              <div class="grid form-grid price-form-grid">
+                <div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div>
+                <div><label>Giá bán</label><input id="priceValue" type="number" placeholder="VD: 2150000"></div>
+                <div><label>Hiệu lực từ</label><input id="priceFrom" type="date"></div>
+                <div><label>Hiệu lực đến</label><input id="priceTo" type="date"></div>
+                <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
+                <div><label>Ghi chú</label><input id="priceNote" placeholder="VD: Giá đại lý tháng 6, giá CTKM..."></div>
+              </div>
+              <div class="price-save-bar"><span>Chọn nhiều model rồi bấm lưu, hệ thống sẽ tạo bảng giá cho từng model.</span><button class="btn primary" onclick="savePrice()">Tạo bảng giá</button></div>
+            </div>
           </div>
-          <div class="hint price-template">File Excel import cần cột: <b>code,type,price,validFrom,validTo,active,note</b>. Ví dụ: S01,Khách lẻ,2350000,2026-06-01,2026-06-30,true,Giá tháng 6</div>
+          <div class="price-list-head"><div><b>Danh sách bảng giá bán</b><span> Tìm nhanh theo model, tên sản phẩm, nhóm khách, ghi chú</span></div><input class="search" id="priceSearch" placeholder="Tìm bảng giá..." oninput="renderPrices()"></div>
           <table><thead><tr><th>Model</th><th>Nhóm khách</th><th>Giá</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table>
         </div>
         <div class="panel view-cost">
@@ -327,17 +339,29 @@
               <button class="btn primary" onclick="saveCostPrice()">Lưu giá vốn</button>
             </div>
           </div>
-          <div class="grid form-grid">
+          <div class="price-workspace cost-workspace">
             <input id="costId" hidden>
             <input id="costProduct" hidden>
-            <div class="span2"><label>Chọn Model áp dụng giá vốn</label><div class="inline"><input id="costProductSearch" placeholder="Tìm model / tên sản phẩm để chọn nhiều" oninput="renderCostProductPicker()"><button type="button" class="btn ghost" onclick="selectAllCostProducts()">Chọn tất cả</button><button type="button" class="btn ghost" onclick="clearCostProducts()">Bỏ chọn</button></div><div id="costProductPicker" class="multi-model-box"></div><div id="costSelectedHint" class="hint"></div></div>
-            <div><label>Giá vốn</label><input id="costValue" type="number"></div>
-            <div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div>
-            <div><label>Hiệu lực đến</label><input id="costTo" type="date"></div>
-            <div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
-            <div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div>
+            <div class="price-model-card">
+              <label>1. Tìm và chọn Model</label>
+              <div class="price-search-row"><input id="costProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderCostProductPicker()"></div>
+              <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllCostProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearCostProducts()">Bỏ chọn</button></div>
+              <div id="costSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
+              <div id="costProductPicker" class="multi-model-box price-model-box"></div>
+            </div>
+            <div class="price-form-card">
+              <label>2. Nhập thông tin giá vốn</label>
+              <div class="grid form-grid price-form-grid">
+                <div><label>Giá vốn</label><input id="costValue" type="number" placeholder="VD: 1500000"></div>
+                <div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div>
+                <div><label>Hiệu lực đến</label><input id="costTo" type="date"></div>
+                <div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
+                <div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div>
+              </div>
+              <div class="price-save-bar"><span>Chọn nhiều model rồi bấm lưu, hệ thống sẽ tạo giá vốn cho từng model.</span><button class="btn primary" onclick="saveCostPrice()">Tạo giá vốn</button></div>
+            </div>
           </div>
-          <div class="hint price-template">File Excel import giá vốn cần cột: <b>code,cost,validFrom,validTo,active,note</b>. Nhân viên thường không nhìn thấy phần này.</div>
+          <div class="price-list-head"><div><b>Danh sách giá vốn</b><span> Tìm nhanh theo model, tên sản phẩm, ghi chú</span></div><input class="search" id="costPriceSearch" placeholder="Tìm giá vốn..." oninput="renderCostPrices()"></div>
           <table><thead><tr><th>Model</th><th>Giá vốn</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="costPriceTable"></tbody></table>
         </div>
       </section>
