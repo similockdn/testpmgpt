@@ -2,7 +2,16 @@ import { auth, db } from './firebase-config.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
-const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
+function createMissingElement(id){
+  console.warn('Thiếu phần tử giao diện, tự tạo tạm để tránh lỗi:', id);
+  const el=document.createElement('input');
+  el.type='hidden';
+  el.id=id;
+  el.dataset.autoCreated='true';
+  document.body.appendChild(el);
+  return el;
+}
+const $=id=>document.getElementById(id)||createMissingElement(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
 function numberToVietnamese(n){
   n=Math.round(Number(n)||0);
   if(n===0) return 'Không đồng';
@@ -415,7 +424,7 @@ document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn
 function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));const activeBtn=document.querySelector(`#menu button[data-page="${id}"]`);if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='Similock Đà Nẵng - Quản lý bán hàng, kho, công nợ, bảo hành'}
 function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí vận hành',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống'}[id]||id)}
 
-function renderAll(){try{applyPermissions();renderSelectors();renderDashboard();renderCustomers();renderProducts();renderPrices();renderCostPrices();renderStaff();renderSales();renderCommissions();renderExpenses();renderDebts();renderReceipts();renderStock();renderStockBook();renderWarranties();renderReports();renderPermissions();staffDeptChanged();resetSaleForm();resetStockForm();}catch(e){console.error('RENDER ERROR:',e);alert('Đăng nhập được nhưng lỗi khi tải màn hình: '+(e.message||e));}}
+function renderAll(){try{applyPermissions();renderSelectors();renderDashboard();renderCustomers();renderProducts();renderPriceProductPicker();renderCostProductPicker();renderPrices();renderCostPrices();renderStaff();renderSales();renderCommissions();renderExpenses();renderDebts();renderReceipts();renderStock();renderStockBook();renderWarranties();renderReports();renderPermissions();staffDeptChanged();resetSaleForm();resetStockForm();}catch(e){console.error('RENDER ERROR:',e);alert('Đăng nhập được nhưng lỗi khi tải màn hình: '+(e.message||e));}}
 function ensureProductDatalist(){
   let dl=document.getElementById('productCodesList');
   if(!dl){dl=document.createElement('datalist');dl.id='productCodesList';document.body.appendChild(dl);}
@@ -435,6 +444,45 @@ function productByInput(v){
   const prefix=v.split(' - ')[0].trim();
   return data.products.find(p=>String(p.code||'').toLowerCase()===prefix.toLowerCase() || `${p.code} - ${p.name||''}`.toLowerCase()===v.toLowerCase())||null;
 }
+
+function checkedCodesFromBox(boxId){
+  const box=$(boxId); if(!box)return [];
+  return [...box.querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.value);
+}
+function renderProductPicker(boxId, searchId, hintId, selectedCodes=[]){
+  const box=$(boxId); if(!box)return;
+  const old=new Set([...checkedCodesFromBox(boxId), ...selectedCodes.filter(Boolean)]);
+  const q=String($(searchId)?.value||'').trim().toLowerCase();
+  const rows=data.products.filter(p=>!q || `${p.code} ${p.name||''} ${p.category||''}`.toLowerCase().includes(q));
+  box.innerHTML=rows.length?rows.map(p=>`<label><input type="checkbox" value="${p.code}" ${old.has(p.code)?'checked':''} onchange="updateProductPickerHint('${boxId}','${hintId}')"><span>${p.code}<small>${p.name||''}</small></span></label>`).join(''):`<div class="empty">Không tìm thấy model phù hợp</div>`;
+  updateProductPickerHint(boxId,hintId);
+}
+function updateProductPickerHint(boxId,hintId){
+  const hint=$(hintId); if(!hint)return;
+  const codes=checkedCodesFromBox(boxId);
+  hint.innerHTML=codes.length?`Đã chọn <b>${codes.length}</b> model: ${codes.join(', ')}`:'Chưa chọn model nào';
+}
+window.renderPriceProductPicker=()=>renderProductPicker('priceProductPicker','priceProductSearch','priceSelectedHint',[$('priceProduct')?.value||'']);
+window.renderCostProductPicker=()=>renderProductPicker('costProductPicker','costProductSearch','costSelectedHint',[$('costProduct')?.value||'']);
+function selectVisibleProductPicker(boxId,hintId){
+  const box=$(boxId); if(!box)return;
+  box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=true);
+  updateProductPickerHint(boxId,hintId);
+}
+function clearProductPicker(boxId,hintId,hiddenId,searchId){
+  const box=$(boxId); if(box)box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=false);
+  if($(hiddenId))$(hiddenId).value='';
+  if($(searchId))$(searchId).value='';
+  updateProductPickerHint(boxId,hintId);
+}
+window.selectAllPriceProducts=()=>selectVisibleProductPicker('priceProductPicker','priceSelectedHint');
+window.clearPriceProducts=()=>clearProductPicker('priceProductPicker','priceSelectedHint','priceProduct','priceProductSearch');
+window.selectAllCostProducts=()=>selectVisibleProductPicker('costProductPicker','costSelectedHint');
+window.clearCostProducts=()=>clearProductPicker('costProductPicker','costSelectedHint','costProduct','costProductSearch');
+function setOnlyCheckedProduct(boxId, code){
+  const box=$(boxId); if(!box)return;
+  box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=x.value===code);
+}
 function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>x.dept==='Sale'||x.dept==='Quản lý'),x=>x.name);fillSelect($('saleTech'),data.staff.filter(x=>x.dept==='Kỹ thuật'),x=>x.name);refreshCommissionStaffOptions();ensureProductDatalist();fillReceiptCustomerOptions();fillSelect($('wSale'),data.sales,x=>`${x.code} - ${x.customerName||''}`);if($('saleWarehouse'))$('saleWarehouse').innerHTML=warehouseOptions($('saleWarehouse').value||defaultWarehouse());if($('stockWarehouse'))$('stockWarehouse').innerHTML=warehouseOptions($('stockWarehouse').value||defaultWarehouse());if($('stockToWarehouse'))$('stockToWarehouse').innerHTML=warehouseOptions($('stockToWarehouse').value||defaultWarehouse(),WAREHOUSES);$('customerList').innerHTML=data.customers.map(c=>`<option value="${ensureCustomerCode(c)} | ${c.name} | ${c.phone||''}"></option>`).join('')}
 function renderDashboard(){let month=new Date().toISOString().slice(0,7);let sales=data.sales.filter(s=>String(s.date||'').startsWith(month));let monthlyExpenses=data.expenses.filter(e=>String(e.date||'').startsWith(month));let rev=sales.reduce((a,s)=>a+(+s.grand||0),0);let orderProfit=sales.reduce((a,s)=>a+(+s.profit||0),0);let expense=monthlyExpenses.reduce((a,e)=>a+(+e.amount||0),0);let profit=orderProfit-expense;let debt=calcDebts().reduce((a,d)=>a+d.debt,0);let low=data.products.filter(p=>stockOf(p.code)<=(+p.minStock||3));$('kpiRevenue').textContent=money(rev);$('kpiProfit').textContent=money(profit);$('kpiDebt').textContent=money(debt);$('kpiLowStock').textContent=low.length;const best={};data.sales.forEach(s=>(s.items||[]).forEach(it=>best[it.code]=(best[it.code]||0)+(+it.qty||0)));let rows=Object.entries(best).sort((a,b)=>b[1]-a[1]).slice(0,8);let max=Math.max(1,...rows.map(r=>r[1]));$('bestProducts').innerHTML=rows.length?rows.map(([code,qty])=>{let p=data.products.find(x=>x.code===code)||{};return `<div class="bar-row"><b>${code}</b><div><small>${p.name||''}</small><div class="bar"><i style="width:${qty/max*100}%"></i></div></div><b>${qty}</b></div>`}).join(''):'Chưa có dữ liệu';const st={};data.sales.forEach(s=>{let n=data.staff.find(x=>x.id===s.staffId)?.name||'Khác';st[n]=st[n]||{rev:0,count:0};st[n].rev+=+s.grand||0;st[n].count++});$('topStaff').innerHTML=Object.entries(st).sort((a,b)=>b[1].rev-a[1].rev).slice(0,5).map(([n,v])=>`<tr><td>${n}</td><td>${money(v.rev)}</td><td>${v.count}</td></tr>`).join('');$('latestSales').innerHTML=data.sales.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(s=>`<tr><td>${s.code}</td><td>${s.customerCode||''}</td><td>${s.customerName||''}</td><td>${money(s.grand)}</td></tr>`).join('');$('lowStockRows').innerHTML=low.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td><span class="badge red">${stockOf(p.code)}</span></td></tr>`).join('')||'<tr><td colspan="3">Kho ổn định</td></tr>'}
 
@@ -446,7 +494,7 @@ window.quickCreateCustomer=async()=>{let raw=$('saleCustomerSearch').value.trim(
 
 window.saveProduct=async()=>{let old=$('pId').value?data.products.find(x=>x.id===$('pId').value):{};let o={code:$('pCode').value.trim(),name:$('pName').value,category:$('pCategory').value,cost:has('viewCost')?(+$('pCost').value||0):(+old?.cost||0),price:+$('pPrice').value||0,minStock:+$('pMinStock').value||3};if(!o.code||!o.name)return alert('Nhập model và tên');let id=$('pId').value;if(id){await updateDoc(doc(db,'products',id),o);await logAction('Sửa sản phẩm',o.code)}else await addDoc(col('products'),{...o,createdAt:serverTimestamp()});clearProduct();await loadAll()}
 function clearProduct(){['pId','pCode','pName'].forEach(i=>$(i).value='');$('pCategory').value='Khóa thông minh';$('pCost').value='';$('pPrice').value='';$('pMinStock').value=3}
-function renderProducts(){$('productTable').innerHTML=data.products.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td>${p.category||''}</td><td class="view-cost">${money(p.cost)}</td><td>${money(p.price)}</td><td>${stockOf(p.code)}</td><td><button class="btn ghost" onclick="editProduct('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('products','${p.id}')">Xóa</button></td></tr>`).join('');applyPermissions()}
+function renderProducts(){const q=String($('productSearch').value||'').trim().toLowerCase();const rows=data.products.filter(p=>{const hay=[p.code,p.name,p.category,p.price,p.cost,stockOf(p.code)].join(' ').toLowerCase();return !q||hay.includes(q)});$('productTable').innerHTML=rows.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td>${p.category||''}</td><td class="view-cost">${money(p.cost)}</td><td>${money(p.price)}</td><td>${stockOf(p.code)}</td><td><button class="btn ghost" onclick="editProduct('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('products','${p.id}')">Xóa</button></td></tr>`).join('') || `<tr><td colspan="7">Không tìm thấy sản phẩm phù hợp</td></tr>`;applyPermissions()}
 window.editProduct=id=>{let p=data.products.find(x=>x.id===id);$('pId').value=id;$('pCode').value=p.code||'';$('pName').value=p.name||'';$('pCategory').value=p.category||'';$('pCost').value=p.cost||0;$('pPrice').value=p.price||0;$('pMinStock').value=p.minStock||3}
 
 function activePriceFor(code,type,date=today()){
@@ -464,18 +512,22 @@ function priceStatus(p){
   return ['Đang áp dụng','green'];
 }
 window.savePrice=async()=>{
-  let o={code:productCodeFromInput($('priceProduct').value),type:$('priceType').value,price:+$('priceValue').value||0,validFrom:$('priceFrom').value||'',validTo:$('priceTo').value||'',active:$('priceActive').value==='true',note:$('priceNote').value||'',updatedAt:serverTimestamp()};
-  if(!o.code)return alert('Chọn model sản phẩm');
-  if(!o.price)return alert('Nhập giá bán');
-  if(o.validFrom&&o.validTo&&o.validFrom>o.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
-  let id=$('priceId').value;
-  if(id)await updateDoc(doc(db,'prices',id),o);else await addDoc(col('prices'),{...o,createdAt:serverTimestamp()});
-  ['priceId','priceValue','priceFrom','priceTo','priceNote'].forEach(i=>$(i).value='');$('priceActive').value='true';await loadAll()
+  const id=$('priceId').value;
+  const picked=checkedCodesFromBox('priceProductPicker');
+  const fallback=productCodeFromInput($('priceProduct')?.value||'');
+  const codes=id?[fallback||picked[0]]:[...new Set(picked.length?picked:(fallback?[fallback]:[]))];
+  const base={type:$('priceType').value,price:+$('priceValue').value||0,validFrom:$('priceFrom').value||'',validTo:$('priceTo').value||'',active:$('priceActive').value==='true',note:$('priceNote').value||'',updatedAt:serverTimestamp()};
+  if(!codes.length||!codes[0])return alert('Chọn ít nhất 1 model sản phẩm');
+  if(!base.price)return alert('Nhập giá bán');
+  if(base.validFrom&&base.validTo&&base.validFrom>base.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
+  if(id){await updateDoc(doc(db,'prices',id),{...base,code:codes[0]});}
+  else{for(const code of codes){await addDoc(col('prices'),{...base,code,createdAt:serverTimestamp()});}}
+  ['priceId','priceProduct','priceValue','priceFrom','priceTo','priceNote'].forEach(i=>{if($(i))$(i).value=''});$('priceActive').value='true';clearPriceProducts();await loadAll()
 }
 function renderPrices(){
   $('priceTable').innerHTML=data.prices.sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||''))).map(p=>{let st=priceStatus(p);return`<tr><td><b>${p.code}</b></td><td>${p.type}</td><td>${money(p.price)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('prices','${p.id}')">Xóa</button></td></tr>`}).join('')
 }
-window.editPrice=id=>{let p=data.prices.find(x=>x.id===id);$('priceId').value=id;$('priceProduct').value=p.code;$('priceType').value=p.type;$('priceValue').value=p.price;$('priceFrom').value=p.validFrom||'';$('priceTo').value=p.validTo||'';$('priceActive').value=String(p.active)!=='false'?'true':'false';$('priceNote').value=p.note||'';showPage('prices')}
+window.editPrice=id=>{let p=data.prices.find(x=>x.id===id);$('priceId').value=id;$('priceProduct').value=p.code;$('priceType').value=p.type;$('priceValue').value=p.price;$('priceFrom').value=p.validFrom||'';$('priceTo').value=p.validTo||'';$('priceActive').value=String(p.active)!=='false'?'true':'false';$('priceNote').value=p.note||'';renderPriceProductPicker();setOnlyCheckedProduct('priceProductPicker',p.code);updateProductPickerHint('priceProductPicker','priceSelectedHint');showPage('prices')}
 
 function activeCostFor(code,date=today()){
   const d=String(date||today());
@@ -491,21 +543,25 @@ function costFor(code,date=today()){
 }
 window.saveCostPrice=async()=>{
   if(!has('viewCost'))return alert('Chỉ Admin được xem/sửa bảng giá vốn');
-  const o={code:productCodeFromInput($('costProduct').value),cost:+$('costValue').value||0,validFrom:$('costFrom').value||'',validTo:$('costTo').value||'',active:$('costActive').value==='true',note:$('costNote').value||'',updatedAt:serverTimestamp()};
-  if(!o.code)return alert('Chọn model sản phẩm');
-  if(!o.cost)return alert('Nhập giá vốn');
-  if(o.validFrom&&o.validTo&&o.validFrom>o.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
   const id=$('costId').value;
-  if(id)await updateDoc(doc(db,'costPrices',id),o);else await addDoc(col('costPrices'),{...o,createdAt:serverTimestamp()});
-  await logAction(id?'Sửa bảng giá vốn':'Thêm bảng giá vốn',`${o.code} - ${o.cost}`);
-  ['costId','costValue','costFrom','costTo','costNote'].forEach(i=>$(i).value='');$('costActive').value='true';await loadAll();
+  const picked=checkedCodesFromBox('costProductPicker');
+  const fallback=productCodeFromInput($('costProduct')?.value||'');
+  const codes=id?[fallback||picked[0]]:[...new Set(picked.length?picked:(fallback?[fallback]:[]))];
+  const base={cost:+$('costValue').value||0,validFrom:$('costFrom').value||'',validTo:$('costTo').value||'',active:$('costActive').value==='true',note:$('costNote').value||'',updatedAt:serverTimestamp()};
+  if(!codes.length||!codes[0])return alert('Chọn ít nhất 1 model sản phẩm');
+  if(!base.cost)return alert('Nhập giá vốn');
+  if(base.validFrom&&base.validTo&&base.validFrom>base.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
+  if(id){await updateDoc(doc(db,'costPrices',id),{...base,code:codes[0]});}
+  else{for(const code of codes){await addDoc(col('costPrices'),{...base,code,createdAt:serverTimestamp()});}}
+  await logAction(id?'Sửa bảng giá vốn':'Thêm bảng giá vốn',`${codes.join(', ')} - ${base.cost}`);
+  ['costId','costProduct','costValue','costFrom','costTo','costNote'].forEach(i=>{if($(i))$(i).value=''});$('costActive').value='true';clearCostProducts();await loadAll();
 }
 function renderCostPrices(){
   const tb=$('costPriceTable'); if(!tb)return;
   if(!has('viewCost')){tb.innerHTML='<tr><td colspan="6">Chỉ Admin được xem bảng giá vốn</td></tr>';return;}
   tb.innerHTML=(data.costPrices||[]).sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||''))).map(p=>{let st=priceStatus(p);return`<tr><td><b>${p.code}</b></td><td>${money(p.cost)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editCostPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('costPrices','${p.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="6">Chưa có bảng giá vốn</td></tr>';
 }
-window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');let p=data.costPrices.find(x=>x.id===id);$('costId').value=id;$('costProduct').value=p.code;$('costValue').value=p.cost;$('costFrom').value=p.validFrom||'';$('costTo').value=p.validTo||'';$('costActive').value=String(p.active)!=='false'?'true':'false';$('costNote').value=p.note||'';showPage('prices')}
+window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');let p=data.costPrices.find(x=>x.id===id);$('costId').value=id;$('costProduct').value=p.code;$('costValue').value=p.cost;$('costFrom').value=p.validFrom||'';$('costTo').value=p.validTo||'';$('costActive').value=String(p.active)!=='false'?'true':'false';$('costNote').value=p.note||'';renderCostProductPicker();setOnlyCheckedProduct('costProductPicker',p.code);updateProductPickerHint('costProductPicker','costSelectedHint');showPage('prices')}
 
 
 window.staffDeptChanged=()=>{let dept=$('eDept')?.value||'Sale';if($('saleCommissionBox'))$('saleCommissionBox').style.display=(dept==='Sale'||dept==='Quản lý')?'block':'none';if($('techFeeBox'))$('techFeeBox').style.display=dept==='Kỹ thuật'?'block':'none'}
@@ -636,8 +692,8 @@ window.addQuickSaleModel=(code)=>{let p=data.products.find(x=>String(x.code).toL
 window.syncSaleExportStockFromSticky=()=>{if($('saleExportStock')&&$('saleExportStockSticky'))$('saleExportStock').checked=$('saleExportStockSticky').checked}
 window.syncSaleExportStockToSticky=()=>{if($('saleExportStock')&&$('saleExportStockSticky'))$('saleExportStockSticky').checked=$('saleExportStock').checked}
 window.saleProductChanged=sel=>{let p=productByInput(sel.value)||{};if(!p.code)return;let tr=sel.closest('tr');tr.children[1].querySelector('input').value=p.name||'';let customer=findCustomerBySearch();let bp=activePriceFor(p.code,customer?.type,$('saleDate')?.value||today());let price=bp?.price||p.price||0;tr.children[3].querySelector('input').value=price;tr.children[4].querySelector('input').value=customer?.discount||0;updateSaleTotals()}
-function saleItems(){return [...$('saleItems').querySelectorAll('tr')].map(tr=>({code:productCodeFromInput(tr.children[0].querySelector('input').value),name:tr.children[1].querySelector('input').value,qty:+tr.children[2].querySelector('input').value||0,price:+tr.children[3].querySelector('input').value||0,discount:+tr.children[4].querySelector('input').value||0})).filter(x=>x.code&&x.qty>0)}
-window.updateSaleTotals=()=>{let t=calcSaleTotals(saleItems(),$('saleVatMode').value,$('salePaid').value);[...$('saleItems').querySelectorAll('tr')].forEach(tr=>{let q=+tr.children[2].querySelector('input').value||0,pr=+tr.children[3].querySelector('input').value||0,ck=+tr.children[4].querySelector('input').value||0;tr.querySelector('.line-total').textContent=money(q*pr*(1-ck/100))});$('saleSubTotal').textContent=money(t.subtotal);$('saleVat').textContent=money(t.vat);$('saleGrand').textContent=money(t.grand);$('saleDebt').textContent=money(t.debt);if($('saleGrandSticky'))$('saleGrandSticky').textContent=money(t.grand);if($('saleDebtSticky'))$('saleDebtSticky').textContent=money(t.debt);syncSaleExportStockToSticky()};['saleVatMode','salePaid','saleCustomerSearch','saleCommissionPercent'].forEach(id=>setTimeout(()=>$(id)?.addEventListener('input',updateSaleTotals),0));setTimeout(()=>$('saleStaff')?.addEventListener('change',()=>{if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff').value);updateSaleTotals()}),0);setTimeout(()=>$('saleTech')?.addEventListener('change',()=>{if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech').value);updateSaleTotals()}),0);
+function saleItems(){return [...$('saleItems').querySelectorAll('tr')].map(tr=>{const inp=[...tr.querySelectorAll('input')];return{code:productCodeFromInput(inp[0]?.value||''),name:inp[1]?.value||'',qty:+(inp[2]?.value||0)||0,price:+(inp[3]?.value||0)||0,discount:+(inp[4]?.value||0)||0}}).filter(x=>x.code&&x.qty>0)}
+window.updateSaleTotals=()=>{let t=calcSaleTotals(saleItems(),$('saleVatMode')?.value||'included8',$('salePaid')?.value||0);[...$('saleItems').querySelectorAll('tr')].forEach(tr=>{const inp=[...tr.querySelectorAll('input')];let q=+(inp[2]?.value||0)||0,pr=+(inp[3]?.value||0)||0,ck=+(inp[4]?.value||0)||0;const line=tr.querySelector('.line-total'); if(line) line.textContent=money(q*pr*(1-ck/100))});$('saleSubTotal').textContent=money(t.subtotal);$('saleVat').textContent=money(t.vat);$('saleGrand').textContent=money(t.grand);$('saleDebt').textContent=money(t.debt);if($('saleGrandSticky'))$('saleGrandSticky').textContent=money(t.grand);if($('saleDebtSticky'))$('saleDebtSticky').textContent=money(t.debt);syncSaleExportStockToSticky()};['saleVatMode','salePaid','saleCustomerSearch','saleCommissionPercent'].forEach(id=>setTimeout(()=>$(id)?.addEventListener('input',updateSaleTotals),0));setTimeout(()=>$('saleStaff')?.addEventListener('change',()=>{if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff').value);updateSaleTotals()}),0);setTimeout(()=>$('saleTech')?.addEventListener('change',()=>{if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech').value);updateSaleTotals()}),0);
 function findCustomerBySearch(){let s=$('saleCustomerSearch').value.toLowerCase();return data.customers.find(c=>s.includes((ensureCustomerCode(c)||'zzzz').toLowerCase())||s.includes((c.phone||'zzzz').toLowerCase())||s.includes((c.name||'zzzz').toLowerCase()))}
 window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){await quickCreateCustomer();customer=findCustomerBySearch()}let items=saleItems();if(!items.length)return alert('Chưa có sản phẩm');
   const exportStock=!!$('saleExportStock')?.checked;
@@ -645,7 +701,7 @@ window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){awai
   let oldSale=editingSale?data.sales.find(x=>x.id===editingSale):null;
   let excludeVoucherId=oldSale?.stockVoucherId||'';
   if(exportStock){for(const it of items){const available=stockOf(it.code,excludeVoucherId,saleWarehouse); if(it.qty>available && !confirm(`Sản phẩm ${it.code} tồn tại kho ${saleWarehouse} hiện có ${available}, vẫn lưu đơn kiêm xuất kho?`)) return;}}
-  let totals=calcSaleTotals(items,$('saleVatMode').value,$('salePaid').value);let cost=items.reduce((a,it)=>a+costFor(it.code,$('saleDate').value)*it.qty,0);let commissionPercent=+$('saleCommissionPercent')?.value||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+$('saleTechCost')?.value||techFeeDefault($('saleTech').value);let commissionBase=calcCommissionBase(totals);let o={code:$('saleCode').value,date:$('saleDate').value,customerId:customer.id,customerCode:ensureCustomerCode(customer),customerName:customer.name,customerPhone:customer.phone||'',customerAddress:customer.address||'',staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,vatMode:$('saleVatMode').value,paid:+$('salePaid').value||0,note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost,status:totals.debt>0?'Còn nợ':'Đã thu tiền',paymentStatus:totals.debt>0?(((+$('salePaid').value||0)>0)?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:+$('salePaid').value||0,debtLeft:totals.debt,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
+  let totals=calcSaleTotals(items,$('saleVatMode').value,$('salePaid').value);let cost=items.reduce((a,it)=>a+costFor(it.code,$('saleDate').value)*it.qty,0);let commissionPercent=+($('saleCommissionPercent')?.value||0)||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+($('saleTechCost')?.value||0)||techFeeDefault($('saleTech')?.value);let commissionBase=calcCommissionBase(totals);let o={code:$('saleCode').value,date:$('saleDate').value,customerId:customer.id,customerCode:ensureCustomerCode(customer),customerName:customer.name,customerPhone:customer.phone||'',customerAddress:customer.address||'',staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,vatMode:$('saleVatMode').value,paid:+$('salePaid').value||0,note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost,status:totals.debt>0?'Còn nợ':'Đã thu tiền',paymentStatus:totals.debt>0?(((+$('salePaid').value||0)>0)?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:+$('salePaid').value||0,debtLeft:totals.debt,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
   if(editingSale){if(!has('editSales'))return alert('Không có quyền sửa đơn');await updateDoc(doc(db,'sales',editingSale),o);await logAction('Sửa đơn bán',o.code)}else{const saleRef=await addDoc(col('sales'),{...o,createdAt:serverTimestamp()});editingSale=saleRef.id;}
   const savedSaleId=editingSale;
   // Kiêm xuất kho: tạo/cập nhật phiếu xuất kho OUT riêng để trừ tồn kho. Không tick thì chưa xuất kho.
@@ -931,7 +987,7 @@ function updateStockHeader(){
 }
 window.addStockItem=(it={})=>{ensureProductDatalist();let tr=document.createElement('tr');tr.innerHTML=`<td><input list="productCodesList" placeholder="Tìm model / tên SP" value="${it.code||''}" onchange="stockProductChanged(this)" oninput="stockProductChanged(this)"></td><td><input value="${it.name||''}" readonly></td><td><input type="number" value="${it.actualQty??it.inputQty??it.qty??1}"></td><td><input class="view-cost" type="number" value="${it.cost||0}"></td><td><input value="${it.note||''}"></td><td><button class="btn danger" onclick="this.closest('tr').remove()">X</button></td>`;$('stockItems').appendChild(tr);applyPermissions();updateStockHeader()}
 window.stockProductChanged=sel=>{let p=productByInput(sel.value)||{};if(!p.code)return;let tr=sel.closest('tr');tr.children[1].querySelector('input').value=p.name||'';tr.children[3].querySelector('input').value=p.cost||0;}
-function stockItems(){return [...$('stockItems').querySelectorAll('tr')].map(tr=>({code:productCodeFromInput(tr.children[0].querySelector('input').value),name:tr.children[1].querySelector('input').value,inputQty:+tr.children[2].querySelector('input').value||0,cost:+tr.children[3].querySelector('input').value||0,note:tr.children[4].querySelector('input').value})).filter(x=>x.code)}
+function stockItems(){return [...$('stockItems').querySelectorAll('tr')].map(tr=>{const inp=[...tr.querySelectorAll('input')];return{code:productCodeFromInput(inp[0]?.value||''),name:inp[1]?.value||'',inputQty:+(inp[2]?.value||0)||0,cost:+(inp[3]?.value||0)||0,note:inp[4]?.value||''}}).filter(x=>x.code)}
 window.saveStockVoucher=async()=>{
   let raw=stockItems();if(!raw.length)return alert('Chưa có mã hàng');
   let type=$('stockType').value, editingId=editingStock||'', warehouse=$('stockWarehouse')?.value||defaultWarehouse(), toWarehouse=$('stockToWarehouse')?.value||'Kho Văn Phòng';
