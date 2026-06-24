@@ -11,7 +11,54 @@ function createMissingElement(id){
   document.body.appendChild(el);
   return el;
 }
-const $=id=>document.getElementById(id)||createMissingElement(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
+const $=id=>document.getElementById(id)||createMissingElement(id);
+// Local wrappers for window handlers used inside ES module
+const addSaleItem=(...args)=>window.addSaleItem(...args);
+const addStockItem=(...args)=>window.addStockItem(...args);
+const clearCostProducts=(...args)=>window.clearCostProducts(...args);
+const clearPriceProducts=(...args)=>window.clearPriceProducts(...args);
+const createSupplementStockVoucher=(...args)=>window.createSupplementStockVoucher(...args);
+const deleteCostPriceGroup=(...args)=>window.deleteCostPriceGroup(...args);
+const deletePriceGroup=(...args)=>window.deletePriceGroup(...args);
+const editCostPriceGroup=(...args)=>window.editCostPriceGroup(...args);
+const editCustomer=(...args)=>window.editCustomer(...args);
+const editExpense=(...args)=>window.editExpense(...args);
+const editPermission=(...args)=>window.editPermission(...args);
+const editPriceGroup=(...args)=>window.editPriceGroup(...args);
+const editProduct=(...args)=>window.editProduct(...args);
+const editReceipt=(...args)=>window.editReceipt(...args);
+const editSale=(...args)=>window.editSale(...args);
+const editStaff=(...args)=>window.editStaff(...args);
+const editStock=(...args)=>window.editStock(...args);
+const editWarranty=(...args)=>window.editWarranty(...args);
+const newCostPriceList=(...args)=>window.newCostPriceList(...args);
+const newPriceList=(...args)=>window.newPriceList(...args);
+const openSaleReturn=(...args)=>window.openSaleReturn(...args);
+const printReceipt=(...args)=>window.printReceipt(...args);
+const printSale=(...args)=>window.printSale(...args);
+const printStock=(...args)=>window.printStock(...args);
+const quickCreateCustomer=(...args)=>window.quickCreateCustomer(...args);
+const receiptFor=(...args)=>window.receiptFor(...args);
+const refreshCommissionStaffOptions=(...args)=>window.refreshCommissionStaffOptions(...args);
+const removeDoc=(...args)=>window.removeDoc(...args);
+const renderCostProductPicker=(...args)=>window.renderCostProductPicker(...args);
+const renderPriceProductPicker=(...args)=>window.renderPriceProductPicker(...args);
+const resetExpenseForm=(...args)=>window.resetExpenseForm(...args);
+const resetReceiptForm=(...args)=>window.resetReceiptForm(...args);
+const resetSaleForm=(...args)=>window.resetSaleForm(...args);
+const resetStockForm=(...args)=>window.resetStockForm(...args);
+const saleItemKeyNav=(...args)=>window.saleItemKeyNav(...args);
+const saleProductChanged=(...args)=>window.saleProductChanged(...args);
+const saveSale=(...args)=>window.saveSale(...args);
+const saveSaleReturn=(...args)=>window.saveSaleReturn(...args);
+const setReportQuickRange=(...args)=>window.setReportQuickRange(...args);
+const staffDeptChanged=(...args)=>window.staffDeptChanged(...args);
+const stockProductChanged=(...args)=>window.stockProductChanged(...args);
+const syncSaleExportStockToSticky=(...args)=>window.syncSaleExportStockToSticky(...args);
+const updateSaleTotals=(...args)=>window.updateSaleTotals(...args);
+const viewCommissionStaff=(...args)=>window.viewCommissionStaff(...args);
+const viewSaleDetail=(...args)=>window.viewSaleDetail(...args);
+const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
 function numberToVietnamese(n){
   n=Math.round(Number(n)||0);
   if(n===0) return 'Không đồng';
@@ -640,6 +687,9 @@ window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được
 window.deleteCostPriceGroup=async(keyEnc)=>{if(!has('viewCost'))return alert('Chỉ Admin được xóa bảng giá vốn');const key=decodeURIComponent(keyEnc);const rows=data.costPrices.filter(p=>costGroupKeyOf(p)===key);if(!rows.length)return;if(!confirm(`Xóa toàn bộ bảng giá vốn này (${rows.length} model)?`))return;for(const r of rows) await deleteDoc(doc(db,'costPrices',r.id));await logAction('Xóa bảng giá vốn',rows[0].listName||key);await loadAll();}
 
 function renderStaff(){$('staffTable').innerHTML=data.staff.map(e=>`<tr><td>${e.name}</td><td>${e.dept}</td><td>${e.phone||''}</td><td>${(e.dept==='Sale'||e.dept==='Quản lý')?((e.commissionPercent??5)+'%'):''}</td><td>${e.dept==='Kỹ thuật'?money(e.techFee??100000):''}</td><td><button class="btn ghost" onclick="editStaff('${e.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('staff','${e.id}')">Xóa</button></td></tr>`).join('')||'<tr><td colspan="6">Chưa có nhân viên</td></tr>'}
+window.staffDeptChanged=()=>{let dept=$('eDept')?.value||'Sale';if($('saleCommissionBox'))$('saleCommissionBox').style.display=(dept==='Sale'||dept==='Quản lý')?'block':'none';if($('techFeeBox'))$('techFeeBox').style.display=dept==='Kỹ thuật'?'block':'none'}
+window.saveStaff=async()=>{let dept=$('eDept').value;let o={name:$('eName').value,dept,phone:$('ePhone').value,commissionPercent:+($('eCommissionPercent')?.value||0),techFee:+($('eTechFee')?.value||0)};if(dept==='Sale'||dept==='Quản lý'){if(!o.commissionPercent)o.commissionPercent=5;o.techFee=0}else if(dept==='Kỹ thuật'){if(!o.techFee)o.techFee=100000;o.commissionPercent=0}else{o.commissionPercent=0;o.techFee=0}if(!o.name)return alert('Nhập tên nhân viên');let id=$('eId').value;if(id)await updateDoc(doc(db,'staff',id),o);else await addDoc(col('staff'),o);$('eId').value='';$('eName').value='';$('ePhone').value='';$('eCommissionPercent').value=5;$('eTechFee').value=100000;$('eDept').value='Sale';staffDeptChanged();await loadAll()}
+
 window.editStaff=id=>{let e=data.staff.find(x=>x.id===id);$('eId').value=id;$('eName').value=e.name;$('eDept').value=e.dept;$('ePhone').value=e.phone||'';if($('eCommissionPercent'))$('eCommissionPercent').value=e.commissionPercent??5;if($('eTechFee'))$('eTechFee').value=e.techFee??100000;staffDeptChanged()}
 
 
