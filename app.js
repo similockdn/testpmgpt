@@ -1,6 +1,6 @@
 import { auth, db } from './firebase-config.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
-import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
+import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);const money=n=>(Number(n)||0).toLocaleString('vi-VN')+'đ';const today=()=>new Date().toISOString().slice(0,10);const uid=()=>Math.random().toString(36).slice(2,9);const normEmail=v=>String(v||'').trim().toLowerCase();
 function numberToVietnamese(n){
@@ -1315,12 +1315,23 @@ window.exportBackup=()=>{
 
 
 async function deleteCollectionDocs(collectionName){
+  // Firestore giới hạn 500 thao tác/1 batch. Dùng 450 để an toàn.
   const snap=await getDocs(col(collectionName));
-  for(const d of snap.docs){ await deleteDoc(doc(db,collectionName,d.id)); }
-  return snap.size;
+  let deleted=0;
+  for(let i=0;i<snap.docs.length;i+=450){
+    const batch=writeBatch(db);
+    const part=snap.docs.slice(i,i+450);
+    part.forEach(d=>batch.delete(doc(db,collectionName,d.id)));
+    await batch.commit();
+    deleted+=part.length;
+  }
+  return deleted;
+}
+function resetLocalDataAfterClear(){
+  ['customers','products','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','expenses','logs'].forEach(n=>{data[n]=[]});
 }
 window.clearAllData=async()=>{
-  if(!has('system')&&!has('audit')) return alert('Chỉ Admin mới được Clear Data');
+  if(currentPerm.role!=='Admin') return alert('Chỉ Admin mới được Clear Data');
   const first=confirm('⚠️ CẢNH BÁO LẦN 1\n\nBạn sắp xóa toàn bộ dữ liệu vận hành của hệ thống. Hành động này không thể hoàn tác.\n\nTiếp tục?');
   if(!first) return;
   const confirmText=prompt('⚠️ XÁC NHẬN LẦN 2\n\nNhập đúng: XOA_TOAN_BO_DU_LIEU');
@@ -1330,15 +1341,19 @@ window.clearAllData=async()=>{
   try{
     const credential=EmailAuthProvider.credential(auth.currentUser.email,password);
     await reauthenticateWithCredential(auth.currentUser,credential);
+
+    // Chỉ xóa dữ liệu vận hành. Giữ lại tài khoản và phân quyền để còn đăng nhập lại.
     const collectionsToClear=['customers','products','prices','costPrices','staff','sales','stockVouchers','receipts','warranties','expenses','logs'];
     let result=[];
     for(const name of collectionsToClear){
       const count=await deleteCollectionDocs(name);
       result.push(`${name}: ${count}`);
     }
-    await logAction('Clear Data','Đã xóa dữ liệu vận hành: '+result.join(', '));
+
+    // Không ghi log sau khi Clear Data, vì sẽ làm collection logs xuất hiện lại 1 dòng.
+    resetLocalDataAfterClear();
     await loadAll();
-    alert('Đã Clear Data thành công. Không xóa users/settings/roles/permissions.');
+    alert('Đã Clear Data thành công. Đã xóa dữ liệu vận hành và nhật ký. Không xóa users/settings/roles/permissions.\n\nChi tiết: '+result.join(', '));
   }catch(e){
     alert('Clear Data thất bại: '+authMsg(e));
   }

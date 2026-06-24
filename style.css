@@ -350,3 +350,34 @@ table{max-width:100%;}
   .panel,.sale-main-box,.sale-side-box,.modal-card{overflow:visible!important;}
   table,.editable{min-width:0!important;}
 }
+
+/* ===== Chuẩn hoá giao diện Kho hàng ===== */
+.warehouse-page .warehouse-panel{padding:20px!important;overflow-x:visible;}
+.warehouse-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;border-bottom:1px solid rgba(14,165,233,.12);padding-bottom:14px;}
+.warehouse-header h3{margin:0;color:#082f49;font-size:22px;}
+.warehouse-header span{display:block;margin-top:5px;color:#64748b;font-size:13px;font-weight:700;}
+.warehouse-save-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+.warehouse-action-board{display:grid;grid-template-columns:1.45fr .95fr;gap:14px;margin-bottom:16px;}
+.warehouse-action-group{background:linear-gradient(135deg,#f0f9ff,#ffffff);border:1px solid rgba(14,165,233,.18);border-radius:18px;padding:14px;}
+.warehouse-action-group.main-flow{background:linear-gradient(135deg,#ecfdf5,#f0f9ff);}
+.warehouse-action-group b{display:block;margin-bottom:10px;color:#075985;font-size:13px;text-transform:uppercase;letter-spacing:.2px;}
+.warehouse-action-buttons{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.warehouse-action-buttons .btn{min-height:40px;}
+.warehouse-form-card{background:#f8fafc;border:1px dashed rgba(14,165,233,.24);border-radius:18px;padding:14px;margin-bottom:12px;}
+.warehouse-form-title{font-weight:900;color:#082f49;margin-bottom:12px;}
+.warehouse-form-grid{gap:13px!important;}
+.warehouse-note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:16px;padding:12px 14px;margin:12px 0 14px;font-size:13px;line-height:1.45;}
+.warehouse-items-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 8px;}
+.warehouse-items-head b{display:block;color:#082f49;font-size:16px;}
+.warehouse-items-head span{display:block;color:#64748b;font-size:12px;margin-top:3px;}
+.warehouse-list-panel .panel-head{margin-bottom:8px;}
+@media(max-width:1100px){
+  .warehouse-action-board{grid-template-columns:1fr;}
+  .warehouse-save-actions{justify-content:flex-start;}
+}
+@media(max-width:720px){
+  .warehouse-header,.warehouse-items-head{flex-direction:column;align-items:stretch;}
+  .warehouse-save-actions,.warehouse-action-buttons{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+  .warehouse-save-actions .btn,.warehouse-action-buttons .btn{width:100%;}
+  .warehouse-action-group{padding:12px;}
+}
