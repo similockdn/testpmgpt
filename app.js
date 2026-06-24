@@ -511,25 +511,52 @@ function priceStatus(p){
   if(p.validFrom && String(p.validFrom)>d) return ['Sắp áp dụng','orange'];
   return ['Đang áp dụng','green'];
 }
-window.savePrice=async()=>{
-  const id=$('priceId').value;
+function selectedPriceCodes(){
   const picked=checkedCodesFromBox('priceProductPicker');
   const fallback=productCodeFromInput($('priceProduct')?.value||'');
-  const codes=id?[fallback||picked[0]]:[...new Set(picked.length?picked:(fallback?[fallback]:[]))];
-  const base={type:$('priceType').value,price:+$('priceValue').value||0,validFrom:$('priceFrom').value||'',validTo:$('priceTo').value||'',active:$('priceActive').value==='true',note:$('priceNote').value||'',updatedAt:serverTimestamp()};
-  if(!codes.length||!codes[0])return alert('Chọn ít nhất 1 model sản phẩm');
-  if(!base.price)return alert('Nhập giá bán');
+  return [...new Set(picked.length?picked:(fallback?[fallback]:[]))].filter(Boolean);
+}
+window.createPriceDraftRows=()=>{
+  const codes=selectedPriceCodes();
+  if(!codes.length)return alert('Chọn ít nhất 1 model trước');
+  const tb=$('priceDraftRows'); if(!tb)return;
+  const existing=new Map([...tb.querySelectorAll('tr[data-code]')].map(tr=>[tr.dataset.code,tr.querySelector('input')?.value||'']));
+  tb.innerHTML=codes.map(code=>{
+    const prod=data.products.find(p=>p.code===code)||{};
+    const old=existing.get(code);
+    const val=old!==undefined?old:(prod.price||'');
+    return `<tr data-code="${code}"><td><b>${code}</b></td><td>${prod.name||''}</td><td><input type="number" value="${val}" placeholder="Nhập giá bán"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#priceDraftRows tr[data-code]'))document.getElementById('priceDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa tạo dòng nhập giá</td></tr>'">X</button></td></tr>`;
+  }).join('');
+}
+function priceDraftItems(){
+  const rows=[...($('priceDraftRows')?.querySelectorAll('tr[data-code]')||[])];
+  return rows.map(tr=>({code:tr.dataset.code,price:+(tr.querySelector('input')?.value||0)||0})).filter(x=>x.code);
+}
+window.savePrice=async()=>{
+  const id=$('priceId').value;
+  let items=priceDraftItems();
+  if(id&&!items.length){
+    const fallback=productCodeFromInput($('priceProduct')?.value||'');
+    const price=+($('priceValue')?.value||0)||0;
+    if(fallback)items=[{code:fallback,price}];
+  }
+  const base={listName:($('priceListName')?.value||'').trim(),type:$('priceType').value,validFrom:$('priceFrom').value||'',validTo:$('priceTo').value||'',active:$('priceActive').value==='true',note:$('priceNote').value||'',updatedAt:serverTimestamp()};
+  if(!base.listName)return alert('Nhập tên bảng giá');
+  if(!items.length)return alert('Bấm "Tạo dòng nhập giá" rồi nhập giá cho từng model');
+  const missing=items.filter(x=>!x.price).map(x=>x.code);
+  if(missing.length)return alert('Chưa nhập giá bán cho model: '+missing.join(', '));
   if(base.validFrom&&base.validTo&&base.validFrom>base.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
-  if(id){await updateDoc(doc(db,'prices',id),{...base,code:codes[0]});}
-  else{for(const code of codes){await addDoc(col('prices'),{...base,code,createdAt:serverTimestamp()});}}
-  ['priceId','priceProduct','priceValue','priceFrom','priceTo','priceNote'].forEach(i=>{if($(i))$(i).value=''});$('priceActive').value='true';clearPriceProducts();await loadAll()
+  if(id){await updateDoc(doc(db,'prices',id),{...base,code:items[0].code,price:items[0].price});}
+  else{for(const it of items){await addDoc(col('prices'),{...base,code:it.code,price:it.price,createdAt:serverTimestamp()});}}
+  ['priceId','priceProduct','priceListName','priceFrom','priceTo','priceNote'].forEach(i=>{if($(i))$(i).value=''});$('priceActive').value='true';clearPriceProducts();if($('priceDraftRows'))$('priceDraftRows').innerHTML='<tr><td colspan="4">Chưa tạo dòng nhập giá</td></tr>';await loadAll()
 }
 function renderPrices(){
   const q=String($('priceSearch')?.value||'').trim().toLowerCase();
-  const rows=data.prices.filter(p=>{const prod=data.products.find(x=>x.code===p.code)||{};const hay=[p.code,prod.name,p.type,p.price,p.validFrom,p.validTo,p.note].join(' ').toLowerCase();return !q||hay.includes(q)}).sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));
-  $('priceTable').innerHTML=rows.map(p=>{let st=priceStatus(p);return`<tr><td><b>${p.code}</b></td><td>${p.type}</td><td>${money(p.price)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('prices','${p.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy bảng giá phù hợp</td></tr>'
+  const rows=data.prices.filter(p=>{const prod=data.products.find(x=>x.code===p.code)||{};const hay=[p.listName,p.code,prod.name,p.type,p.price,p.validFrom,p.validTo,p.note].join(' ').toLowerCase();return !q||hay.includes(q)}).sort((a,b)=>String(a.listName||'').localeCompare(String(b.listName||''))||String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));
+  $('priceTable').innerHTML=rows.map(p=>{let st=priceStatus(p);return`<tr><td>${p.listName||''}</td><td><b>${p.code}</b></td><td>${p.type}</td><td>${money(p.price)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('prices','${p.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="8">Không tìm thấy bảng giá phù hợp</td></tr>'
 }
-window.editPrice=id=>{let p=data.prices.find(x=>x.id===id);$('priceId').value=id;$('priceProduct').value=p.code;$('priceType').value=p.type;$('priceValue').value=p.price;$('priceFrom').value=p.validFrom||'';$('priceTo').value=p.validTo||'';$('priceActive').value=String(p.active)!=='false'?'true':'false';$('priceNote').value=p.note||'';renderPriceProductPicker();setOnlyCheckedProduct('priceProductPicker',p.code);updateProductPickerHint('priceProductPicker','priceSelectedHint');showPage('prices')}
+window.editPrice=id=>{let p=data.prices.find(x=>x.id===id);$('priceId').value=id;$('priceProduct').value=p.code;if($('priceListName'))$('priceListName').value=p.listName||'';$('priceType').value=p.type;$('priceFrom').value=p.validFrom||'';$('priceTo').value=p.validTo||'';$('priceActive').value=String(p.active)!=='false'?'true':'false';$('priceNote').value=p.note||'';renderPriceProductPicker();setOnlyCheckedProduct('priceProductPicker',p.code);updateProductPickerHint('priceProductPicker','priceSelectedHint');if($('priceDraftRows')){$('priceDraftRows').innerHTML=`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.price||0}"></td><td></td></tr>`;}showPage('prices')}
+
 
 function activeCostFor(code,date=today()){
   const d=String(date||today());
@@ -543,29 +570,49 @@ function costFor(code,date=today()){
   if(cp)return +cp.cost||0;
   return +(data.products.find(p=>p.code===code)?.cost||0);
 }
+window.createCostDraftRows=()=>{
+  if(!has('viewCost'))return alert('Chỉ Admin được xem/sửa bảng giá vốn');
+  const picked=checkedCodesFromBox('costProductPicker');
+  const fallback=productCodeFromInput($('costProduct')?.value||'');
+  const codes=[...new Set(picked.length?picked:(fallback?[fallback]:[]))].filter(Boolean);
+  if(!codes.length)return alert('Chọn ít nhất 1 model trước');
+  const tb=$('costDraftRows'); if(!tb)return;
+  const existing=new Map([...tb.querySelectorAll('tr[data-code]')].map(tr=>[tr.dataset.code,tr.querySelector('input')?.value||'']));
+  tb.innerHTML=codes.map(code=>{
+    const prod=data.products.find(p=>p.code===code)||{};
+    const old=existing.get(code);
+    const val=old!==undefined?old:(prod.cost||'');
+    return `<tr data-code="${code}"><td><b>${code}</b></td><td>${prod.name||''}</td><td><input type="number" value="${val}" placeholder="Nhập giá vốn"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#costDraftRows tr[data-code]'))document.getElementById('costDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa tạo dòng nhập giá vốn</td></tr>'">X</button></td></tr>`;
+  }).join('');
+}
+function costDraftItems(){
+  const rows=[...($('costDraftRows')?.querySelectorAll('tr[data-code]')||[])];
+  return rows.map(tr=>({code:tr.dataset.code,cost:+(tr.querySelector('input')?.value||0)||0})).filter(x=>x.code);
+}
 window.saveCostPrice=async()=>{
   if(!has('viewCost'))return alert('Chỉ Admin được xem/sửa bảng giá vốn');
   const id=$('costId').value;
-  const picked=checkedCodesFromBox('costProductPicker');
-  const fallback=productCodeFromInput($('costProduct')?.value||'');
-  const codes=id?[fallback||picked[0]]:[...new Set(picked.length?picked:(fallback?[fallback]:[]))];
-  const base={cost:+$('costValue').value||0,validFrom:$('costFrom').value||'',validTo:$('costTo').value||'',active:$('costActive').value==='true',note:$('costNote').value||'',updatedAt:serverTimestamp()};
-  if(!codes.length||!codes[0])return alert('Chọn ít nhất 1 model sản phẩm');
-  if(!base.cost)return alert('Nhập giá vốn');
+  let items=costDraftItems();
+  if(id&&!items.length){const fallback=productCodeFromInput($('costProduct')?.value||'');const cost=+($('costValue')?.value||0)||0;if(fallback)items=[{code:fallback,cost}];}
+  const base={listName:($('costListName')?.value||'').trim(),validFrom:$('costFrom').value||'',validTo:$('costTo').value||'',active:$('costActive').value==='true',note:$('costNote').value||'',updatedAt:serverTimestamp()};
+  if(!base.listName)return alert('Nhập tên bảng giá vốn');
+  if(!items.length)return alert('Bấm "Tạo dòng nhập giá vốn" rồi nhập giá vốn cho từng model');
+  const missing=items.filter(x=>!x.cost).map(x=>x.code);
+  if(missing.length)return alert('Chưa nhập giá vốn cho model: '+missing.join(', '));
   if(base.validFrom&&base.validTo&&base.validFrom>base.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
-  if(id){await updateDoc(doc(db,'costPrices',id),{...base,code:codes[0]});}
-  else{for(const code of codes){await addDoc(col('costPrices'),{...base,code,createdAt:serverTimestamp()});}}
-  await logAction(id?'Sửa bảng giá vốn':'Thêm bảng giá vốn',`${codes.join(', ')} - ${base.cost}`);
-  ['costId','costProduct','costValue','costFrom','costTo','costNote'].forEach(i=>{if($(i))$(i).value=''});$('costActive').value='true';clearCostProducts();await loadAll();
+  if(id){await updateDoc(doc(db,'costPrices',id),{...base,code:items[0].code,cost:items[0].cost});}
+  else{for(const it of items){await addDoc(col('costPrices'),{...base,code:it.code,cost:it.cost,createdAt:serverTimestamp()});}}
+  await logAction(id?'Sửa bảng giá vốn':'Thêm bảng giá vốn',`${items.map(x=>x.code).join(', ')}`);
+  ['costId','costProduct','costListName','costFrom','costTo','costNote'].forEach(i=>{if($(i))$(i).value=''});$('costActive').value='true';clearCostProducts();if($('costDraftRows'))$('costDraftRows').innerHTML='<tr><td colspan="4">Chưa tạo dòng nhập giá vốn</td></tr>';await loadAll();
 }
 function renderCostPrices(){
   const tb=$('costPriceTable'); if(!tb)return;
-  if(!has('viewCost')){tb.innerHTML='<tr><td colspan="6">Chỉ Admin được xem bảng giá vốn</td></tr>';return;}
+  if(!has('viewCost')){tb.innerHTML='<tr><td colspan="7">Chỉ Admin được xem bảng giá vốn</td></tr>';return;}
   const q=String($('costPriceSearch')?.value||'').trim().toLowerCase();
-  const rows=(data.costPrices||[]).filter(p=>{const prod=data.products.find(x=>x.code===p.code)||{};const hay=[p.code,prod.name,p.cost,p.validFrom,p.validTo,p.note].join(' ').toLowerCase();return !q||hay.includes(q)}).sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));
-  tb.innerHTML=rows.map(p=>{let st=priceStatus(p);return`<tr><td><b>${p.code}</b></td><td>${money(p.cost)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editCostPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('costPrices','${p.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="6">Không tìm thấy giá vốn phù hợp</td></tr>';
+  const rows=(data.costPrices||[]).filter(p=>{const prod=data.products.find(x=>x.code===p.code)||{};const hay=[p.listName,p.code,prod.name,p.cost,p.validFrom,p.validTo,p.note].join(' ').toLowerCase();return !q||hay.includes(q)}).sort((a,b)=>String(a.listName||'').localeCompare(String(b.listName||''))||String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));
+  tb.innerHTML=rows.map(p=>{let st=priceStatus(p);return`<tr><td>${p.listName||''}</td><td><b>${p.code}</b></td><td>${money(p.cost)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editCostPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('costPrices','${p.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy giá vốn phù hợp</td></tr>';
 }
-window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');let p=data.costPrices.find(x=>x.id===id);$('costId').value=id;$('costProduct').value=p.code;$('costValue').value=p.cost;$('costFrom').value=p.validFrom||'';$('costTo').value=p.validTo||'';$('costActive').value=String(p.active)!=='false'?'true':'false';$('costNote').value=p.note||'';renderCostProductPicker();setOnlyCheckedProduct('costProductPicker',p.code);updateProductPickerHint('costProductPicker','costSelectedHint');showPage('prices')}
+window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');let p=data.costPrices.find(x=>x.id===id);$('costId').value=id;$('costProduct').value=p.code;if($('costListName'))$('costListName').value=p.listName||'';$('costFrom').value=p.validFrom||'';$('costTo').value=p.validTo||'';$('costActive').value=String(p.active)!=='false'?'true':'false';$('costNote').value=p.note||'';renderCostProductPicker();setOnlyCheckedProduct('costProductPicker',p.code);updateProductPickerHint('costProductPicker','costSelectedHint');if($('costDraftRows')){$('costDraftRows').innerHTML=`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.cost||0}"></td><td></td></tr>`;}showPage('prices')}
 
 
 window.staffDeptChanged=()=>{let dept=$('eDept')?.value||'Sale';if($('saleCommissionBox'))$('saleCommissionBox').style.display=(dept==='Sale'||dept==='Quản lý')?'block':'none';if($('techFeeBox'))$('techFeeBox').style.display=dept==='Kỹ thuật'?'block':'none'}
@@ -1272,8 +1319,8 @@ function assertExcel(){if(!excelReady())throw new Error('Thư viện Excel chưa
 const excelSchemas={
   customers:{sheet:'Khach_hang',headers:['customerCode','name','type','phone','address','discount','openingDebt'],sample:[{customerCode:'KL0902950816',name:'Nguyễn Văn A',type:'Khách lẻ',phone:'0902950816',address:'Đà Nẵng',discount:0,openingDebt:0}]},
   products:{sheet:'San_pham',headers:['code','name','category','cost','price','minStock'],sample:[{code:'F07',name:'Khóa thông minh F07',category:'Khóa thông minh',cost:950000,price:1850000,minStock:3}]},
-  prices:{sheet:'Bang_gia',headers:['code','type','price','validFrom','validTo','active','note'],sample:[{code:'F07',type:'Khách lẻ',price:1850000,validFrom:today(),validTo:'',active:true,note:'Giá bán lẻ'}]},
-  costPrices:{sheet:'Bang_gia_von',headers:['code','cost','validFrom','validTo','active','note'],sample:[{code:'F07',cost:950000,validFrom:today(),validTo:'',active:true,note:'Giá vốn tháng hiện hành'}]},
+  prices:{sheet:'Bang_gia',headers:['listName','code','type','price','validFrom','validTo','active','note'],sample:[{listName:'Bảng giá bán lẻ tháng hiện hành',code:'F07',type:'Khách lẻ',price:1850000,validFrom:today(),validTo:'',active:true,note:'Giá bán lẻ'}]},
+  costPrices:{sheet:'Bang_gia_von',headers:['listName','code','cost','validFrom','validTo','active','note'],sample:[{listName:'Giá vốn tháng hiện hành',code:'F07',cost:950000,validFrom:today(),validTo:'',active:true,note:'Giá vốn tháng hiện hành'}]},
   staff:{sheet:'Nhan_vien',headers:['name','dept','phone','commissionPercent','techFee'],sample:[{name:'Nguyễn Sale',dept:'Sale',phone:'0900000001',commissionPercent:5,techFee:0},{name:'Lê Kỹ Thuật',dept:'Kỹ thuật',phone:'0900000002',commissionPercent:0,techFee:100000}]},
   expenses:{sheet:'Chi_phi',headers:['date','category','amount','note'],sample:[{date:today(),category:'Chi lương cố định',amount:8000000,note:'Lương tháng'}]},
   warranties:{sheet:'Bao_hanh',headers:['saleId','customer','phone','serial','start','months','end','status','note'],sample:[{saleId:'',customer:'Nguyễn Văn A',phone:'0902950816',serial:'F07-001',start:today(),months:24,end:'',status:'Còn bảo hành',note:''}]},
@@ -1286,8 +1333,8 @@ const excelSchemas={
 function exportRows(type){let rows=[];
   if(type==='customers')rows=data.customers.map(c=>({customerCode:ensureCustomerCode(c),name:c.name,type:c.type,phone:c.phone,address:c.address,discount:c.discount,openingDebt:c.openingDebt}));
   if(type==='products')rows=data.products.map(p=>({code:p.code,name:p.name,category:p.category,cost:p.cost,price:p.price,minStock:p.minStock,stock:stockOf(p.code)}));
-  if(type==='prices')rows=data.prices.map(p=>({code:p.code,type:p.type,price:p.price,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));
-  if(type==='costPrices')rows=(data.costPrices||[]).map(p=>({code:p.code,cost:p.cost,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));
+  if(type==='prices')rows=data.prices.map(p=>({listName:p.listName||'',code:p.code,type:p.type,price:p.price,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));
+  if(type==='costPrices')rows=(data.costPrices||[]).map(p=>({listName:p.listName||'',code:p.code,cost:p.cost,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));
   if(type==='staff')rows=data.staff.map(e=>({name:e.name,dept:e.dept,phone:e.phone,commissionPercent:e.commissionPercent||0,techFee:e.techFee||0}));
   if(type==='expenses')rows=data.expenses.map(e=>({date:e.date,category:e.category,amount:e.amount,note:e.note}));
   if(type==='warranties')rows=data.warranties.map(w=>({saleId:w.saleId||'',customer:w.customer,phone:w.phone,serial:w.serial,start:w.start,months:w.months,end:w.end,status:w.status,note:w.note}));
@@ -1332,7 +1379,7 @@ window.importExcel=async(e,type)=>{
         if(existingByCode.has(obj.code)) await updateDoc(doc(db,'products',existingByCode.get(obj.code).id),obj);
         else await addDoc(col('products'),{...obj,createdAt:serverTimestamp()});
       }else if(type==='prices'){
-        obj.code=String(obj.code||'').trim().toUpperCase();obj.type=obj.type||'Khách lẻ';obj.price=safeNum(obj.price);obj.validFrom=String(obj.validFrom||'');obj.validTo=String(obj.validTo||'');obj.active=String(obj.active).toLowerCase()!=='false';obj.note=obj.note||'';
+        obj.listName=String(obj.listName||obj.name||'Bảng giá nhập Excel').trim();obj.code=String(obj.code||'').trim().toUpperCase();obj.type=obj.type||'Khách lẻ';obj.price=safeNum(obj.price);obj.validFrom=String(obj.validFrom||'');obj.validTo=String(obj.validTo||'');obj.active=String(obj.active).toLowerCase()!=='false';obj.note=obj.note||'';
         if(!obj.code||!obj.price){skip++;errors.push(`Dòng ${r+2}: thiếu model/giá`);continue}
         if(!validateDate(obj.validFrom)||!validateDate(obj.validTo)){skip++;errors.push(`Dòng ${r+2}: sai định dạng ngày YYYY-MM-DD`);continue}
         if(obj.validFrom&&obj.validTo&&obj.validFrom>obj.validTo){skip++;errors.push(`Dòng ${r+2}: ngày bắt đầu lớn hơn ngày kết thúc`);continue}
@@ -1355,7 +1402,7 @@ window.importExcel=async(e,type)=>{
         await addDoc(col('warranties'),{...obj,end});
       }else if(type==='costPrices'){
         if(!has('viewCost')){skip++;continue;}
-        const o={code:String(obj.code||obj.productCode||'').trim().toUpperCase(),cost:safeNum(obj.cost),validFrom:String(obj.validFrom||''),validTo:String(obj.validTo||''),active:String(obj.active).toLowerCase()!=='false',note:obj.note||'',createdAt:serverTimestamp()};
+        const o={listName:String(obj.listName||obj.name||'Bảng giá vốn nhập Excel').trim(),code:String(obj.code||obj.productCode||'').trim().toUpperCase(),cost:safeNum(obj.cost),validFrom:String(obj.validFrom||''),validTo:String(obj.validTo||''),active:String(obj.active).toLowerCase()!=='false',note:obj.note||'',createdAt:serverTimestamp()};
         if(!o.code||!o.cost){skip++;continue;}
         await addDoc(col('costPrices'),o);ok++;continue;
       }
