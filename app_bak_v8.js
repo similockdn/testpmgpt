@@ -510,7 +510,6 @@ window.renderProducts=renderProducts;
 window.clearProductSearch=()=>{const input=document.getElementById('productSearch'); if(input) input.value=''; renderProducts();};
 window.editProduct=id=>{let p=data.products.find(x=>x.id===id);$('pId').value=id;$('pCode').value=p.code||'';$('pName').value=p.name||'';$('pCategory').value=p.category||'';$('pCost').value=p.cost||0;$('pPrice').value=p.price||0;$('pMinStock').value=p.minStock||3}
 
-
 function activePriceFor(code,type,date=today()){
   const now=String(date||today());
   const list=data.prices.filter(p=>p.code===code&&p.type===(type||'Khách lẻ')&&String(p.active)!=='false')
@@ -530,28 +529,16 @@ function selectedPriceCodes(){
   const fallback=productCodeFromInput($('priceProduct')?.value||'');
   return [...new Set(picked.length?picked:(fallback?[fallback]:[]))].filter(Boolean);
 }
-function priceGroupKeyOf(p){return [p.listName||'',p.type||'',p.validFrom||'',p.validTo||'',String(p.active)!=='false'?'true':'false',p.note||''].join('|||')}
-function groupPrices(list){
-  const m=new Map();
-  list.forEach(p=>{const k=priceGroupKeyOf(p); if(!m.has(k))m.set(k,{key:k,listName:p.listName||'',type:p.type||'',validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||'',items:[]}); m.get(k).items.push(p);});
-  return [...m.values()].sort((a,b)=>String(a.listName).localeCompare(String(b.listName))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));
-}
-window.newPriceList=()=>{
-  ['priceId','priceGroupKey','priceProduct','priceListName','priceFrom','priceTo','priceNote'].forEach(i=>{if($(i))$(i).value=''});
-  if($('priceType'))$('priceType').value='Khách lẻ'; if($('priceActive'))$('priceActive').value='true';
-  clearPriceProducts(); if($('priceDraftRows'))$('priceDraftRows').innerHTML='<tr><td colspan="4">Chưa có sản phẩm trong bảng giá</td></tr>';
-}
 window.createPriceDraftRows=()=>{
   const codes=selectedPriceCodes();
   if(!codes.length)return alert('Chọn ít nhất 1 model trước');
   const tb=$('priceDraftRows'); if(!tb)return;
   const existing=new Map([...tb.querySelectorAll('tr[data-code]')].map(tr=>[tr.dataset.code,tr.querySelector('input')?.value||'']));
-  const all=[...new Set([...existing.keys(),...codes])];
-  tb.innerHTML=all.map(code=>{
+  tb.innerHTML=codes.map(code=>{
     const prod=data.products.find(p=>p.code===code)||{};
     const old=existing.get(code);
     const val=old!==undefined?old:(prod.price||'');
-    return `<tr data-code="${code}"><td><b>${code}</b></td><td>${prod.name||''}</td><td><input type="number" value="${val}" placeholder="Nhập giá bán"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#priceDraftRows tr[data-code]'))document.getElementById('priceDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa có sản phẩm trong bảng giá</td></tr>'">X</button></td></tr>`;
+    return `<tr data-code="${code}"><td><b>${code}</b></td><td>${prod.name||''}</td><td><input type="number" value="${val}" placeholder="Nhập giá bán"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#priceDraftRows tr[data-code]'))document.getElementById('priceDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa tạo dòng nhập giá</td></tr>'">X</button></td></tr>`;
   }).join('');
 }
 function priceDraftItems(){
@@ -559,32 +546,29 @@ function priceDraftItems(){
   return rows.map(tr=>({code:tr.dataset.code,price:+(tr.querySelector('input')?.value||0)||0})).filter(x=>x.code);
 }
 window.savePrice=async()=>{
+  const id=$('priceId').value;
   let items=priceDraftItems();
+  if(id&&!items.length){
+    const fallback=productCodeFromInput($('priceProduct')?.value||'');
+    const price=+($('priceValue')?.value||0)||0;
+    if(fallback)items=[{code:fallback,price}];
+  }
   const base={listName:($('priceListName')?.value||'').trim(),type:$('priceType').value,validFrom:$('priceFrom').value||'',validTo:$('priceTo').value||'',active:$('priceActive').value==='true',note:$('priceNote').value||'',updatedAt:serverTimestamp()};
   if(!base.listName)return alert('Nhập tên bảng giá');
-  if(!items.length)return alert('Chọn sản phẩm rồi bấm “Đưa vào bảng giá”');
+  if(!items.length)return alert('Bấm "Tạo dòng nhập giá" rồi nhập giá cho từng model');
   const missing=items.filter(x=>!x.price).map(x=>x.code);
   if(missing.length)return alert('Chưa nhập giá bán cho model: '+missing.join(', '));
   if(base.validFrom&&base.validTo&&base.validFrom>base.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
-  const oldKey=$('priceGroupKey')?.value||'';
-  const oldRows=oldKey?data.prices.filter(p=>priceGroupKeyOf(p)===oldKey):[];
-  for(const old of oldRows){ if(!items.some(it=>it.code===old.code)) await deleteDoc(doc(db,'prices',old.id)); }
-  for(const it of items){
-    const old=oldRows.find(x=>x.code===it.code);
-    if(old) await updateDoc(doc(db,'prices',old.id),{...base,code:it.code,price:it.price});
-    else await addDoc(col('prices'),{...base,code:it.code,price:it.price,createdAt:serverTimestamp()});
-  }
-  await logAction(oldKey?'Sửa bảng giá':'Thêm bảng giá',`${base.listName} - ${items.length} model`);
-  newPriceList(); await loadAll();
+  if(id){await updateDoc(doc(db,'prices',id),{...base,code:items[0].code,price:items[0].price});}
+  else{for(const it of items){await addDoc(col('prices'),{...base,code:it.code,price:it.price,createdAt:serverTimestamp()});}}
+  ['priceId','priceProduct','priceListName','priceFrom','priceTo','priceNote'].forEach(i=>{if($(i))$(i).value=''});$('priceActive').value='true';clearPriceProducts();if($('priceDraftRows'))$('priceDraftRows').innerHTML='<tr><td colspan="4">Chưa tạo dòng nhập giá</td></tr>';await loadAll()
 }
 function renderPrices(){
   const q=String($('priceSearch')?.value||'').trim().toLowerCase();
-  let groups=groupPrices(data.prices).filter(g=>{const productText=g.items.map(p=>{const prod=data.products.find(x=>x.code===p.code)||{};return `${p.code} ${prod.name||''} ${p.price}`}).join(' ');const hay=[g.listName,g.type,g.validFrom,g.validTo,g.note,productText].join(' ').toLowerCase();return !q||hay.includes(q)});
-  $('priceTable').innerHTML=groups.map(g=>{let st=priceStatus(g);let models=g.items.map(x=>x.code).join(', ');return`<tr><td><b>${g.listName||''}</b><br><small>${models}</small></td><td>${g.type}</td><td><b>${g.items.length}</b></td><td>${g.validFrom||'Không giới hạn'} → ${g.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${g.note||''}</td><td><button class="btn ghost" onclick="editPriceGroup('${encodeURIComponent(g.key)}')">Mở/Sửa</button> <button class="btn danger" onclick="deletePriceGroup('${encodeURIComponent(g.key)}')">Xóa bảng</button></td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy bảng giá phù hợp</td></tr>'
+  const rows=data.prices.filter(p=>{const prod=data.products.find(x=>x.code===p.code)||{};const hay=[p.listName,p.code,prod.name,p.type,p.price,p.validFrom,p.validTo,p.note].join(' ').toLowerCase();return !q||hay.includes(q)}).sort((a,b)=>String(a.listName||'').localeCompare(String(b.listName||''))||String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));
+  $('priceTable').innerHTML=rows.map(p=>{let st=priceStatus(p);return`<tr><td>${p.listName||''}</td><td><b>${p.code}</b></td><td>${p.type}</td><td>${money(p.price)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('prices','${p.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="8">Không tìm thấy bảng giá phù hợp</td></tr>'
 }
-window.editPriceGroup=(keyEnc)=>{const key=decodeURIComponent(keyEnc);const rows=data.prices.filter(p=>priceGroupKeyOf(p)===key);if(!rows.length)return alert('Không tìm thấy bảng giá');const p=rows[0];$('priceGroupKey').value=key;$('priceId').value='';$('priceProduct').value='';if($('priceListName'))$('priceListName').value=p.listName||'';$('priceType').value=p.type;$('priceFrom').value=p.validFrom||'';$('priceTo').value=p.validTo||'';$('priceActive').value=String(p.active)!=='false'?'true':'false';$('priceNote').value=p.note||'';renderPriceProductPicker();const codes=rows.map(x=>x.code);const box=$('priceProductPicker');if(box)box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=codes.includes(x.value));updateProductPickerHint('priceProductPicker','priceSelectedHint');if($('priceDraftRows')){$('priceDraftRows').innerHTML=rows.map(p=>`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.price||0}"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#priceDraftRows tr[data-code]'))document.getElementById('priceDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa có sản phẩm trong bảng giá</td></tr>'">X</button></td></tr>`).join('');}showPage('prices')}
-window.editPrice=id=>{let p=data.prices.find(x=>x.id===id); if(p) editPriceGroup(encodeURIComponent(priceGroupKeyOf(p)));}
-window.deletePriceGroup=async(keyEnc)=>{const key=decodeURIComponent(keyEnc);const rows=data.prices.filter(p=>priceGroupKeyOf(p)===key);if(!rows.length)return;if(!confirm(`Xóa toàn bộ bảng giá này (${rows.length} model)?`))return;for(const r of rows) await deleteDoc(doc(db,'prices',r.id));await logAction('Xóa bảng giá',rows[0].listName||key);await loadAll();}
+window.editPrice=id=>{let p=data.prices.find(x=>x.id===id);$('priceId').value=id;$('priceProduct').value=p.code;if($('priceListName'))$('priceListName').value=p.listName||'';$('priceType').value=p.type;$('priceFrom').value=p.validFrom||'';$('priceTo').value=p.validTo||'';$('priceActive').value=String(p.active)!=='false'?'true':'false';$('priceNote').value=p.note||'';renderPriceProductPicker();setOnlyCheckedProduct('priceProductPicker',p.code);updateProductPickerHint('priceProductPicker','priceSelectedHint');if($('priceDraftRows')){$('priceDraftRows').innerHTML=`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.price||0}"></td><td></td></tr>`;}showPage('prices')}
 
 
 function activeCostFor(code,date=today()){
@@ -599,9 +583,6 @@ function costFor(code,date=today()){
   if(cp)return +cp.cost||0;
   return +(data.products.find(p=>p.code===code)?.cost||0);
 }
-function costGroupKeyOf(p){return [p.listName||'',p.validFrom||'',p.validTo||'',String(p.active)!=='false'?'true':'false',p.note||''].join('|||')}
-function groupCostPrices(list){const m=new Map();list.forEach(p=>{const k=costGroupKeyOf(p); if(!m.has(k))m.set(k,{key:k,listName:p.listName||'',validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||'',items:[]}); m.get(k).items.push(p);});return [...m.values()].sort((a,b)=>String(a.listName).localeCompare(String(b.listName))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));}
-window.newCostPriceList=()=>{if(!has('viewCost'))return alert('Chỉ Admin được xem/sửa bảng giá vốn');['costId','costGroupKey','costProduct','costListName','costFrom','costTo','costNote'].forEach(i=>{if($(i))$(i).value=''});if($('costActive'))$('costActive').value='true';clearCostProducts();if($('costDraftRows'))$('costDraftRows').innerHTML='<tr><td colspan="4">Chưa có sản phẩm trong bảng giá vốn</td></tr>';}
 window.createCostDraftRows=()=>{
   if(!has('viewCost'))return alert('Chỉ Admin được xem/sửa bảng giá vốn');
   const picked=checkedCodesFromBox('costProductPicker');
@@ -610,35 +591,45 @@ window.createCostDraftRows=()=>{
   if(!codes.length)return alert('Chọn ít nhất 1 model trước');
   const tb=$('costDraftRows'); if(!tb)return;
   const existing=new Map([...tb.querySelectorAll('tr[data-code]')].map(tr=>[tr.dataset.code,tr.querySelector('input')?.value||'']));
-  const all=[...new Set([...existing.keys(),...codes])];
-  tb.innerHTML=all.map(code=>{const prod=data.products.find(p=>p.code===code)||{};const old=existing.get(code);const val=old!==undefined?old:(prod.cost||'');return `<tr data-code="${code}"><td><b>${code}</b></td><td>${prod.name||''}</td><td><input type="number" value="${val}" placeholder="Nhập giá vốn"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#costDraftRows tr[data-code]'))document.getElementById('costDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa có sản phẩm trong bảng giá vốn</td></tr>'">X</button></td></tr>`;}).join('');
+  tb.innerHTML=codes.map(code=>{
+    const prod=data.products.find(p=>p.code===code)||{};
+    const old=existing.get(code);
+    const val=old!==undefined?old:(prod.cost||'');
+    return `<tr data-code="${code}"><td><b>${code}</b></td><td>${prod.name||''}</td><td><input type="number" value="${val}" placeholder="Nhập giá vốn"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#costDraftRows tr[data-code]'))document.getElementById('costDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa tạo dòng nhập giá vốn</td></tr>'">X</button></td></tr>`;
+  }).join('');
 }
-function costDraftItems(){const rows=[...($('costDraftRows')?.querySelectorAll('tr[data-code]')||[])];return rows.map(tr=>({code:tr.dataset.code,cost:+(tr.querySelector('input')?.value||0)||0})).filter(x=>x.code);}
+function costDraftItems(){
+  const rows=[...($('costDraftRows')?.querySelectorAll('tr[data-code]')||[])];
+  return rows.map(tr=>({code:tr.dataset.code,cost:+(tr.querySelector('input')?.value||0)||0})).filter(x=>x.code);
+}
 window.saveCostPrice=async()=>{
   if(!has('viewCost'))return alert('Chỉ Admin được xem/sửa bảng giá vốn');
+  const id=$('costId').value;
   let items=costDraftItems();
+  if(id&&!items.length){const fallback=productCodeFromInput($('costProduct')?.value||'');const cost=+($('costValue')?.value||0)||0;if(fallback)items=[{code:fallback,cost}];}
   const base={listName:($('costListName')?.value||'').trim(),validFrom:$('costFrom').value||'',validTo:$('costTo').value||'',active:$('costActive').value==='true',note:$('costNote').value||'',updatedAt:serverTimestamp()};
   if(!base.listName)return alert('Nhập tên bảng giá vốn');
-  if(!items.length)return alert('Chọn sản phẩm rồi bấm “Đưa vào bảng giá vốn”');
-  const missing=items.filter(x=>!x.cost).map(x=>x.code); if(missing.length)return alert('Chưa nhập giá vốn cho model: '+missing.join(', '));
+  if(!items.length)return alert('Bấm "Tạo dòng nhập giá vốn" rồi nhập giá vốn cho từng model');
+  const missing=items.filter(x=>!x.cost).map(x=>x.code);
+  if(missing.length)return alert('Chưa nhập giá vốn cho model: '+missing.join(', '));
   if(base.validFrom&&base.validTo&&base.validFrom>base.validTo)return alert('Ngày hiệu lực đến phải lớn hơn hoặc bằng ngày bắt đầu');
-  const oldKey=$('costGroupKey')?.value||'';const oldRows=oldKey?data.costPrices.filter(p=>costGroupKeyOf(p)===oldKey):[];
-  for(const old of oldRows){ if(!items.some(it=>it.code===old.code)) await deleteDoc(doc(db,'costPrices',old.id)); }
-  for(const it of items){const old=oldRows.find(x=>x.code===it.code); if(old) await updateDoc(doc(db,'costPrices',old.id),{...base,code:it.code,cost:it.cost}); else await addDoc(col('costPrices'),{...base,code:it.code,cost:it.cost,createdAt:serverTimestamp()});}
-  await logAction(oldKey?'Sửa bảng giá vốn':'Thêm bảng giá vốn',`${base.listName} - ${items.length} model`);
-  newCostPriceList(); await loadAll();
+  if(id){await updateDoc(doc(db,'costPrices',id),{...base,code:items[0].code,cost:items[0].cost});}
+  else{for(const it of items){await addDoc(col('costPrices'),{...base,code:it.code,cost:it.cost,createdAt:serverTimestamp()});}}
+  await logAction(id?'Sửa bảng giá vốn':'Thêm bảng giá vốn',`${items.map(x=>x.code).join(', ')}`);
+  ['costId','costProduct','costListName','costFrom','costTo','costNote'].forEach(i=>{if($(i))$(i).value=''});$('costActive').value='true';clearCostProducts();if($('costDraftRows'))$('costDraftRows').innerHTML='<tr><td colspan="4">Chưa tạo dòng nhập giá vốn</td></tr>';await loadAll();
 }
 function renderCostPrices(){
-  if(!has('viewCost'))return;
-  const q=String($('costPriceSearch')?.value||'').trim().toLowerCase();
   const tb=$('costPriceTable'); if(!tb)return;
-  const groups=groupCostPrices(data.costPrices||[]).filter(g=>{const productText=g.items.map(p=>{const prod=data.products.find(x=>x.code===p.code)||{};return `${p.code} ${prod.name||''} ${p.cost}`}).join(' ');const hay=[g.listName,g.validFrom,g.validTo,g.note,productText].join(' ').toLowerCase();return !q||hay.includes(q)});
-  tb.innerHTML=groups.map(g=>{let st=priceStatus(g);let models=g.items.map(x=>x.code).join(', ');return`<tr><td><b>${g.listName||''}</b><br><small>${models}</small></td><td><b>${g.items.length}</b></td><td>${g.validFrom||'Không giới hạn'} → ${g.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${g.note||''}</td><td><button class="btn ghost" onclick="editCostPriceGroup('${encodeURIComponent(g.key)}')">Mở/Sửa</button> <button class="btn danger" onclick="deleteCostPriceGroup('${encodeURIComponent(g.key)}')">Xóa bảng</button></td></tr>`}).join('')||'<tr><td colspan="6">Không tìm thấy giá vốn phù hợp</td></tr>';
+  if(!has('viewCost')){tb.innerHTML='<tr><td colspan="7">Chỉ Admin được xem bảng giá vốn</td></tr>';return;}
+  const q=String($('costPriceSearch')?.value||'').trim().toLowerCase();
+  const rows=(data.costPrices||[]).filter(p=>{const prod=data.products.find(x=>x.code===p.code)||{};const hay=[p.listName,p.code,prod.name,p.cost,p.validFrom,p.validTo,p.note].join(' ').toLowerCase();return !q||hay.includes(q)}).sort((a,b)=>String(a.listName||'').localeCompare(String(b.listName||''))||String(a.code||'').localeCompare(String(b.code||''))||String(b.validFrom||'').localeCompare(String(a.validFrom||'')));
+  tb.innerHTML=rows.map(p=>{let st=priceStatus(p);return`<tr><td>${p.listName||''}</td><td><b>${p.code}</b></td><td>${money(p.cost)}</td><td>${p.validFrom||'Không giới hạn'} → ${p.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${p.note||''}</td><td><button class="btn ghost" onclick="editCostPrice('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('costPrices','${p.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy giá vốn phù hợp</td></tr>';
 }
-window.editCostPriceGroup=(keyEnc)=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');const key=decodeURIComponent(keyEnc);const rows=data.costPrices.filter(p=>costGroupKeyOf(p)===key);if(!rows.length)return alert('Không tìm thấy bảng giá vốn');const p=rows[0];$('costGroupKey').value=key;$('costId').value='';$('costProduct').value='';if($('costListName'))$('costListName').value=p.listName||'';$('costFrom').value=p.validFrom||'';$('costTo').value=p.validTo||'';$('costActive').value=String(p.active)!=='false'?'true':'false';$('costNote').value=p.note||'';renderCostProductPicker();const codes=rows.map(x=>x.code);const box=$('costProductPicker');if(box)box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=codes.includes(x.value));updateProductPickerHint('costProductPicker','costSelectedHint');if($('costDraftRows')){$('costDraftRows').innerHTML=rows.map(p=>`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.cost||0}"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#costDraftRows tr[data-code]'))document.getElementById('costDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa có sản phẩm trong bảng giá vốn</td></tr>'">X</button></td></tr>`).join('');}showPage('prices')}
-window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');let p=data.costPrices.find(x=>x.id===id); if(p) editCostPriceGroup(encodeURIComponent(costGroupKeyOf(p)));}
-window.deleteCostPriceGroup=async(keyEnc)=>{if(!has('viewCost'))return alert('Chỉ Admin được xóa bảng giá vốn');const key=decodeURIComponent(keyEnc);const rows=data.costPrices.filter(p=>costGroupKeyOf(p)===key);if(!rows.length)return;if(!confirm(`Xóa toàn bộ bảng giá vốn này (${rows.length} model)?`))return;for(const r of rows) await deleteDoc(doc(db,'costPrices',r.id));await logAction('Xóa bảng giá vốn',rows[0].listName||key);await loadAll();}
+window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');let p=data.costPrices.find(x=>x.id===id);$('costId').value=id;$('costProduct').value=p.code;if($('costListName'))$('costListName').value=p.listName||'';$('costFrom').value=p.validFrom||'';$('costTo').value=p.validTo||'';$('costActive').value=String(p.active)!=='false'?'true':'false';$('costNote').value=p.note||'';renderCostProductPicker();setOnlyCheckedProduct('costProductPicker',p.code);updateProductPickerHint('costProductPicker','costSelectedHint');if($('costDraftRows')){$('costDraftRows').innerHTML=`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.cost||0}"></td><td></td></tr>`;}showPage('prices')}
 
+
+window.staffDeptChanged=()=>{let dept=$('eDept')?.value||'Sale';if($('saleCommissionBox'))$('saleCommissionBox').style.display=(dept==='Sale'||dept==='Quản lý')?'block':'none';if($('techFeeBox'))$('techFeeBox').style.display=dept==='Kỹ thuật'?'block':'none'}
+window.saveStaff=async()=>{let dept=$('eDept').value;let o={name:$('eName').value,dept,phone:$('ePhone').value,commissionPercent:+($('eCommissionPercent')?.value||0),techFee:+($('eTechFee')?.value||0)};if(dept==='Sale'||dept==='Quản lý'){if(!o.commissionPercent)o.commissionPercent=5;o.techFee=0}else if(dept==='Kỹ thuật'){if(!o.techFee)o.techFee=100000;o.commissionPercent=0}else{o.commissionPercent=0;o.techFee=0}if(!o.name)return alert('Nhập tên nhân viên');let id=$('eId').value;if(id)await updateDoc(doc(db,'staff',id),o);else await addDoc(col('staff'),o);$('eId').value='';$('eName').value='';$('ePhone').value='';$('eCommissionPercent').value=5;$('eTechFee').value=100000;$('eDept').value='Sale';staffDeptChanged();await loadAll()}
 function renderStaff(){$('staffTable').innerHTML=data.staff.map(e=>`<tr><td>${e.name}</td><td>${e.dept}</td><td>${e.phone||''}</td><td>${(e.dept==='Sale'||e.dept==='Quản lý')?((e.commissionPercent??5)+'%'):''}</td><td>${e.dept==='Kỹ thuật'?money(e.techFee??100000):''}</td><td><button class="btn ghost" onclick="editStaff('${e.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('staff','${e.id}')">Xóa</button></td></tr>`).join('')||'<tr><td colspan="6">Chưa có nhân viên</td></tr>'}
 window.editStaff=id=>{let e=data.staff.find(x=>x.id===id);$('eId').value=id;$('eName').value=e.name;$('eDept').value=e.dept;$('ePhone').value=e.phone||'';if($('eCommissionPercent'))$('eCommissionPercent').value=e.commissionPercent??5;if($('eTechFee'))$('eTechFee').value=e.techFee??100000;staffDeptChanged()}
 

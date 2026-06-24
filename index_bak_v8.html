@@ -288,30 +288,29 @@
         <div class="panel">
           <div class="panel-head">
             <div>
-              <h3>💵 Bảng giá bán hàng</h3>
-              <span>Quy trình kiểu MISA: tạo một bảng giá, chọn nhiều model, nhập giá trên từng dòng sản phẩm.</span>
+              <h3>💵 Bảng giá theo nhóm khách có thời hạn</h3>
+              <span>Quản lý giá bán theo Model, nhóm khách và ngày hiệu lực. Khi bán hàng hệ thống tự lấy bảng giá còn hạn.</span>
             </div>
             <div>
               <input type="file" id="importPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'prices')">
               <button class="btn ghost" onclick="downloadTemplateExcel('prices')">Mẫu Excel</button>
               <button class="btn ghost" onclick="importPrices.click()">Nhập Excel</button>
               <button class="btn ghost" onclick="exportExcel('prices')">Xuất Excel</button>
-              <button class="btn primary" onclick="newPriceList()">Tạo bảng giá mới</button>
+              <button class="btn primary" onclick="savePrice()">Lưu bảng giá</button>
             </div>
           </div>
           <div class="price-workspace">
             <input id="priceId" hidden>
-            <input id="priceGroupKey" hidden>
             <input id="priceProduct" hidden>
             <div class="price-model-card">
-              <label>1. Chọn sản phẩm áp dụng</label>
+              <label>1. Tìm và chọn Model</label>
               <div class="price-search-row"><input id="priceProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderPriceProductPicker()"></div>
               <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllPriceProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearPriceProducts()">Bỏ chọn</button></div>
               <div id="priceSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
               <div id="priceProductPicker" class="multi-model-box price-model-box"></div>
             </div>
             <div class="price-form-card">
-              <label>2. Thông tin bảng giá</label>
+              <label>2. Nhập thông tin bảng giá bán</label>
               <div class="grid form-grid price-form-grid">
                 <div><label>Tên bảng giá</label><input id="priceListName" placeholder="VD: Bảng giá đại lý tháng 6"></div>
                 <div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div>
@@ -320,14 +319,14 @@
                 <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
                 <div><label>Ghi chú</label><input id="priceNote" placeholder="VD: Giá đại lý tháng 6, giá CTKM..."></div>
               </div>
-              <div class="price-save-bar"><span>Chọn model bên trái → bấm “Đưa vào bảng giá” → nhập giá từng dòng → Lưu bảng giá.</span><button class="btn ghost" onclick="createPriceDraftRows()">Đưa vào bảng giá</button><button class="btn primary" onclick="savePrice()">Lưu bảng giá</button></div>
+              <div class="price-save-bar"><span>Bước 1: chọn model. Bước 2: bấm tạo dòng nhập giá. Bước 3: nhập giá từng model và lưu.</span><button class="btn ghost" onclick="createPriceDraftRows()">Tạo dòng nhập giá</button><button class="btn primary" onclick="savePrice()">Lưu bảng giá</button></div>
               <div class="price-draft-box">
-                <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá bán áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="priceDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá</td></tr></tbody></table>
+                <table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>Giá bán</th><th>Xóa</th></tr></thead><tbody id="priceDraftRows"><tr><td colspan="4">Chưa tạo dòng nhập giá</td></tr></tbody></table>
               </div>
             </div>
           </div>
-          <div class="price-list-head"><div><b>Danh sách bảng giá bán</b><span> Mỗi dòng là một bảng giá, bấm “Mở” để xem/sửa toàn bộ sản phẩm bên trong</span></div><input class="search" id="priceSearch" placeholder="Tìm tên bảng giá, nhóm khách, model..." oninput="renderPrices()"></div>
-          <table><thead><tr><th>Tên bảng giá</th><th>Nhóm khách</th><th>Số model</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table>
+          <div class="price-list-head"><div><b>Danh sách bảng giá bán</b><span> Tìm nhanh theo tên bảng giá, model, tên sản phẩm, nhóm khách, ghi chú</span></div><input class="search" id="priceSearch" placeholder="Tìm bảng giá..." oninput="renderPrices()"></div>
+          <table><thead><tr><th>Tên bảng giá</th><th>Model</th><th>Nhóm khách</th><th>Giá</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table>
         </div>
         <div class="panel view-cost">
           <div class="panel-head">
@@ -340,22 +339,21 @@
               <button class="btn ghost" onclick="downloadTemplateExcel('costPrices')">Mẫu Excel</button>
               <button class="btn ghost" onclick="importCostPrices.click()">Nhập Excel</button>
               <button class="btn ghost" onclick="exportExcel('costPrices')">Xuất Excel</button>
-              <button class="btn primary" onclick="newCostPriceList()">Tạo giá vốn mới</button>
+              <button class="btn primary" onclick="saveCostPrice()">Lưu giá vốn</button>
             </div>
           </div>
           <div class="price-workspace cost-workspace">
             <input id="costId" hidden>
-            <input id="costGroupKey" hidden>
             <input id="costProduct" hidden>
             <div class="price-model-card">
-              <label>1. Chọn sản phẩm tính giá vốn</label>
+              <label>1. Tìm và chọn Model</label>
               <div class="price-search-row"><input id="costProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderCostProductPicker()"></div>
               <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllCostProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearCostProducts()">Bỏ chọn</button></div>
               <div id="costSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
               <div id="costProductPicker" class="multi-model-box price-model-box"></div>
             </div>
             <div class="price-form-card">
-              <label>2. Thông tin bảng giá vốn</label>
+              <label>2. Nhập thông tin giá vốn</label>
               <div class="grid form-grid price-form-grid">
                 <div><label>Tên bảng giá vốn</label><input id="costListName" placeholder="VD: Giá vốn lô hàng tháng 6"></div>
                 <div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div>
@@ -363,14 +361,14 @@
                 <div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
                 <div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div>
               </div>
-              <div class="price-save-bar"><span>Chọn model bên trái → bấm “Đưa vào bảng giá vốn” → nhập giá vốn từng dòng → Lưu giá vốn.</span><button class="btn ghost" onclick="createCostDraftRows()">Đưa vào bảng giá vốn</button><button class="btn primary" onclick="saveCostPrice()">Lưu giá vốn</button></div>
+              <div class="price-save-bar"><span>Bước 1: chọn model. Bước 2: bấm tạo dòng nhập giá vốn. Bước 3: nhập giá vốn từng model và lưu.</span><button class="btn ghost" onclick="createCostDraftRows()">Tạo dòng nhập giá vốn</button><button class="btn primary" onclick="saveCostPrice()">Lưu giá vốn</button></div>
               <div class="price-draft-box">
-                <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá vốn áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="costDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá vốn</td></tr></tbody></table>
+                <table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>Giá vốn</th><th>Xóa</th></tr></thead><tbody id="costDraftRows"><tr><td colspan="4">Chưa tạo dòng nhập giá vốn</td></tr></tbody></table>
               </div>
             </div>
           </div>
-          <div class="price-list-head"><div><b>Danh sách bảng giá vốn</b><span> Mỗi dòng là một bảng giá vốn, bấm “Mở” để xem/sửa toàn bộ sản phẩm bên trong</span></div><input class="search" id="costPriceSearch" placeholder="Tìm tên bảng giá vốn, model..." oninput="renderCostPrices()"></div>
-          <table><thead><tr><th>Tên bảng giá</th><th>Số model</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="costPriceTable"></tbody></table>
+          <div class="price-list-head"><div><b>Danh sách giá vốn</b><span> Tìm nhanh theo tên bảng giá, model, tên sản phẩm, ghi chú</span></div><input class="search" id="costPriceSearch" placeholder="Tìm giá vốn..." oninput="renderCostPrices()"></div>
+          <table><thead><tr><th>Tên bảng giá</th><th>Model</th><th>Giá vốn</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="costPriceTable"></tbody></table>
         </div>
       </section>
 
