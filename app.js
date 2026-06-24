@@ -1621,3 +1621,74 @@ window.clearAllData=async()=>{
     alert('Clear Data thất bại: '+authMsg(e));
   }
 }
+
+
+/* SIMILOCK_SAVE_TOAST_V13: thông báo lưu thành công + chống bấm lưu nhiều lần */
+(function(){
+  const savingMap = new Map();
+  function toast(message, type='success', sub=''){
+    const box = document.getElementById('toastContainer');
+    if(!box){ try{ alert(message); }catch(e){} return; }
+    const el = document.createElement('div');
+    el.className = 'toast ' + (type || 'success');
+    const icon = type==='error' ? '❌' : (type==='info' ? '⏳' : '✅');
+    el.innerHTML = `<span class="toast-icon">${icon}</span><div>${message}${sub?`<small>${sub}</small>`:''}</div>`;
+    box.appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(-6px)'; }, 2300);
+    setTimeout(()=>el.remove(), 2700);
+  }
+  window.showToast = toast;
+  function currentSaveButton(fnName){
+    const ev = window.event;
+    const btn = ev && ev.target && ev.target.closest ? ev.target.closest('button') : null;
+    if(btn && (btn.getAttribute('onclick')||'').includes(fnName)) return btn;
+    return null;
+  }
+  function wrapSave(fnName, successText){
+    const original = window[fnName];
+    if(typeof original !== 'function' || original.__wrappedSaveToast) return;
+    const wrapped = async function(...args){
+      if(savingMap.get(fnName)){
+        toast('Đang lưu dữ liệu, vui lòng chờ...', 'info');
+        return;
+      }
+      const btn = currentSaveButton(fnName);
+      const oldText = btn ? btn.innerHTML : '';
+      try{
+        savingMap.set(fnName, true);
+        if(btn){ btn.disabled = true; btn.classList.add('saving'); btn.innerHTML = 'Đang lưu...'; }
+        const start = Date.now();
+        const result = await original.apply(this,args);
+        const elapsed = Date.now() - start;
+        // Không hiện thông báo thành công cho các nhánh kiểm tra lỗi trả về quá nhanh.
+        if(elapsed > 80 || result){ toast(successText || 'Đã lưu dữ liệu thành công'); }
+        return result;
+      }catch(err){
+        console.error(err);
+        toast('Lưu dữ liệu chưa thành công', 'error', err && err.message ? err.message : 'Vui lòng kiểm tra lại dữ liệu hoặc quyền truy cập.');
+        throw err;
+      }finally{
+        savingMap.set(fnName, false);
+        if(btn){ btn.disabled = false; btn.classList.remove('saving'); btn.innerHTML = oldText; }
+      }
+    };
+    wrapped.__wrappedSaveToast = true;
+    window[fnName] = wrapped;
+  }
+  [
+    ['saveUserPermission','Đã lưu phân quyền thành công'],
+    ['saveSale','Đã lưu phiếu bán thành công'],
+    ['saveSaleAndPrint','Đã lưu phiếu bán và chuẩn bị in'],
+    ['saveSaleReturn','Đã lưu phiếu trả hàng thành công'],
+    ['saveReceipt','Đã lưu phiếu thu thành công'],
+    ['saveStockVoucher','Đã lưu chứng từ kho thành công'],
+    ['saveExpense','Đã lưu chi phí thành công'],
+    ['saveWarranty','Đã lưu bảo hành thành công'],
+    ['saveCustomer','Đã lưu khách hàng thành công'],
+    ['saveProduct','Đã lưu sản phẩm thành công'],
+    ['savePrice','Đã lưu bảng giá bán thành công'],
+    ['saveCostPrice','Đã lưu bảng giá vốn thành công'],
+    ['saveStaff','Đã lưu nhân viên thành công'],
+    ['changeMyPassword','Đã đổi mật khẩu thành công']
+  ].forEach(([fn,msg])=>wrapSave(fn,msg));
+})();

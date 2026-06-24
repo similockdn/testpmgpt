@@ -408,3 +408,11 @@ table{max-width:100%;}
 #prices td:first-child b{color:#075985;}
 @media(max-width:1200px){.price-workspace{grid-template-columns:1fr}.price-model-box{grid-template-columns:repeat(3,1fr)!important}}
 @media(max-width:720px){.price-workspace{grid-template-columns:1fr}.price-form-grid{grid-template-columns:1fr!important}.price-model-box{grid-template-columns:1fr!important}.price-save-bar,.price-list-head{align-items:stretch;flex-direction:column}.price-list-head .search{max-width:none}.price-save-bar .btn{width:100%}}
+
+
+/* Toast thông báo lưu dữ liệu */
+.toast-container{position:fixed;right:18px;top:18px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{min-width:280px;max-width:420px;background:#fff;border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.18);border-left:5px solid #16a34a;padding:13px 16px;font-weight:700;color:#0f172a;animation:toastIn .18s ease-out;display:flex;align-items:center;gap:10px}
+.toast.info{border-left-color:#2563eb}.toast.error{border-left-color:#dc2626}.toast .toast-icon{font-size:18px}.toast small{display:block;font-weight:500;color:#64748b;margin-top:2px}
+.btn.saving,.btn:disabled{opacity:.65;cursor:not-allowed}
+@keyframes toastIn{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}

@@ -1,0 +1,1 @@
+Đã bổ sung popup/toast thông báo khi lưu thành công và khóa nút trong lúc đang lưu để tránh bấm nhiều lần. Áp dụng cho phân quyền, phiếu bán, phiếu thu, kho, bảng giá, sản phẩm, khách hàng, nhân viên, chi phí, bảo hành, đổi mật khẩu.
