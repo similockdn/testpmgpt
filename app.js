@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-config.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
 function createMissingElement(id){
@@ -439,6 +439,48 @@ function stopIdleSecurity(){
   hideIdleModal();
   idleLoggingOut = false;
 }
+
+
+
+function setChangePasswordBusy(isBusy,msg=''){
+  const btn=$('savePasswordBtn'); if(btn) btn.disabled=!!isBusy;
+  const box=$('changePasswordStatus');
+  if(box){box.style.display=msg?'block':'none'; box.textContent=msg||'';}
+}
+window.openChangePasswordModal=function(){
+  ['oldPassword','newPassword','confirmPassword'].forEach(id=>{const el=$(id); if(el) el.value='';});
+  setChangePasswordBusy(false,'');
+  $('changePasswordModal').classList.remove('hidden');
+  setTimeout(()=>{try{$('oldPassword').focus()}catch(e){}},50);
+}
+window.closeChangePasswordModal=function(){
+  $('changePasswordModal').classList.add('hidden');
+  setChangePasswordBusy(false,'');
+}
+window.changeMyPassword=async function(){
+  try{
+    if(!auth.currentUser) return alert('Bạn cần đăng nhập lại để đổi mật khẩu.');
+    const oldPw=$('oldPassword').value;
+    const newPw=$('newPassword').value;
+    const confirmPw=$('confirmPassword').value;
+    if(!oldPw) return alert('Vui lòng nhập mật khẩu hiện tại.');
+    if(!newPw || newPw.length<6) return alert('Mật khẩu mới phải tối thiểu 6 ký tự.');
+    if(newPw!==confirmPw) return alert('Mật khẩu mới nhập lại chưa khớp.');
+    if(oldPw===newPw) return alert('Mật khẩu mới không được trùng mật khẩu hiện tại.');
+    setChangePasswordBusy(true,'Đang xác thực mật khẩu hiện tại...');
+    const credential=EmailAuthProvider.credential(auth.currentUser.email,oldPw);
+    await reauthenticateWithCredential(auth.currentUser,credential);
+    setChangePasswordBusy(true,'Đang cập nhật mật khẩu mới...');
+    await updatePassword(auth.currentUser,newPw);
+    await logAction('Change Password','Người dùng tự đổi mật khẩu');
+    window.closeChangePasswordModal();
+    alert('Đổi mật khẩu thành công. Lần đăng nhập sau hãy dùng mật khẩu mới.');
+  }catch(e){
+    setChangePasswordBusy(false,'');
+    alert('Đổi mật khẩu thất bại: '+authMsg(e));
+  }
+}
+$('changePasswordBtn').onclick=()=>window.openChangePasswordModal();
 
 $('logoutBtn').onclick=async()=>{ await logAction('Logout','Người dùng bấm đăng xuất'); try{localStorage.setItem('similock:forceLogout',String(Date.now()))}catch(e){}; signOut(auth); };
 
