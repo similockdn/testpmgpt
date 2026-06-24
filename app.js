@@ -494,7 +494,20 @@ window.quickCreateCustomer=async()=>{let raw=$('saleCustomerSearch').value.trim(
 
 window.saveProduct=async()=>{let old=$('pId').value?data.products.find(x=>x.id===$('pId').value):{};let o={code:$('pCode').value.trim(),name:$('pName').value,category:$('pCategory').value,cost:has('viewCost')?(+$('pCost').value||0):(+old?.cost||0),price:+$('pPrice').value||0,minStock:+$('pMinStock').value||3};if(!o.code||!o.name)return alert('Nhập model và tên');let id=$('pId').value;if(id){await updateDoc(doc(db,'products',id),o);await logAction('Sửa sản phẩm',o.code)}else await addDoc(col('products'),{...o,createdAt:serverTimestamp()});clearProduct();await loadAll()}
 function clearProduct(){['pId','pCode','pName'].forEach(i=>$(i).value='');$('pCategory').value='Khóa thông minh';$('pCost').value='';$('pPrice').value='';$('pMinStock').value=3}
-function renderProducts(){const q=String($('productSearch').value||'').trim().toLowerCase();const rows=data.products.filter(p=>{const hay=[p.code,p.name,p.category,p.price,p.cost,stockOf(p.code)].join(' ').toLowerCase();return !q||hay.includes(q)});$('productTable').innerHTML=rows.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td>${p.category||''}</td><td class="view-cost">${money(p.cost)}</td><td>${money(p.price)}</td><td>${stockOf(p.code)}</td><td><button class="btn ghost" onclick="editProduct('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('products','${p.id}')">Xóa</button></td></tr>`).join('') || `<tr><td colspan="7">Không tìm thấy sản phẩm phù hợp</td></tr>`;applyPermissions()}
+function renderProducts(){
+  const input=document.getElementById('productSearch');
+  const table=document.getElementById('productTable');
+  if(!table) return;
+  const q=String(input?.value||'').trim().toLowerCase();
+  const rows=data.products.filter(p=>{
+    const hay=[p.code,p.name,p.category,p.price,p.cost,stockOf(p.code)].join(' ').toLowerCase();
+    return !q||hay.includes(q);
+  });
+  table.innerHTML=rows.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td>${p.category||''}</td><td class="view-cost">${money(p.cost)}</td><td>${money(p.price)}</td><td>${stockOf(p.code)}</td><td><button class="btn ghost" onclick="editProduct('${p.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('products','${p.id}')">Xóa</button></td></tr>`).join('') || `<tr><td colspan="7">Không tìm thấy sản phẩm phù hợp</td></tr>`;
+  applyPermissions();
+}
+window.renderProducts=renderProducts;
+window.clearProductSearch=()=>{const input=document.getElementById('productSearch'); if(input) input.value=''; renderProducts();};
 window.editProduct=id=>{let p=data.products.find(x=>x.id===id);$('pId').value=id;$('pCode').value=p.code||'';$('pName').value=p.name||'';$('pCategory').value=p.category||'';$('pCost').value=p.cost||0;$('pPrice').value=p.price||0;$('pMinStock').value=p.minStock||3}
 
 function activePriceFor(code,type,date=today()){
