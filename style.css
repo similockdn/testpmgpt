@@ -416,3 +416,80 @@ table{max-width:100%;}
 .toast.info{border-left-color:#2563eb}.toast.error{border-left-color:#dc2626}.toast .toast-icon{font-size:18px}.toast small{display:block;font-weight:500;color:#64748b;margin-top:2px}
 .btn.saving,.btn:disabled{opacity:.65;cursor:not-allowed}
 @keyframes toastIn{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+
+/* ===== Staff multi-function UI ===== */
+.check-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.check-row label{display:flex;align-items:center;gap:7px;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:9px 12px;color:var(--text);font-size:13px;font-weight:800;margin:0}
+.check-row input{width:auto;box-shadow:none}
+.field-note{display:block;color:var(--muted);font-size:12px;margin-top:6px}
+
+/* ===== Mobile visibility fix v15: hiển thị đủ menu/tính năng trên điện thoại ===== */
+@media(max-width:720px){
+  .app{display:block!important;min-height:100vh;}
+  .sidebar{
+    position:sticky!important;
+    top:0!important;
+    z-index:50!important;
+    width:100%!important;
+    height:auto!important;
+    max-height:48vh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    padding:10px!important;
+    border-right:0!important;
+    border-bottom:1px solid rgba(255,255,255,.16)!important;
+  }
+  .logo{padding:6px 4px 10px!important;margin:0!important;gap:10px!important;}
+  .logo div{display:block!important;font-size:14px!important;line-height:1.1!important;}
+  .logo small{font-size:11px!important;}
+  .logo span{width:40px!important;height:40px!important;font-size:20px!important;}
+  .nav-menu{display:flex!important;flex-direction:column!important;gap:8px!important;}
+  .menu-group{display:block!important;border:1px solid rgba(148,163,184,.22)!important;background:rgba(255,255,255,.055)!important;border-radius:14px!important;overflow:hidden!important;}
+  .menu-toggle{
+    display:flex!important;
+    width:100%!important;
+    justify-content:space-between!important;
+    align-items:center!important;
+    padding:12px 13px!important;
+    font-size:14px!important;
+    color:#e0f2fe!important;
+    text-align:left!important;
+  }
+  .menu-toggle:after{display:inline-block!important;content:'⌄'!important;font-size:16px!important;color:#93c5fd!important;}
+  .submenu{display:none!important;padding:0 8px 10px!important;}
+  .menu-group.open .submenu{display:flex!important;flex-direction:column!important;gap:6px!important;}
+  .submenu button{
+    display:block!important;
+    width:100%!important;
+    padding:11px 12px 11px 34px!important;
+    font-size:14px!important;
+    line-height:1.25!important;
+    color:#e2e8f0!important;
+    white-space:normal!important;
+  }
+  .main{margin-left:0!important;width:100%!important;padding:10px!important;}
+  .topbar{position:relative!important;top:auto!important;margin-bottom:10px!important;border-radius:16px!important;padding:12px!important;}
+  .topbar h2{font-size:19px!important;}
+  .topbar p{font-size:12px!important;}
+  .user{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;}
+  .user span{grid-column:1/-1;word-break:break-word;}
+  .user .btn{width:100%!important;padding:10px!important;}
+  .panel{border-radius:16px!important;padding:12px!important;margin-bottom:12px!important;overflow-x:auto!important;}
+  .panel-head{gap:10px!important;}
+  .panel-head>div:last-child{width:100%!important;display:flex!important;flex-wrap:wrap!important;gap:8px!important;}
+  .panel-head .btn,.panel-head input,.panel-head select{width:100%!important;max-width:100%!important;}
+  .grid,.form-grid,.report-grid,.permission-grid,.kpi-grid,.dashboard-grid{grid-template-columns:1fr!important;}
+  .inline{flex-direction:column!important;}
+  table{min-width:760px;}
+  .editable{min-width:820px;}
+  .table-responsive,.panel table{overflow-x:auto!important;}
+  .sale-sticky-actions{left:8px!important;right:8px!important;bottom:8px!important;z-index:40!important;}
+  body{padding-bottom:100px;}
+}
+
+@media(min-width:721px) and (max-width:1100px){
+  .submenu{display:none!important;}
+  .menu-group.open .submenu{display:flex!important;flex-direction:column!important;}
+  .submenu button{font-size:12px!important;padding:9px 8px!important;text-align:center!important;}
+}
