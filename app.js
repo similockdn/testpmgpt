@@ -1665,8 +1665,9 @@ function renderReports(){
   const salaries=data.salaries.filter(e=>inReportRange(e.date,from,to));
   const rev=sales.reduce((a,s)=>a+(+s.grand||0),0);
   const revenueBeforeVat=sales.reduce((a,s)=>a+calcCommissionBase(s),0);
-  const paid=sales.reduce((a,s)=>a+(+s.paid||0),0);
-  const debt=sales.reduce((a,s)=>a+(+s.debt||0),0);
+  // Công nợ/đã thu phải lấy theo phân bổ phiếu thu hiện tại, không chỉ lấy số tiền nhập lúc tạo đơn.
+  const paid=sales.reduce((a,s)=>a+(+salePaymentInfo(s).paidTotal||0),0);
+  const debt=sales.reduce((a,s)=>a+(+salePaymentInfo(s).debtLeft||0),0);
   const totalCost=sales.reduce((a,s)=>a+(+s.cost||((s.items||[]).reduce((b,it)=>b+costFor(it.code,s.date||today())*(+it.qty||0),0))),0);
   const grossMargin=revenueBeforeVat-totalCost;
   const comm=sales.reduce((a,s)=>a+(+s.saleCommission||0),0);
@@ -1721,7 +1722,7 @@ function renderReports(){
   sales.forEach(s=>{
     const k=groupKeyByPeriod(s.date,period);
     byTime[k]=byTime[k]||{key:k,orders:0,qty:0,revenue:0,surcharge:0,paid:0,debt:0,comm:0,tech:0,profit:0};
-    byTime[k].orders++;byTime[k].qty+=(s.items||[]).reduce((a,it)=>a+(+it.qty||0),0);byTime[k].revenue+=+s.grand||0;byTime[k].surcharge+=+s.surcharge||0;byTime[k].paid+=+s.paid||0;byTime[k].debt+=+s.debt||0;byTime[k].comm+=+s.saleCommission||0;byTime[k].tech+=(+s.techCost||0)+(+s.techFuel||0);byTime[k].profit+=+s.profit||0;
+    const pay=salePaymentInfo(s);byTime[k].orders++;byTime[k].qty+=(s.items||[]).reduce((a,it)=>a+(+it.qty||0),0);byTime[k].revenue+=+s.grand||0;byTime[k].surcharge+=+s.surcharge||0;byTime[k].paid+=+pay.paidTotal||0;byTime[k].debt+=+pay.debtLeft||0;byTime[k].comm+=+s.saleCommission||0;byTime[k].tech+=(+s.techCost||0)+(+s.techFuel||0);byTime[k].profit+=+s.profit||0;
   });
   if($('reportRevenueTable'))$('reportRevenueTable').innerHTML=Object.values(byTime).sort((a,b)=>String(b.key).localeCompare(String(a.key))).map(x=>`<tr><td><b>${x.key}</b></td><td>${x.orders}</td><td>${x.qty}</td><td>${money(x.revenue)}</td><td>${money(x.surcharge)}</td><td>${money(x.paid)}</td><td>${money(x.debt)}</td><td class="view-cost">${money(x.comm)}</td><td class="view-cost">${money(x.tech)}</td><td class="view-cost">${money(x.profit)}</td></tr>`).join('')||'<tr><td colspan="10">Chưa có doanh thu trong kỳ</td></tr>';
 
