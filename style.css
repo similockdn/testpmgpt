@@ -493,3 +493,62 @@ table{max-width:100%;}
   .menu-group.open .submenu{display:flex!important;flex-direction:column!important;}
   .submenu button{font-size:12px!important;padding:9px 8px!important;text-align:center!important;}
 }
+
+/* ===== v19: Thu gọn trạng thái nhanh + thanh lưu đơn hàng luôn thấy ===== */
+#sales .compact-status-box{
+  padding:12px!important;
+  align-self:start!important;
+  min-height:auto!important;
+}
+#sales .compact-status-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:8px;
+}
+#sales .compact-status-head h4{margin:0!important;font-size:14px!important;color:#075985!important}
+#sales .compact-status-head span{font-size:11px!important;color:#64748b!important;font-weight:800!important}
+#sales .status-chip-grid{display:grid;grid-template-columns:1fr;gap:8px}
+#sales .status-chip{
+  background:#f8fafc!important;
+  border:1px dashed rgba(14,165,233,.24)!important;
+  border-radius:13px!important;
+  padding:8px 10px!important;
+}
+#sales .status-chip b{font-size:12px!important;color:#0f172a!important}
+#sales .status-chip small{display:block;margin-top:3px;font-size:11px!important;line-height:1.35!important;color:#64748b!important;font-weight:700!important}
+#sales .status-chip .badge{padding:2px 7px!important;font-size:10px!important}
+#sales .sale-side-box p{display:none!important}
+
+/* Thanh lưu đơn hàng cố định dưới màn hình khi đang ở trang Bán hàng */
+#sales.active .sale-sticky-actions{
+  position:fixed!important;
+  left:calc(280px + 20px)!important;
+  right:20px!important;
+  bottom:14px!important;
+  z-index:300!important;
+  margin-top:0!important;
+  border-radius:18px!important;
+  padding:9px 12px!important;
+  box-shadow:0 -12px 38px rgba(15,23,42,.16)!important;
+}
+#sales .sale-sticky-actions .btn{padding:10px 13px!important;border-radius:12px!important}
+#sales .sale-sticky-actions .big-save{padding:12px 20px!important;font-size:15px!important}
+#sales .sticky-total{min-width:190px!important;padding:7px 12px!important;border-radius:14px!important}
+#sales .sticky-total b{font-size:21px!important}
+#sales .sticky-total span{font-size:11px!important}
+#sales .sticky-total small{font-size:12px!important}
+#sales .sale-form-panel{padding-bottom:92px!important}
+@media(max-width:1100px){
+  #sales.active .sale-sticky-actions{left:calc(86px + 14px)!important;right:14px!important;bottom:12px!important}
+}
+@media(max-width:720px){
+  #sales.active .sale-sticky-actions{left:8px!important;right:8px!important;bottom:8px!important;gap:6px!important;padding:8px!important}
+  #sales .sale-sticky-actions .btn{flex:1 1 auto!important;padding:9px 8px!important;font-size:12px!important}
+  #sales .sale-sticky-actions .big-save{flex:2 1 140px!important;font-size:13px!important}
+  #sales .sticky-total{width:100%!important;min-width:0!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
+  #sales .sticky-total span,#sales .sticky-total small{display:inline!important;margin:0!important}
+  #sales .sticky-total b{font-size:18px!important;margin:0!important}
+  #sales .sale-form-panel{padding-bottom:150px!important}
+}

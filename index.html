@@ -111,15 +111,22 @@
                 <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
                 <div><label>VAT</label><select id="saleVatMode"><option value="included8" selected>Giá đã gồm VAT 8%</option><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option></select></div>
                 <div><label>Phụ thu đơn hàng</label><input id="saleSurcharge" type="number" value="0" min="0" placeholder="VD: 100000" oninput="updateSaleTotals()" /><small class="field-note">Dùng cho đơn xa, phát sinh vận chuyển/lắp đặt</small></div>
+                <div><label>CK tổng đơn</label><select id="saleOrderDiscountType" onchange="updateSaleTotals()"><option value="none">Không chiết khấu</option><option value="percent">Theo % tổng đơn</option><option value="amount">Theo số tiền</option></select></div>
+                <div><label>Giá trị CK tổng đơn</label><input id="saleOrderDiscountValue" type="number" value="0" min="0" placeholder="VD: 5 hoặc 100000" oninput="updateSaleTotals()" /><small class="field-note">Áp dụng sau chiết khấu từng dòng</small></div>
                 <div><label>Thanh toán ngay</label><input id="salePaid" type="number" value="0" /></div>
                 <div class="sale-stock-action"><label>Xuất kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
                 <div class="span2"><label>Ghi chú</label><input id="saleNote" placeholder="VD: khách thanh toán sau, lắp đặt chiều nay..." /></div>
               </div>
             </div>
-            <div class="sale-side-box">
-              <h4>Trạng thái nhanh</h4>
-              <p><b>Công nợ:</b> nếu thu đủ, đơn chuyển sang <span class="badge green">Đã thu tiền</span>. Nếu thu một phần sẽ hiện <span class="badge orange">Thanh toán một phần</span>.</p>
-              <p><b>Kho:</b> chỉ trừ tồn khi tick <b>Kiêm xuất kho</b>. Khi đã xuất, chi tiết đơn sẽ kèm phiếu xuất kho.</p>
+            <div class="sale-side-box compact-status-box">
+              <div class="compact-status-head">
+                <h4>Trạng thái nhanh</h4>
+                <span>Gọn để dễ nhập đơn</span>
+              </div>
+              <div class="status-chip-grid">
+                <div class="status-chip"><b>Công nợ</b><small>Thu đủ: <span class="badge green">Đã thu</span><br>Thu một phần: <span class="badge orange">Một phần</span></small></div>
+                <div class="status-chip"><b>Kho</b><small>Tick <b>Kiêm xuất kho</b> mới trừ tồn. Đã xuất sẽ có phiếu kho.</small></div>
+              </div>
             </div>
           </div>
           <div class="sale-items-head">
@@ -133,9 +140,9 @@
               <button class="btn ghost" onclick="addQuickSaleModel('S40')">+ S40</button>
             </div>
           </div>
-          <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK %</th><th>Thành tiền</th><th></th></tr></thead><tbody id="saleItems"></tbody></table>
+          <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>Loại CK</th><th>CK</th><th>Thành tiền</th><th></th></tr></thead><tbody id="saleItems"></tbody></table>
           <button class="btn ghost" onclick="addSaleItem()">+ Thêm dòng hàng</button>
-          <div class="total-box sale-total-main"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Phụ thu: <b id="saleSurchargeText">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
+          <div class="total-box sale-total-main"><div>Tiền hàng gốc: <b id="saleGoodsBeforeDiscount">0</b></div><div>Tổng CK: <b id="saleDiscountText">0</b></div><div>Tiền sau CK: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Phụ thu: <b id="saleSurchargeText">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
           <div class="sale-sticky-actions">
             <div class="sticky-total"><span>Tổng tiền</span><b id="saleGrandSticky">0</b><small>Còn nợ: <strong id="saleDebtSticky">0</strong></small></div>
             <button class="btn primary big-save" onclick="saveSale()">Lưu phiếu bán</button>
