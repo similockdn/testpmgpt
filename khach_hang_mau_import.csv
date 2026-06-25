@@ -1,3 +1,2 @@
-name,type,phone,address,discount,openingDebt
-Nguyễn Văn A,Khách lẻ,0900000001,Đà Nẵng,0,0
-Đại lý B,Đại lý,0900000002,Hội An,10,0
+customerCode,name,type,phone,address,email,contact,source,birthday,note,discount,openingDebt
+KL0902950816,Nguyễn Văn A,Khách lẻ,0902950816,Đà Nẵng,,,Facebook,,,0,0
