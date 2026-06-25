@@ -93,6 +93,11 @@
       </section>
 
       <section id="sales" class="page">
+        <div class="sales-tabbar">
+          <button id="salesTabFormBtn" class="sales-tab active" onclick="showSalesTab('form')">🧾 Phiếu bán hàng</button>
+          <button id="salesTabListBtn" class="sales-tab" onclick="showSalesTab('list')">📋 Danh sách phiếu bán</button>
+        </div>
+        <div id="salesFormTab" class="sales-tab-content active">
         <div class="panel sale-form-panel">
           <div class="panel-head sale-head-with-status">
             <div><h3>🛒 Bán hàng / Phiếu bán</h3><span>Tạo đơn, theo dõi công nợ và chọn kiêm xuất kho khi cần trừ tồn kho.</span></div>
@@ -108,7 +113,7 @@
               <div class="grid form-grid">
                 <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
                 <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
-                <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm mã KH / tên / SĐT hoặc nhập khách mới" oninput="saleCustomerChanged()" onchange="saleCustomerChanged()" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button></div><datalist id="customerList"></datalist><datalist id="productCodesList"></datalist></div>
+                <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm mã KH / tên / SĐT hoặc nhập khách mới" oninput="saleCustomerChanged()" onchange="saleCustomerChanged()" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button><button class="btn ghost" onclick="editSaleCustomer()">Sửa KH</button></div><datalist id="customerList"></datalist><datalist id="productCodesList"></datalist></div>
                 <div><label>Loại khách</label><select id="saleCustomerType" onchange="saleCustomerTypeChanged()"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select><small class="field-note">Áp dụng bảng giá theo loại khách</small></div>
                 <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
                 <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
@@ -147,7 +152,10 @@
             <button class="btn ghost" onclick="resetSaleForm()">Phiếu mới</button>
           </div>
         </div>
+        </div>
+        <div id="salesListTab" class="sales-tab-content">
         <div class="panel"><div class="panel-head"><div><h3>Danh sách phiếu bán</h3><span>Bấm Chi tiết để xem công nợ và phiếu xuất kho liên quan.</span></div><input class="search" id="saleSearch" placeholder="Tìm mã phiếu / mã KH / SĐT / khách" oninput="renderSales()" /></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Tổng</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng</th><th class="view-cost">Lợi nhuận</th><th>Công nợ</th><th>Kho</th><th>Hành động</th></tr></thead><tbody id="saleTable"></tbody></table></div>
+        </div>
       </section>
 
 

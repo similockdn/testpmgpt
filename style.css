@@ -785,3 +785,43 @@ th,td{padding:clamp(7px,.75vw,10px)!important;}
   .kiot-head{align-items:stretch;gap:12px}
   .kiot-head>div:last-child{display:flex;flex-wrap:wrap;gap:8px}
 }
+
+/* V39 - Bán hàng tách 2 tab: Phiếu bán hàng / Danh sách phiếu bán */
+.sales-tabbar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin:0 0 14px 0;
+  padding:8px;
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(126,180,220,.35);
+  border-radius:18px;
+  box-shadow:0 10px 24px rgba(17,82,130,.08);
+  position:sticky;
+  top:8px;
+  z-index:20;
+}
+.sales-tab{
+  border:0;
+  border-radius:14px;
+  padding:12px 18px;
+  font-weight:800;
+  color:#0b5480;
+  background:#e8f5ff;
+  cursor:pointer;
+  transition:.15s ease;
+  white-space:nowrap;
+}
+.sales-tab:hover{ transform:translateY(-1px); background:#d9efff; }
+.sales-tab.active{
+  color:#fff;
+  background:linear-gradient(135deg,#0688c8,#15b88d);
+  box-shadow:0 8px 18px rgba(7,137,184,.22);
+}
+.sales-tab-content{ display:none; }
+.sales-tab-content.active{ display:block; }
+#salesListTab .panel{ margin-top:0; }
+@media (max-width: 768px){
+  .sales-tabbar{ position:static; overflow-x:auto; }
+  .sales-tab{ flex:1; padding:11px 12px; font-size:14px; }
+}
