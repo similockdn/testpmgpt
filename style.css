@@ -714,3 +714,74 @@ th,td{padding:clamp(7px,.75vw,10px)!important;}
 .perm-card{border:1px solid var(--line);background:#fff;border-radius:18px;padding:14px;box-shadow:0 10px 25px rgba(15,23,42,.04)}
 .perm-card-head{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}.perm-card-head b{font-size:15px}.perm-card-head small{color:var(--muted);line-height:1.35}.perm-options{display:grid;gap:8px}.perm-options label,.warehouse-check{display:flex!important;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:9px 10px;color:var(--text);font-weight:700}.perm-options input,.warehouse-check input{width:auto}.perm-actions-mini{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.perm-actions-mini .btn{padding:6px 8px;border-radius:9px;font-size:12px}.perm-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 8px;padding:10px 12px;background:#f1f5f9;border:1px solid var(--line);border-radius:14px}.warehouse-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px}.perm-chip-wrap{display:flex;gap:6px;flex-wrap:wrap}.perm-chip{display:inline-flex;align-items:center;border-radius:999px;background:#eef6ff;color:#075985;border:1px solid #bae6fd;padding:4px 8px;font-size:12px;font-weight:800;margin:2px}.muted-small{color:var(--muted);font-size:12px}
 @media(max-width:720px){.perm-toolbar{align-items:flex-start;flex-direction:column}.permission-groups{grid-template-columns:1fr}}
+
+/* v34 - Bảng giá kiểu KiotViet: tách rõ Giá bán và Giá vốn */
+.price-module-tabs{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(240px,1fr));
+  gap:14px;
+  margin-bottom:16px;
+}
+.price-tab{
+  border:1px solid rgba(14,165,233,.22);
+  background:#f8fafc;
+  border-radius:18px;
+  padding:16px 18px;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:0 10px 26px rgba(15,23,42,.045);
+  transition:.18s ease;
+  color:#0f172a;
+}
+.price-tab b{display:block;font-size:18px;color:#075985;margin-bottom:4px}
+.price-tab span{font-size:13px;color:#64748b;font-weight:700}
+.price-tab.active{background:linear-gradient(135deg,#e0f2fe,#dcfce7);border-color:#38bdf8;box-shadow:0 14px 34px rgba(14,165,233,.14)}
+.price-tab.danger.active{background:linear-gradient(135deg,#fff7ed,#fee2e2);border-color:#fb7185;box-shadow:0 14px 34px rgba(239,68,68,.13)}
+.price-tab.danger b{color:#991b1b}
+.price-pane{display:none}
+.price-pane.active{display:block}
+.price-panel{padding:20px!important}
+.kiot-head{border-radius:20px;padding:18px 20px;margin-bottom:16px;border:1px solid rgba(14,165,233,.16)}
+.kiot-head.sale-head{background:linear-gradient(135deg,#eff6ff,#ecfdf5)}
+.kiot-head.cost-head{background:linear-gradient(135deg,#fff7ed,#fff1f2);border-color:rgba(239,68,68,.18)}
+.cost-warning-line{background:#fff7ed;border:1px dashed #fb923c;color:#9a3412;border-radius:16px;padding:12px 14px;font-weight:800;margin-bottom:16px}
+.kiot-price-layout{display:grid;grid-template-columns:minmax(330px,.9fr) minmax(620px,1.55fr);gap:18px;align-items:start}
+.kiot-price-list,.kiot-price-editor{background:#fff;border:1px solid rgba(14,165,233,.16);border-radius:20px;padding:16px;box-shadow:0 12px 32px rgba(15,23,42,.045)}
+.kiot-price-list{position:sticky;top:92px;max-height:calc(100vh - 150px);overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.kiot-price-list.cost-list{border-color:rgba(239,68,68,.2);background:#fffafa}
+.kiot-box-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;margin-bottom:8px}
+.kiot-box-title b{color:#0f172a;font-size:16px}
+.kiot-box-title small{color:#64748b;font-weight:700;font-size:12px;text-align:right}
+.kiot-table-scroll{overflow:auto;max-height:calc(100vh - 260px);border-radius:14px;border:1px solid #e2e8f0}
+.compact-table th,.compact-table td{padding:10px 12px;font-size:13px;vertical-align:top}
+.compact-table small{display:block;color:#64748b;font-weight:700;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kiot-price-editor.sale-editor{border-top:5px solid #0ea5e9}
+.kiot-price-editor.cost-editor{border-top:5px solid #ef4444;background:#fffafa;border-color:rgba(239,68,68,.2)}
+.kiot-editor-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e2e8f0}
+.kiot-editor-title b{font-size:18px;color:#0f172a}
+.kiot-editor-title small{display:block;color:#64748b;font-weight:700;margin-top:3px}
+.price-mode-badge{border-radius:999px;padding:8px 14px;font-size:12px;font-weight:900;letter-spacing:.4px;white-space:nowrap}
+.price-mode-badge.sale{background:#dbeafe;color:#075985;border:1px solid #bae6fd}
+.price-mode-badge.cost{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.kiot-info-grid{background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:14px;margin-bottom:16px}
+.cost-editor .kiot-info-grid{background:#fff7ed;border-color:#fed7aa}
+.kiot-product-zone{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(420px,1.15fr);gap:16px;align-items:start}
+.kiot-product-pick,.kiot-draft-table{border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#fbfdff}
+.kiot-product-pick.cost-pick,.kiot-draft-table.cost-draft{background:#fff7ed;border-color:#fed7aa}
+.price-model-box{max-height:360px;overflow:auto}
+.price-save-bar.kiot-save-bar{position:sticky;bottom:10px;z-index:6;margin-top:16px;box-shadow:0 -10px 30px rgba(15,23,42,.08)}
+.price-save-bar.sale-save{background:#ecfdf5;border-color:#86efac}
+.price-save-bar.cost-save{background:#fff7ed;border-color:#fdba74}
+.cost-pill{background:#fee2e2!important;color:#991b1b!important;border-color:#fecaca!important}
+
+@media(max-width:1280px){
+  .kiot-price-layout{grid-template-columns:1fr}
+  .kiot-price-list{position:relative;top:auto;max-height:none}
+  .kiot-table-scroll{max-height:360px}
+}
+@media(max-width:900px){
+  .price-module-tabs{grid-template-columns:1fr}
+  .kiot-product-zone{grid-template-columns:1fr}
+  .kiot-head{align-items:stretch;gap:12px}
+  .kiot-head>div:last-child{display:flex;flex-wrap:wrap;gap:8px}
+}

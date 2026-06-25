@@ -878,6 +878,17 @@ function priceStatus(p){
   if(p.validFrom && String(p.validFrom)>d) return ['Sắp áp dụng','orange'];
   return ['Đang áp dụng','green'];
 }
+
+window.switchPricePane=(pane='sale')=>{
+  const salePane=$('priceSalePane'), costPane=$('priceCostPane'), saleTab=$('priceSaleTab'), costTab=$('priceCostTab');
+  const showCost=pane==='cost';
+  if(salePane) salePane.classList.toggle('active', !showCost);
+  if(costPane) costPane.classList.toggle('active', showCost);
+  if(saleTab) saleTab.classList.toggle('active', !showCost);
+  if(costTab) costTab.classList.toggle('active', showCost);
+  if(showCost && !has('viewCost')) toast('Bạn không có quyền xem bảng giá vốn','error');
+};
+
 function selectedPriceCodes(){
   const picked=checkedCodesFromBox('priceProductPicker');
   const fallback=productCodeFromInput($('priceProduct')?.value||'');
@@ -932,8 +943,9 @@ window.savePrice=async()=>{
 }
 function renderPrices(){
   const q=String($('priceSearch')?.value||'').trim().toLowerCase();
+  const tb=$('priceTable'); if(!tb)return;
   let groups=groupPrices(data.prices).filter(g=>{const productText=g.items.map(p=>{const prod=data.products.find(x=>x.code===p.code)||{};return `${p.code} ${prod.name||''} ${p.price}`}).join(' ');const hay=[g.listName,g.type,g.validFrom,g.validTo,g.note,productText].join(' ').toLowerCase();return !q||hay.includes(q)});
-  $('priceTable').innerHTML=groups.map(g=>{let st=priceStatus(g);let models=g.items.map(x=>x.code).join(', ');return`<tr><td><b>${g.listName||''}</b><br><small>${models}</small></td><td>${g.type}</td><td><b>${g.items.length}</b></td><td>${g.validFrom||'Không giới hạn'} → ${g.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${g.note||''}</td><td><button class="btn ghost" onclick="editPriceGroup('${encodeURIComponent(g.key)}')">Mở/Sửa</button> <button class="btn danger" onclick="deletePriceGroup('${encodeURIComponent(g.key)}')">Xóa bảng</button></td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy bảng giá phù hợp</td></tr>'
+  tb.innerHTML=groups.map(g=>{let st=priceStatus(g);let models=g.items.map(x=>x.code).join(', ');return`<tr><td><b>${g.listName||''}</b><small>${models}</small><span class="badge ${st[1]}">${st[0]}</span></td><td>${g.type}</td><td><b>${g.items.length}</b></td><td><button class="btn ghost" onclick="editPriceGroup('${encodeURIComponent(g.key)}')">Mở</button><button class="btn danger" onclick="deletePriceGroup('${encodeURIComponent(g.key)}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="4">Không tìm thấy bảng giá phù hợp</td></tr>';
 }
 window.editPriceGroup=(keyEnc)=>{const key=decodeURIComponent(keyEnc);const rows=data.prices.filter(p=>priceGroupKeyOf(p)===key);if(!rows.length)return alert('Không tìm thấy bảng giá');const p=rows[0];$('priceGroupKey').value=key;$('priceId').value='';$('priceProduct').value='';if($('priceListName'))$('priceListName').value=p.listName||'';$('priceType').value=p.type;$('priceFrom').value=p.validFrom||'';$('priceTo').value=p.validTo||'';$('priceActive').value=String(p.active)!=='false'?'true':'false';$('priceNote').value=p.note||'';renderPriceProductPicker();const codes=rows.map(x=>x.code);const box=$('priceProductPicker');if(box)box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=codes.includes(x.value));updateProductPickerHint('priceProductPicker','priceSelectedHint');if($('priceDraftRows')){$('priceDraftRows').innerHTML=rows.map(p=>`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.price||0}"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#priceDraftRows tr[data-code]'))document.getElementById('priceDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa có sản phẩm trong bảng giá</td></tr>'">X</button></td></tr>`).join('');}showPage('prices')}
 window.editPrice=id=>{let p=data.prices.find(x=>x.id===id); if(p) editPriceGroup(encodeURIComponent(priceGroupKeyOf(p)));}
@@ -986,7 +998,7 @@ function renderCostPrices(){
   const q=String($('costPriceSearch')?.value||'').trim().toLowerCase();
   const tb=$('costPriceTable'); if(!tb)return;
   const groups=groupCostPrices(data.costPrices||[]).filter(g=>{const productText=g.items.map(p=>{const prod=data.products.find(x=>x.code===p.code)||{};return `${p.code} ${prod.name||''} ${p.cost}`}).join(' ');const hay=[g.listName,g.validFrom,g.validTo,g.note,productText].join(' ').toLowerCase();return !q||hay.includes(q)});
-  tb.innerHTML=groups.map(g=>{let st=priceStatus(g);let models=g.items.map(x=>x.code).join(', ');return`<tr><td><b>${g.listName||''}</b><br><small>${models}</small></td><td><b>${g.items.length}</b></td><td>${g.validFrom||'Không giới hạn'} → ${g.validTo||'Không giới hạn'}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${g.note||''}</td><td><button class="btn ghost" onclick="editCostPriceGroup('${encodeURIComponent(g.key)}')">Mở/Sửa</button> <button class="btn danger" onclick="deleteCostPriceGroup('${encodeURIComponent(g.key)}')">Xóa bảng</button></td></tr>`}).join('')||'<tr><td colspan="6">Không tìm thấy giá vốn phù hợp</td></tr>';
+  tb.innerHTML=groups.map(g=>{let st=priceStatus(g);let models=g.items.map(x=>x.code).join(', ');return`<tr><td><b>${g.listName||''}</b><small>${models}</small><span class="badge ${st[1]}">${st[0]}</span></td><td><b>${g.items.length}</b></td><td>${g.validFrom||'Không giới hạn'} → ${g.validTo||'Không giới hạn'}</td><td><button class="btn ghost" onclick="editCostPriceGroup('${encodeURIComponent(g.key)}')">Mở</button><button class="btn danger" onclick="deleteCostPriceGroup('${encodeURIComponent(g.key)}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="4">Không tìm thấy giá vốn phù hợp</td></tr>';
 }
 window.editCostPriceGroup=(keyEnc)=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');const key=decodeURIComponent(keyEnc);const rows=data.costPrices.filter(p=>costGroupKeyOf(p)===key);if(!rows.length)return alert('Không tìm thấy bảng giá vốn');const p=rows[0];$('costGroupKey').value=key;$('costId').value='';$('costProduct').value='';if($('costListName'))$('costListName').value=p.listName||'';$('costFrom').value=p.validFrom||'';$('costTo').value=p.validTo||'';$('costActive').value=String(p.active)!=='false'?'true':'false';$('costNote').value=p.note||'';renderCostProductPicker();const codes=rows.map(x=>x.code);const box=$('costProductPicker');if(box)box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=codes.includes(x.value));updateProductPickerHint('costProductPicker','costSelectedHint');if($('costDraftRows')){$('costDraftRows').innerHTML=rows.map(p=>`<tr data-code="${p.code}"><td><b>${p.code}</b></td><td>${(data.products.find(x=>x.code===p.code)||{}).name||''}</td><td><input type="number" value="${p.cost||0}"></td><td><button class="btn danger" onclick="this.closest('tr').remove();if(!document.querySelector('#costDraftRows tr[data-code]'))document.getElementById('costDraftRows').innerHTML='<tr><td colspan=\'4\'>Chưa có sản phẩm trong bảng giá vốn</td></tr>'">X</button></td></tr>`).join('');}showPage('prices')}
 window.editCostPrice=id=>{if(!has('viewCost'))return alert('Chỉ Admin được sửa bảng giá vốn');let p=data.costPrices.find(x=>x.id===id); if(p) editCostPriceGroup(encodeURIComponent(costGroupKeyOf(p)));}
@@ -2017,6 +2029,14 @@ document.addEventListener('DOMContentLoaded', function(){
     cs.addEventListener('search', renderCustomers);
     cs.addEventListener('change', renderCustomers);
   }
+});
+
+
+/* V35_STABLE_GLOBAL_EXPORTS: đảm bảo các hàm gọi từ HTML inline onclick/oninput hoạt động trong ES module */
+Object.assign(window,{
+  renderCustomers, renderProducts, renderPrices, renderCostPrices, renderStaff, renderSales, renderCommissions,
+  renderExpenses, renderSalaries, renderDebts, renderReceipts, renderStock, renderStockBook, renderWarranties,
+  renderReports, renderPermissions, renderAuditLogs
 });
 
 /* SIMILOCK_SAVE_TOAST_V13: thông báo lưu thành công + chống bấm lưu nhiều lần */

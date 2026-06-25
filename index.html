@@ -313,92 +313,148 @@
       <section id="products" class="page"><div class="panel"><div class="panel-head"><h3>🔐 Danh mục sản phẩm</h3><div><input type="file" id="importProducts" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'products')"><button class="btn ghost" onclick="downloadTemplateExcel('products')">Mẫu Excel</button><button class="btn ghost" onclick="importProducts.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('products')">Xuất Excel</button><button class="btn primary" onclick="saveProduct()">Lưu</button></div></div><div class="grid form-grid"><input id="pId" hidden><div><label>Model</label><input id="pCode"></div><div><label>Tên sản phẩm</label><input id="pName"></div><div><label>Danh mục</label><input id="pCategory" value="Khóa thông minh"></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number"></div><div><label>Giá bán</label><input id="pPrice" type="number"></div><div><label>Tồn tối thiểu</label><input id="pMinStock" type="number" value="3"></div><div><label>Trạng thái</label><select id="pActive"><option value="active">Đang kinh doanh</option><option value="inactive">Ngừng bán</option></select></div></div><div class="toolbar"><input class="search" id="productSearch" placeholder="Tìm Model / tên sản phẩm / danh mục" oninput="renderProducts()" /><button class="btn ghost" onclick="clearProductSearch()">Xóa tìm</button></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="productTable"></tbody></table></div></section>
 
       <section id="prices" class="page">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h3>💵 Bảng giá bán hàng</h3>
-              <span>Quy trình kiểu MISA: tạo một bảng giá, chọn nhiều model, nhập giá trên từng dòng sản phẩm.</span>
-            </div>
-            <div>
-              <input type="file" id="importPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'prices')">
-              <button class="btn ghost" onclick="downloadTemplateExcel('prices')">Mẫu Excel</button>
-              <button class="btn ghost" onclick="importPrices.click()">Nhập Excel</button>
-              <button class="btn ghost" onclick="exportExcel('prices')">Xuất Excel</button>
-              <button class="btn primary" onclick="newPriceList()">Tạo bảng giá mới</button>
-            </div>
-          </div>
-          <div class="price-workspace">
-            <input id="priceId" hidden>
-            <input id="priceGroupKey" hidden>
-            <input id="priceProduct" hidden>
-            <div class="price-model-card">
-              <label>1. Chọn sản phẩm áp dụng</label>
-              <div class="price-search-row"><input id="priceProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderPriceProductPicker()"></div>
-              <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllPriceProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearPriceProducts()">Bỏ chọn</button></div>
-              <div id="priceSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
-              <div id="priceProductPicker" class="multi-model-box price-model-box"></div>
-            </div>
-            <div class="price-form-card">
-              <label>2. Thông tin bảng giá</label>
-              <div class="grid form-grid price-form-grid">
-                <div><label>Tên bảng giá</label><input id="priceListName" placeholder="VD: Bảng giá đại lý tháng 6"></div>
-                <div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option></select></div>
-                <div><label>Hiệu lực từ</label><input id="priceFrom" type="date"></div>
-                <div><label>Hiệu lực đến</label><input id="priceTo" type="date"></div>
-                <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
-                <div><label>Ghi chú</label><input id="priceNote" placeholder="VD: Giá đại lý tháng 6, giá CTKM..."></div>
-              </div>
-              <div class="price-save-bar"><span>Chọn model bên trái → bấm “Đưa vào bảng giá” → nhập giá từng dòng → Lưu bảng giá.</span><button class="btn ghost" onclick="createPriceDraftRows()">Đưa vào bảng giá</button><button class="btn primary" onclick="savePrice()">Lưu bảng giá</button></div>
-              <div class="price-draft-box">
-                <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá bán áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="priceDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá</td></tr></tbody></table>
-              </div>
-            </div>
-          </div>
-          <div class="price-list-head"><div><b>Danh sách bảng giá bán</b><span> Mỗi dòng là một bảng giá, bấm “Mở” để xem/sửa toàn bộ sản phẩm bên trong</span></div><input class="search" id="priceSearch" placeholder="Tìm tên bảng giá, nhóm khách, model..." oninput="renderPrices()"></div>
-          <table><thead><tr><th>Tên bảng giá</th><th>Nhóm khách</th><th>Số model</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="priceTable"></tbody></table>
+        <div class="price-module-tabs">
+          <button type="button" id="priceSaleTab" class="price-tab active" onclick="switchPricePane('sale')">
+            <b>💵 Bảng giá bán hàng</b><span>Giá áp dụng khi lập phiếu bán</span>
+          </button>
+          <button type="button" id="priceCostTab" class="price-tab danger view-cost" onclick="switchPricePane('cost')">
+            <b>🔒 Bảng giá vốn</b><span>Chỉ Admin, dùng tính lợi nhuận</span>
+          </button>
         </div>
-        <div class="panel view-cost">
-          <div class="panel-head">
-            <div>
-              <h3>🔒 Bảng giá vốn theo thời gian</h3>
-              <span>Chỉ Admin được xem/sửa. Dùng để tính lợi nhuận đúng theo tháng khi giá vốn thay đổi.</span>
-            </div>
-            <div>
-              <input type="file" id="importCostPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'costPrices')">
-              <button class="btn ghost" onclick="downloadTemplateExcel('costPrices')">Mẫu Excel</button>
-              <button class="btn ghost" onclick="importCostPrices.click()">Nhập Excel</button>
-              <button class="btn ghost" onclick="exportExcel('costPrices')">Xuất Excel</button>
-              <button class="btn primary" onclick="newCostPriceList()">Tạo giá vốn mới</button>
-            </div>
-          </div>
-          <div class="price-workspace cost-workspace">
-            <input id="costId" hidden>
-            <input id="costGroupKey" hidden>
-            <input id="costProduct" hidden>
-            <div class="price-model-card">
-              <label>1. Chọn sản phẩm tính giá vốn</label>
-              <div class="price-search-row"><input id="costProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderCostProductPicker()"></div>
-              <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllCostProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearCostProducts()">Bỏ chọn</button></div>
-              <div id="costSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
-              <div id="costProductPicker" class="multi-model-box price-model-box"></div>
-            </div>
-            <div class="price-form-card">
-              <label>2. Thông tin bảng giá vốn</label>
-              <div class="grid form-grid price-form-grid">
-                <div><label>Tên bảng giá vốn</label><input id="costListName" placeholder="VD: Giá vốn lô hàng tháng 6"></div>
-                <div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div>
-                <div><label>Hiệu lực đến</label><input id="costTo" type="date"></div>
-                <div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
-                <div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div>
+
+        <div id="priceSalePane" class="price-pane active">
+          <div class="panel price-panel sale-price-panel">
+            <div class="panel-head kiot-head sale-head">
+              <div>
+                <h3>💵 Bảng giá bán hàng</h3>
+                <span>Kiểu KiotViet: chọn bảng giá bên trái, cấu hình và nhập giá sản phẩm bên phải.</span>
               </div>
-              <div class="price-save-bar"><span>Chọn model bên trái → bấm “Đưa vào bảng giá vốn” → nhập giá vốn từng dòng → Lưu giá vốn.</span><button class="btn ghost" onclick="createCostDraftRows()">Đưa vào bảng giá vốn</button><button class="btn primary" onclick="saveCostPrice()">Lưu giá vốn</button></div>
-              <div class="price-draft-box">
-                <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá vốn áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="costDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá vốn</td></tr></tbody></table>
+              <div>
+                <input type="file" id="importPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'prices')">
+                <button class="btn ghost" onclick="downloadTemplateExcel('prices')">Mẫu Excel</button>
+                <button class="btn ghost" onclick="importPrices.click()">Nhập Excel</button>
+                <button class="btn ghost" onclick="exportExcel('prices')">Xuất Excel</button>
+                <button class="btn primary" onclick="newPriceList()">+ Bảng giá bán mới</button>
               </div>
             </div>
+
+            <div class="kiot-price-layout">
+              <aside class="kiot-price-list">
+                <div class="kiot-box-title"><b>Danh sách bảng giá bán</b><small>Bấm Mở/Sửa để chỉnh bảng giá</small></div>
+                <input class="search" id="priceSearch" placeholder="Tìm tên bảng giá, nhóm khách, model..." oninput="renderPrices()">
+                <div class="kiot-table-scroll">
+                  <table class="compact-table"><thead><tr><th>Bảng giá</th><th>Nhóm</th><th>Model</th><th></th></tr></thead><tbody id="priceTable"></tbody></table>
+                </div>
+              </aside>
+
+              <section class="kiot-price-editor sale-editor">
+                <input id="priceId" hidden>
+                <input id="priceGroupKey" hidden>
+                <input id="priceProduct" hidden>
+
+                <div class="kiot-editor-title">
+                  <div><b>Thiết lập bảng giá bán</b><small>Áp dụng cho Khách lẻ / CTV / Đại lý</small></div>
+                  <span class="price-mode-badge sale">GIÁ BÁN</span>
+                </div>
+
+                <div class="grid form-grid price-form-grid kiot-info-grid">
+                  <div class="span2"><label>Tên bảng giá</label><input id="priceListName" placeholder="VD: Giá đại lý tháng 6 / Giá CTV / Giá lẻ 2026"></div>
+                  <div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select></div>
+                  <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
+                  <div><label>Hiệu lực từ</label><input id="priceFrom" type="date"></div>
+                  <div><label>Hiệu lực đến</label><input id="priceTo" type="date"></div>
+                  <div class="span2"><label>Ghi chú</label><input id="priceNote" placeholder="VD: giá chương trình, giá theo khu vực..."></div>
+                </div>
+
+                <div class="kiot-product-zone">
+                  <div class="kiot-product-pick">
+                    <div class="kiot-box-title"><b>Chọn sản phẩm</b><small>Tìm model/tên sản phẩm rồi tick chọn</small></div>
+                    <div class="price-search-row"><input id="priceProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderPriceProductPicker()"></div>
+                    <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllPriceProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearPriceProducts()">Bỏ chọn</button><button type="button" class="btn primary" onclick="createPriceDraftRows()">Đưa vào bảng giá</button></div>
+                    <div id="priceSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
+                    <div id="priceProductPicker" class="multi-model-box price-model-box"></div>
+                  </div>
+
+                  <div class="kiot-draft-table">
+                    <div class="kiot-box-title"><b>Nhập giá bán theo model</b><small>Kiểm tra kỹ trước khi lưu</small></div>
+                    <div class="price-draft-box">
+                      <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá bán áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="priceDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá</td></tr></tbody></table>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="price-save-bar kiot-save-bar sale-save"><span>Đây là <b>BẢNG GIÁ BÁN</b> dùng để lên đơn cho khách. Không nhập giá vốn tại đây.</span><button class="btn primary" onclick="savePrice()">Lưu bảng giá bán</button></div>
+              </section>
+            </div>
           </div>
-          <div class="price-list-head"><div><b>Danh sách bảng giá vốn</b><span> Mỗi dòng là một bảng giá vốn, bấm “Mở” để xem/sửa toàn bộ sản phẩm bên trong</span></div><input class="search" id="costPriceSearch" placeholder="Tìm tên bảng giá vốn, model..." oninput="renderCostPrices()"></div>
-          <table><thead><tr><th>Tên bảng giá</th><th>Số model</th><th>Hiệu lực</th><th>Trạng thái</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="costPriceTable"></tbody></table>
+        </div>
+
+        <div id="priceCostPane" class="price-pane">
+          <div class="panel price-panel cost-price-panel view-cost">
+            <div class="panel-head kiot-head cost-head">
+              <div>
+                <h3>🔒 Bảng giá vốn theo thời gian</h3>
+                <span>Chỉ Admin được xem/sửa. Dùng tính lợi nhuận, không dùng để bán hàng.</span>
+              </div>
+              <div>
+                <input type="file" id="importCostPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'costPrices')">
+                <button class="btn ghost" onclick="downloadTemplateExcel('costPrices')">Mẫu Excel</button>
+                <button class="btn ghost" onclick="importCostPrices.click()">Nhập Excel</button>
+                <button class="btn ghost" onclick="exportExcel('costPrices')">Xuất Excel</button>
+                <button class="btn danger" onclick="newCostPriceList()">+ Bảng giá vốn mới</button>
+              </div>
+            </div>
+
+            <div class="cost-warning-line">⚠️ Đây là khu vực <b>GIÁ VỐN</b>. Giá nhập tại đây dùng để tính lợi nhuận, không hiển thị cho nhân viên không có quyền.</div>
+
+            <div class="kiot-price-layout">
+              <aside class="kiot-price-list cost-list">
+                <div class="kiot-box-title"><b>Danh sách bảng giá vốn</b><small>Bấm Mở/Sửa để chỉnh giá vốn</small></div>
+                <input class="search" id="costPriceSearch" placeholder="Tìm tên bảng giá vốn, model..." oninput="renderCostPrices()">
+                <div class="kiot-table-scroll">
+                  <table class="compact-table"><thead><tr><th>Bảng giá vốn</th><th>Model</th><th>Hiệu lực</th><th></th></tr></thead><tbody id="costPriceTable"></tbody></table>
+                </div>
+              </aside>
+
+              <section class="kiot-price-editor cost-editor">
+                <input id="costId" hidden>
+                <input id="costGroupKey" hidden>
+                <input id="costProduct" hidden>
+
+                <div class="kiot-editor-title">
+                  <div><b>Thiết lập bảng giá vốn</b><small>Phục vụ tính giá vốn và lợi nhuận</small></div>
+                  <span class="price-mode-badge cost">GIÁ VỐN</span>
+                </div>
+
+                <div class="grid form-grid price-form-grid kiot-info-grid">
+                  <div class="span2"><label>Tên bảng giá vốn</label><input id="costListName" placeholder="VD: Giá vốn lô hàng tháng 6"></div>
+                  <div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div>
+                  <div><label>Hiệu lực đến</label><input id="costTo" type="date"></div>
+                  <div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
+                  <div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div>
+                </div>
+
+                <div class="kiot-product-zone">
+                  <div class="kiot-product-pick cost-pick">
+                    <div class="kiot-box-title"><b>Chọn sản phẩm tính giá vốn</b><small>Tìm model/tên sản phẩm rồi tick chọn</small></div>
+                    <div class="price-search-row"><input id="costProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderCostProductPicker()"></div>
+                    <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllCostProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearCostProducts()">Bỏ chọn</button><button type="button" class="btn danger" onclick="createCostDraftRows()">Đưa vào bảng giá vốn</button></div>
+                    <div id="costSelectedHint" class="price-selected-pill cost-pill">Chưa chọn model nào</div>
+                    <div id="costProductPicker" class="multi-model-box price-model-box"></div>
+                  </div>
+
+                  <div class="kiot-draft-table cost-draft">
+                    <div class="kiot-box-title"><b>Nhập giá vốn theo model</b><small>Chỉ Admin/Kế toán được thao tác</small></div>
+                    <div class="price-draft-box">
+                      <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá vốn áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="costDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá vốn</td></tr></tbody></table>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="price-save-bar kiot-save-bar cost-save"><span>Đây là <b>BẢNG GIÁ VỐN</b>. Không nhập giá bán tại khu vực này.</span><button class="btn danger" onclick="saveCostPrice()">Lưu bảng giá vốn</button></div>
+              </section>
+            </div>
+          </div>
         </div>
       </section>
 
