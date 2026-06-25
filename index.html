@@ -112,7 +112,7 @@
                 <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
                 <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
                 <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select><small class="field-note">Tính trên giá trước thuế VAT</small></div>
-                <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" readonly /></div>
+                <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" min="0" placeholder="VD: 300000" oninput="updateSaleTotals()" /><small class="field-note">Nhập tổng tiền công lắp đặt thực tế theo số bộ khóa trong đơn</small></div>
                 <div><label>Tiền xăng kỹ thuật</label><input id="saleTechFuel" type="number" value="0" min="0" placeholder="VD: 50000" oninput="updateSaleTotals()" /><small class="field-note">Tính riêng cho kỹ thuật và trừ vào lợi nhuận</small></div>
                 <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
                 <div><label>VAT</label><select id="saleVatMode"><option value="included8" selected>Giá đã gồm VAT 8%</option><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option></select></div>
