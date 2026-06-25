@@ -222,6 +222,77 @@ function stockLedgerRows(){
   });
   return rows.filter(r=>!r.warehouse||canAccessWarehouse(r.warehouse)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.code).localeCompare(String(a.code)));
 }
+
+function stockBookRows(from='',to=''){
+  const productMap=new Map();
+  (data.products||[]).forEach(p=>{
+    productMap.set(p.code,{
+      code:p.code||'',
+      name:p.name||'',
+      cost:+p.cost||0,
+      minStock:+p.minStock||3,
+      active:p.active||'active',
+      khoChinh:0,
+      khoVanPhong:0,
+      stock:0,
+      totalIn:0,
+      totalOut:0,
+      totalTransfer:0,
+      totalAdj:0,
+      periodMovement:false,
+      value:0
+    });
+  });
+  function ensure(code,name,cost=0){
+    code=String(code||'').trim();
+    if(!code)return null;
+    if(!productMap.has(code)){
+      productMap.set(code,{code,name:name||'',cost:+cost||0,minStock:3,active:'active',khoChinh:0,khoVanPhong:0,stock:0,totalIn:0,totalOut:0,totalTransfer:0,totalAdj:0,periodMovement:false,value:0});
+    }
+    const r=productMap.get(code);
+    if(name&&!r.name)r.name=name;
+    if(cost&&!r.cost)r.cost=+cost||0;
+    return r;
+  }
+  (data.stockVouchers||[]).forEach(v=>{
+    const inPeriod=!from&&!to?true:stockDateInRange(v.date,from,to);
+    (v.items||[]).forEach(it=>{
+      const q=Math.abs(+it.qty||0);
+      const r=ensure(it.code,it.name,it.cost);
+      if(!r||!q)return;
+      const fromWh=v.fromWarehouse||v.warehouse||'Kho Chính';
+      const toWh=v.toWarehouse||'Kho Văn Phòng';
+      const wh=voucherWarehouse(v)||'Kho Chính';
+      if(v.type==='TRANSFER'){
+        if(fromWh==='Kho Chính')r.khoChinh-=q;
+        if(fromWh==='Kho Văn Phòng')r.khoVanPhong-=q;
+        if(toWh==='Kho Chính')r.khoChinh+=q;
+        if(toWh==='Kho Văn Phòng')r.khoVanPhong+=q;
+        if(inPeriod){r.totalTransfer+=q;r.periodMovement=true;}
+      }else if(v.type==='OUT'){
+        if(wh==='Kho Chính')r.khoChinh-=q;
+        if(wh==='Kho Văn Phòng')r.khoVanPhong-=q;
+        if(inPeriod){r.totalOut+=q;r.periodMovement=true;}
+      }else if(v.type==='IN'||v.type==='RETURN'){
+        if(wh==='Kho Chính')r.khoChinh+=q;
+        if(wh==='Kho Văn Phòng')r.khoVanPhong+=q;
+        if(inPeriod){r.totalIn+=q;r.periodMovement=true;}
+      }else{
+        const signed=+it.qty||0;
+        if(wh==='Kho Chính')r.khoChinh+=signed;
+        if(wh==='Kho Văn Phòng')r.khoVanPhong+=signed;
+        if(inPeriod){r.totalAdj+=signed;r.periodMovement=true;}
+      }
+    });
+  });
+  return [...productMap.values()].map(r=>{
+    const main=canAccessWarehouse('Kho Chính')?r.khoChinh:0;
+    const office=canAccessWarehouse('Kho Văn Phòng')?r.khoVanPhong:0;
+    const stock=main+office;
+    return {...r,khoChinh:main,khoVanPhong:office,stock,value:stock*(+r.cost||0)};
+  }).sort((a,b)=>String(a.code).localeCompare(String(b.code),'vi',{numeric:true}));
+}
+
 function printHeader(title){return `<p style="text-align:center;line-height:1.45;margin:0 0 6px"><b>SIMILOCK ĐÀ NẴNG</b><br>223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>403 Nguyễn Thái Bình, P. Bảy Hiền, TP.HCM<br>Hotline: 0905.244.009</p><h2 style="text-align:center;margin:4px 0 8px;font-size:18px">${title}</h2><hr>`}
 
 function voucherItemsFromSaleItems(items){return (items||[]).map(it=>{const p=data.products.find(x=>x.code===it.code)||{};return {code:it.code,name:it.name||p.name||'',qty:+it.qty||0,inputQty:+it.qty||0,cost:+p.cost||0,note:'Xuất theo đơn bán hàng'}})}
@@ -1513,7 +1584,7 @@ function renderStockBook(){
     ${showOffice?`<div class="stock-summary-card"><span>Kho Văn Phòng</span><b>${sumOffice}</b></div>`:''}
     <div class="stock-summary-card"><span>Tổng tồn đang xem</span><b>${sumStock}</b></div>
     ${has('viewCost')?`<div class="stock-summary-card"><span>Giá trị tồn</span><b>${money(sumValue)}</b></div>`:''}`;
-  $('stockBookTable').innerHTML=rows.map(r=>`<tr><td><b>${r.code}</b></td><td>${r.name}</td><td>${r.totalIn}</td><td>${r.totalOut}</td><td>${r.totalTransfer}</td><td>${r.totalAdj}</td>${showMain?`<td><b>${r.khoChinh}</b></td>`:''}${showOffice?`<td><b>${r.khoVanPhong}</b></td>`:''}<td><b>${r.visibleStock}</b></td><td>${stockStatusBadge(r.visibleStock,r.minStock)}</td><td class="view-cost">${money(r.cost)}</td><td class="view-cost"><b>${money(r.visibleValue)}</b></td></tr>`).join('')||'<tr><td colspan="12">Không tìm thấy tồn kho phù hợp</td></tr>';
+  if($('stockBookTable'))$('stockBookTable').innerHTML=rows.map(r=>`<tr><td><b>${r.code}</b></td><td>${r.name}</td><td>${r.totalIn}</td><td>${r.totalOut}</td><td>${r.totalTransfer}</td><td>${r.totalAdj}</td>${showMain?`<td><b>${r.khoChinh}</b></td>`:''}${showOffice?`<td><b>${r.khoVanPhong}</b></td>`:''}<td><b>${r.visibleStock}</b></td><td>${stockStatusBadge(r.visibleStock,r.minStock)}</td><td class="view-cost">${money(r.cost)}</td><td class="view-cost"><b>${money(r.visibleValue)}</b></td></tr>`).join('')||'<tr><td colspan="12">Không tìm thấy tồn kho phù hợp</td></tr>';
   applyPermissions();
 }
 
@@ -1623,14 +1694,26 @@ function renderReports(){
   applyPermissions();
 }
 window.renderReports=renderReports;
+function initPermissionChooser(selected=[]){
+  const selectedSet=new Set(selected||[]);
+  const permBox=document.getElementById('permBox');
+  if(permBox){
+    permBox.innerHTML=permissionGroupHtml([...selectedSet]);
+  }
+  const whBox=document.getElementById('warehouseAccessBox');
+  if(whBox){
+    const current=[...whBox.querySelectorAll('input:checked')].map(i=>i.value);
+    const whSet=new Set(current);
+    whBox.innerHTML=WAREHOUSES.map(w=>`<label class="warehouse-check"><input type="checkbox" value="${w}" ${whSet.has(w)?'checked':''}> ${w}</label>`).join('');
+  }
+}
 function renderPermissions(){
   if(!$('uUid') && $('uEmail')) $('uEmail').insertAdjacentHTML('beforebegin','<input id="uUid" type="hidden">');
   const selected=[...document.querySelectorAll('#permBox input:checked')].map(i=>i.value);
-  if($('permBox'))$('permBox').innerHTML=permissionGroupHtml(selected);
-  if($('warehouseAccessBox'))$('warehouseAccessBox').innerHTML=WAREHOUSES.map(w=>`<label class="warehouse-check"><input type="checkbox" value="${w}"> ${w}</label>`).join('');
+  initPermissionChooser(selected);
   const q=($('permissionSearch')?.value||'').toLowerCase().trim();
-  const rows=data.users.filter(u=>matchSearchText(q,u.email,u.name,u.role,(u.perms||[]).map(p=>permLabels[p]||p).join(' '),(u.warehouseAccess||[]).join(' ')));
-  if($('permissionSearchCount'))$('permissionSearchCount').textContent=`Hiển thị ${rows.length}/${data.users.length}`;
+  const rows=(data.users||[]).filter(u=>matchSearchText(q,u.email,u.name,u.role,(u.perms||[]).map(p=>permLabels[p]||p).join(' '),(u.warehouseAccess||[]).join(' ')));
+  if($('permissionSearchCount'))$('permissionSearchCount').textContent=`Hiển thị ${rows.length}/${(data.users||[]).length}`;
   if($('permissionTable'))$('permissionTable').innerHTML=rows.map(u=>`<tr><td><b>${u.email||''}</b><br><small>UID: ${u.id}</small></td><td>${u.name||''}</td><td><span class="badge green">${u.role||''}</span></td><td><div class="perm-chip-wrap">${permissionSummary(u.perms||[])}</div></td><td>${(u.warehouseAccess||[]).map(w=>`<span class="perm-chip">${w}</span>`).join('')||'<span class="muted-small">Không giới hạn/Chưa chọn</span>'}</td><td><button class="btn ghost" onclick="editPermission('${u.id}')">Sửa</button> <button class="btn ghost admin-only" onclick="adminSendPasswordReset('${u.id}')">Reset mật khẩu</button></td></tr>`).join('')||'<tr><td colspan="6">Không tìm thấy phân quyền phù hợp</td></tr>';
   applyPermissions();
 }
@@ -1653,6 +1736,7 @@ window.editPermission=id=>{
   let u=data.users.find(x=>x.id===id);
   if(!u)return alert('Không tìm thấy user UID: '+id);
   $('uUid').value=u.id;$('uEmail').value=u.email||'';$('uName').value=u.name||'';$('uRole').value=u.role||'Sale';
+  initPermissionChooser(u.perms||[]);
   document.querySelectorAll('#permBox input').forEach(i=>i.checked=(u.perms||[]).includes(i.value));
   document.querySelectorAll('#warehouseAccessBox input').forEach(i=>i.checked=((u.warehouseAccess||[]).includes(i.value) || u.role==='Admin'));
   $('permissions')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -1908,6 +1992,7 @@ document.addEventListener('input', function(e){
   if(e && e.target && e.target.id === 'customerSearch') renderCustomers();
 });
 document.addEventListener('DOMContentLoaded', function(){
+  try{initPermissionChooser([]);}catch(e){}
   const cs=document.getElementById('customerSearch');
   if(cs && !cs.__customerSearchBound){
     cs.__customerSearchBound=true;
