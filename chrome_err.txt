@@ -1,0 +1,31 @@
+[29333:29333:0625/054404.095845:ERROR:base/files/file_path_watcher_inotify.cc:923] Failed to read /proc/sys/fs/inotify/max_user_watches
+[29334:29334:0625/054404.098376:ERROR:base/files/file_path_watcher_inotify.cc:923] Failed to read /proc/sys/fs/inotify/max_user_watches
+[29311:29339:0625/054404.112665:ERROR:base/files/file_path_watcher_inotify.cc:923] Failed to read /proc/sys/fs/inotify/max_user_watches
+[29311:29340:0625/054404.112711:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+[29311:29340:0625/054404.131501:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29340:0625/054404.132329:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+[29311:29340:0625/054404.132723:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+[29311:29338:0625/054404.132420:ERROR:net/base/address_tracker_linux.cc:242] Could not bind NETLINK socket: Permission denied (13)
+[29311:29340:0625/054404.205888:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29340:0625/054404.265774:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29311:0625/054404.298054:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29311:29340:0625/054404.298176:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29311:0625/054404.299748:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29311:29311:0625/054404.313571:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29361:29380:0625/054404.339977:ERROR:base/files/file_path_watcher_inotify.cc:923] Failed to read /proc/sys/fs/inotify/max_user_watches
+[29311:29340:0625/054404.352401:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29340:0625/054404.442973:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+[29311:29311:0625/054404.443087:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29311:29340:0625/054404.443263:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+[29311:29311:0625/054404.449025:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29311:29340:0625/054404.449129:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29311:0625/054404.466169:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: unknown error type: 
+[29311:29311:0625/054404.518220:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29311:29340:0625/054404.518375:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29311:0625/054404.526014:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29311:29340:0625/054404.526181:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29311:0625/054404.530358:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[29311:29340:0625/054404.530608:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[29311:29311:0625/054404.532342:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[0625/054408.829512:ERROR:third_party/crashpad/crashpad/util/linux/socket.cc:182] incorrect payload size 0
+[0625/054408.834867:ERROR:third_party/crashpad/crashpad/util/linux/socket.cc:182] incorrect payload size 0

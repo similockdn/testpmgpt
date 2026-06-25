@@ -204,6 +204,13 @@ function stockOf(code,excludeVoucherId='',warehouse=''){
 }
 function prefixByStockType(t){return t==='IN'?'NK':t==='OUT'?'XK':t==='RETURN'?'TH':t==='TRANSFER'?'CK':t==='CHECK'?'KK':'DC'}
 function stockTypeName(t){return t==='IN'?'Phiếu nhập kho':t==='OUT'?'Phiếu xuất kho':t==='RETURN'?'Phiếu trả lại hàng bán':t==='TRANSFER'?'Phiếu chuyển kho':t==='CHECK'?'Phiếu kiểm kê':'Phiếu điều chỉnh kho'}
+function stockStatusBadge(stock,minStock=3){
+  const qty=Number(stock)||0;
+  const min=Number(minStock)||3;
+  if(qty<=0) return '<span class="badge red">Hết hàng</span>';
+  if(qty<min) return '<span class="badge orange">Tồn thấp</span>';
+  return '<span class="badge green">Đủ hàng</span>';
+}
 function stockVoucherLocked(v){return !!(v.saleId||v.saleCode||v.locked)}
 function saleLocked(s){const pay=salePaymentInfo(s);return pay.paidTotal>0||!!stockVoucherForSale(s)}
 function stockLedgerRows(){
@@ -706,7 +713,17 @@ document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn
 function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));const activeBtn=document.querySelector(`#menu button[data-page="${id}"]`);if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='Similock Đà Nẵng - Quản lý bán hàng, kho, công nợ, bảo hành'}
 function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí vận hành',salaries:'Lương nhân viên',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống',audit:'Nhật ký thao tác'}[id]||id)}
 
-function renderAll(){try{applyPermissions();renderSelectors();renderDashboard();renderCustomers();renderProducts();renderPriceProductPicker();renderCostProductPicker();renderPrices();renderCostPrices();renderStaff();renderSales();renderCommissions();renderExpenses();renderSalaries();renderDebts();renderReceipts();renderStock();renderStockBook();renderWarranties();renderReports();renderPermissions();renderAuditLogs();staffDeptChanged();resetSaleForm();resetStockForm();}catch(e){console.error('RENDER ERROR:',e);alert('Đăng nhập được nhưng lỗi khi tải màn hình: '+(e.message||e));}}
+function renderAll(){
+  const steps=[
+    ['applyPermissions',applyPermissions],['renderSelectors',renderSelectors],['renderDashboard',renderDashboard],['renderCustomers',renderCustomers],['renderProducts',renderProducts],['renderPriceProductPicker',renderPriceProductPicker],['renderCostProductPicker',renderCostProductPicker],['renderPrices',renderPrices],['renderCostPrices',renderCostPrices],['renderStaff',renderStaff],['renderSales',renderSales],['renderCommissions',renderCommissions],['renderExpenses',renderExpenses],['renderSalaries',renderSalaries],['renderDebts',renderDebts],['renderReceipts',renderReceipts],['renderStock',renderStock],['renderStockBook',renderStockBook],['renderWarranties',renderWarranties],['renderReports',renderReports],['renderPermissions',renderPermissions],['renderAuditLogs',renderAuditLogs],['staffDeptChanged',staffDeptChanged],['resetSaleForm',resetSaleForm],['resetStockForm',resetStockForm]
+  ];
+  const errors=[];
+  for(const [name,fn] of steps){
+    try{ if(typeof fn==='function') fn(); }
+    catch(e){ console.error('RENDER ERROR '+name+':',e); errors.push(name+': '+(e.message||e)); }
+  }
+  if(errors.length){ alert('Đăng nhập được nhưng lỗi khi tải màn hình: '+errors.join(' | ')); }
+}
 function ensureProductDatalist(){
   let dl=document.getElementById('productCodesList');
   if(!dl){dl=document.createElement('datalist');dl.id='productCodesList';document.body.appendChild(dl);}
@@ -825,7 +842,7 @@ function matchSearchText(q,...parts){
   const phoneQ=normalizePhone(raw);
   return !qKey || hay.includes(qKey) || (phoneQ && hay.replace(/\s+/g,'').includes(phoneQ)) || qKey.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
 }
-window.editCustomer=id=>{let c=data.customers.find(x=>x.id===id);if(!c)return;$('cId').value=id;$('cCode').value=ensureCustomerCode(c);$('cName').value=c.name||'';$('cType').value=c.type||'Khách lẻ';$('cPhone').value=c.phone||'';$('cAddress').value=c.address||'';if($('cEmail'))$('cEmail').value=c.email||'';if($('cContact'))$('cContact').value=c.contact||'';if($('cSource'))$('cSource').value=c.source||'';if($('cBirthday'))$('cBirthday').value=c.birthday||'';if($('cNote'))$('cNote').value=c.note||'';$('cDiscount').value=c.discount||0;$('cOpeningDebt').value=c.openingDebt||0;let anchor=$('customerFormAnchor')||$('cCode');anchor.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>{$('cName')?.focus();},250);if(window.showToast)showToast('Đã mở thông tin khách để sửa','info',c.name||ensureCustomerCode(c));}
+window.editCustomer=id=>{let c=data.customers.find(x=>x.id===id);if(!c)return;$('cId').value=id;$('cCode').value=ensureCustomerCode(c);$('cName').value=c.name||'';$('cType').value=c.type||'Khách lẻ';$('cPhone').value=c.phone||'';$('cAddress').value=c.address||'';if($('cEmail'))$('cEmail').value=c.email||'';if($('cContact'))$('cContact').value=c.contact||'';if($('cSource'))$('cSource').value=c.source||'';if($('cBirthday'))$('cBirthday').value=c.birthday||'';if($('cNote'))$('cNote').value=c.note||'';$('cDiscount').value=c.discount||0;$('cOpeningDebt').value=c.openingDebt||0;let anchor=$('customerFormAnchor')||$('cCode');anchor.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>{$('cName')?.focus();},250);if(window.showToast)window.showToast('Đã mở thông tin khách để sửa','info',c.name||ensureCustomerCode(c));}
 window.quickCreateCustomer=async()=>{let raw=($('saleCustomerSearch').value||'').trim();let parts=raw.split('|').map(x=>x.trim()).filter(Boolean);let suggestedName=(parts[1]&&!/^[0-9+ .-]+$/.test(parts[1]))?parts[1]:'';let suggestedPhone=parts.find(x=>/\d{8,}/.test(x))||'';let name=(prompt('Tên khách hàng:',suggestedName)||'').trim();if(!name)return alert('Bắt buộc nhập tên khách hàng');let phone=(prompt('SĐT khách hàng:',suggestedPhone)||'').trim();if(!phone)return alert('Bắt buộc nhập số điện thoại khách hàng');let type=(prompt('Loại khách: Khách lẻ / CTV / Đại lý','Khách lẻ')||'Khách lẻ').trim();if(!['Khách lẻ','CTV','Đại lý'].includes(type))type='Khách lẻ';let address=prompt('Địa chỉ:', parts[4]||parts[3]||'')||'';let customerCode=customerCodeFromPhone(phone);await addDoc(col('customers'),{customerCode,name,type,phone,address,email:'',contact:'',source:'',birthday:'',note:'',discount:0,openingDebt:0,createdAt:serverTimestamp()});await loadAll();$('saleCustomerSearch').value=`${customerCode} | ${name} | ${phone} | ${type} | ${address}`;if($('saleCustomerType'))$('saleCustomerType').value=type}
 
 window.saveProduct=async()=>{let old=$('pId').value?data.products.find(x=>x.id===$('pId').value):{};let o={code:$('pCode').value.trim(),name:$('pName').value,category:$('pCategory').value,cost:has('viewCost')?(+$('pCost').value||0):(+old?.cost||0),price:+$('pPrice').value||0,minStock:+$('pMinStock').value||3,active:($('pActive')?.value||'active')};if(!o.code||!o.name)return alert('Nhập model và tên');let id=$('pId').value;if(id){await updateDoc(doc(db,'products',id),o);await logAction('Sửa sản phẩm',o.code)}else {await addDoc(col('products'),{...o,createdAt:serverTimestamp()});await logAction('Tạo sản phẩm',o.code)}clearProduct();await loadAll()}
