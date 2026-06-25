@@ -43,6 +43,13 @@ service cloud.firestore {
       allow read, write: if isAdmin() || isMainAdminEmail();
     }
 
+
+    // Lương nhân viên: chỉ Admin hoặc user có quyền lương mới được truy cập.
+    match /salaries/{id} {
+      allow read: if signedIn() && (isAdmin() || isMainAdminEmail() || (myUserExists() && myUser().perms.hasAny(['viewSalary','manageSalary'])));
+      allow write: if signedIn() && (isAdmin() || isMainAdminEmail() || (myUserExists() && myUser().perms.hasAny(['manageSalary'])));
+    }
+
     // Dữ liệu ERP: chỉ tài khoản đã có hồ sơ hợp lệ mới truy cập.
     // Email Admin chính được phép khởi tạo hệ thống lần đầu.
     match /{document=**} {

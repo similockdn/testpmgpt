@@ -46,6 +46,7 @@
           <div class="submenu">
             <button data-page="commissions">Hoa hồng</button>
             <button data-page="expenses">Chi phí</button>
+            <button data-page="salaries">Lương nhân viên</button>
           </div>
         </div>
         <div class="menu-group">
@@ -106,8 +107,10 @@
                 <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
                 <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select><small class="field-note">Tính trên giá trước thuế VAT</small></div>
                 <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" readonly /></div>
+                <div><label>Tiền xăng kỹ thuật</label><input id="saleTechFuel" type="number" value="0" min="0" placeholder="VD: 50000" oninput="updateSaleTotals()" /><small class="field-note">Tính riêng cho kỹ thuật và trừ vào lợi nhuận</small></div>
                 <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
                 <div><label>VAT</label><select id="saleVatMode"><option value="included8" selected>Giá đã gồm VAT 8%</option><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option></select></div>
+                <div><label>Phụ thu đơn hàng</label><input id="saleSurcharge" type="number" value="0" min="0" placeholder="VD: 100000" oninput="updateSaleTotals()" /><small class="field-note">Dùng cho đơn xa, phát sinh vận chuyển/lắp đặt</small></div>
                 <div><label>Thanh toán ngay</label><input id="salePaid" type="number" value="0" /></div>
                 <div class="sale-stock-action"><label>Xuất kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
                 <div class="span2"><label>Ghi chú</label><input id="saleNote" placeholder="VD: khách thanh toán sau, lắp đặt chiều nay..." /></div>
@@ -132,7 +135,7 @@
           </div>
           <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK %</th><th>Thành tiền</th><th></th></tr></thead><tbody id="saleItems"></tbody></table>
           <button class="btn ghost" onclick="addSaleItem()">+ Thêm dòng hàng</button>
-          <div class="total-box sale-total-main"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
+          <div class="total-box sale-total-main"><div>Tiền hàng: <b id="saleSubTotal">0</b></div><div>VAT: <b id="saleVat">0</b></div><div>Phụ thu: <b id="saleSurchargeText">0</b></div><div>Tổng tiền: <b id="saleGrand">0</b></div><div>Còn nợ: <b id="saleDebt">0</b></div></div>
           <div class="sale-sticky-actions">
             <div class="sticky-total"><span>Tổng tiền</span><b id="saleGrandSticky">0</b><small>Còn nợ: <strong id="saleDebtSticky">0</strong></small></div>
             <button class="btn primary big-save" onclick="saveSale()">Lưu phiếu bán</button>
@@ -164,11 +167,11 @@
         </div>
         <div class="panel">
           <div class="panel-head"><h3>🛠️ Công kỹ thuật theo nhân viên</h3></div>
-          <table><thead><tr><th>Nhân viên kỹ thuật</th><th>Số đơn lắp</th><th>Doanh thu phụ trách</th><th>Công kỹ thuật</th></tr></thead><tbody id="commissionByTech"></tbody></table>
+          <table><thead><tr><th>Nhân viên kỹ thuật</th><th>Số đơn lắp</th><th>Doanh thu phụ trách</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng nhận</th></tr></thead><tbody id="commissionByTech"></tbody></table>
         </div>
         <div class="panel wide">
           <div class="panel-head"><h3 id="commissionOrderTitle">🧾 Hoa hồng / công kỹ thuật theo từng đơn hàng</h3></div>
-          <table><thead><tr><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tổng chi</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
+          <table><thead><tr><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>Phụ thu</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng chi</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
         </div>
       </section>
 
@@ -177,12 +180,31 @@
           <div class="panel-head"><h3>📒 Chi phí vận hành</h3><div><button class="btn ghost" onclick="resetExpenseForm()">Phiếu mới</button><input type="file" id="importExpenses" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'expenses')"><button class="btn ghost" onclick="downloadTemplateExcel('expenses')">Mẫu Excel</button><button class="btn ghost" onclick="importExpenses.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất Excel</button><button class="btn primary" onclick="saveExpense()">Lưu chi phí</button></div></div>
           <div class="grid form-grid">
             <div><label>Ngày</label><input id="exDate" type="date"></div>
-            <div><label>Loại chi phí</label><select id="exCategory"><option>Tiền điện</option><option>Tiền nước</option><option>Tiền Internet</option><option>Tiền thuê nhà</option><option>Tiền vận chuyển hàng</option><option>Chi lương cố định</option><option>Khác</option></select></div>
+            <div><label>Loại chi phí</label><select id="exCategory"><option>Tiền điện</option><option>Tiền nước</option><option>Tiền Internet</option><option>Tiền thuê nhà</option><option>Tiền vận chuyển hàng</option><option>Marketing</option><option>Văn phòng phẩm</option><option>Xăng xe</option><option>Khác</option></select></div>
             <div><label>Số tiền</label><input id="exAmount" type="number"></div>
             <div class="span2"><label>Ghi chú</label><input id="exNote" placeholder="VD: Tiền điện tháng 6"></div>
           </div>
-          <div class="total-box"><div>Tổng chi phí vận hành: <b id="expenseTotal">0</b></div></div>
+          <div class="total-box"><div>Tổng chi phí vận hành: <b id="expenseTotal">0</b> <small>(không bao gồm lương)</small></div></div>
           <table><thead><tr><th>Ngày</th><th>Loại chi phí</th><th>Số tiền</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="expenseTable"></tbody></table>
+        </div>
+      </section>
+
+
+      <section id="salaries" class="page salary-only">
+        <div class="panel">
+          <div class="panel-head"><h3>👤 Lương nhân viên</h3><div><button class="btn ghost manage-salary" onclick="resetSalaryForm()">Phiếu mới</button><input type="file" id="importSalaries" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'salaries')"><button class="btn ghost" onclick="downloadTemplateExcel('salaries')">Mẫu Excel</button><button class="btn ghost manage-salary" onclick="importSalaries.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('salaries')">Xuất Excel</button><button class="btn primary manage-salary" onclick="saveSalary()">Lưu lương</button></div></div>
+          <input id="salId" hidden>
+          <div class="grid form-grid manage-salary">
+            <div><label>Ngày</label><input id="salDate" type="date"></div>
+            <div><label>Nhân viên</label><select id="salStaff"></select></div>
+            <div><label>Lương cơ bản</label><input id="salBase" type="number"></div>
+            <div><label>Phụ cấp</label><input id="salAllowance" type="number" value="0"></div>
+            <div><label>Thưởng</label><input id="salBonus" type="number" value="0"></div>
+            <div><label>Khấu trừ</label><input id="salDeduct" type="number" value="0"></div>
+            <div class="span2"><label>Ghi chú</label><input id="salNote" placeholder="VD: Lương tháng 6"></div>
+          </div>
+          <div class="total-box"><div>Tổng lương đã nhập: <b id="salaryTotal">0</b> <small>Được cộng vào chi phí cố định công ty khi tính lợi nhuận.</small></div></div>
+          <table><thead><tr><th>Ngày</th><th>Nhân viên</th><th>Lương CB</th><th>Phụ cấp</th><th>Thưởng</th><th>Khấu trừ</th><th>Tổng lương</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="salaryTable"></tbody></table>
         </div>
       </section>
 
@@ -395,7 +417,7 @@
 
         <div class="panel wide">
           <div class="panel-head"><h3>📊 Doanh thu theo thời gian</h3><span>Ngày / tuần / tháng / năm</span></div>
-          <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công kỹ thuật</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
+          <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh thu</th><th>Phụ thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công + xăng KT</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
         </div>
 
 
@@ -410,8 +432,12 @@
         </div>
 
         <div class="panel wide view-cost">
-          <div class="panel-head"><h3>🧾 Chi tiết chi phí trong kỳ</h3></div>
+          <div class="panel-head"><h3>🧾 Chi tiết chi phí vận hành trong kỳ</h3></div>
           <table><thead><tr><th>Ngày</th><th>Loại chi phí</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="reportExpenseDetailTable"></tbody></table>
+        </div>
+        <div class="panel wide salary-only">
+          <div class="panel-head"><h3>👤 Chi tiết lương trong kỳ</h3></div>
+          <table><thead><tr><th>Ngày</th><th>Nhân viên</th><th>Lương CB</th><th>Phụ cấp</th><th>Thưởng</th><th>Khấu trừ</th><th>Tổng lương</th><th>Ghi chú</th></tr></thead><tbody id="reportSalaryDetailTable"></tbody></table>
         </div>
       </section>
 
@@ -424,7 +450,7 @@
             <h3>🗑️ Clear Data</h3>
             <p>Chức năng này xóa dữ liệu vận hành để làm mới hệ thống. Không xóa tài khoản, phân quyền và cấu hình.</p>
             <div class="grid form-grid">
-              <div><label>Sẽ xóa</label><input readonly value="Khách hàng, sản phẩm, bảng giá, đơn hàng, kho, công nợ, bảo hành, chi phí, nhật ký"></div>
+              <div><label>Sẽ xóa</label><input readonly value="Khách hàng, sản phẩm, bảng giá, đơn hàng, kho, công nợ, bảo hành, chi phí, lương, nhật ký"></div>
               <div><label>Không xóa</label><input readonly value="users, settings, roles, permissions"></div>
             </div>
             <button class="btn danger" onclick="clearAllData()">🗑️ Clear Data</button>
