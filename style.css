@@ -884,3 +884,65 @@ th,td{padding:clamp(7px,.75vw,10px)!important;}
   }
   #sales .panel-head.sale-head-with-status h3{font-size:20px!important;}
 }
+
+/* ===== V42: Thu nhỏ banner Bán hàng / Phiếu bán ===== */
+#sales .sale-form-panel > .panel-head.sale-head-with-status{
+  display:grid!important;
+  grid-template-columns:auto 1fr!important;
+  align-items:center!important;
+  gap:10px 18px!important;
+  padding:10px 16px!important;
+  min-height:62px!important;
+  border-radius:16px!important;
+  margin-bottom:12px!important;
+  background:linear-gradient(135deg,#e0f7ff,#dcfce7)!important;
+}
+#sales .sale-form-panel > .panel-head.sale-head-with-status > div:first-child{
+  min-width:270px!important;
+}
+#sales .sale-form-panel > .panel-head.sale-head-with-status h3{
+  font-size:22px!important;
+  line-height:1.05!important;
+  margin:0 0 2px!important;
+  letter-spacing:-.3px!important;
+}
+#sales .sale-form-panel > .panel-head.sale-head-with-status > div:first-child span{
+  font-size:12px!important;
+  line-height:1.15!important;
+  margin:0!important;
+  display:block!important;
+  color:#0f766e!important;
+}
+#sales .sale-form-panel > .panel-head.sale-head-with-status .quick-status-line{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:wrap!important;
+  gap:4px 10px!important;
+  padding:0!important;
+  margin:0!important;
+  border-top:0!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  color:#0f172a!important;
+}
+#sales .sale-form-panel > .panel-head.sale-head-with-status .quick-status-title{
+  font-size:12px!important;
+  white-space:nowrap!important;
+  color:#075985!important;
+}
+#sales .sale-form-panel > .panel-head.sale-head-with-status .badge{
+  padding:2px 7px!important;
+  font-size:10.5px!important;
+}
+@media(max-width:900px){
+  #sales .sale-form-panel > .panel-head.sale-head-with-status{
+    grid-template-columns:1fr!important;
+    gap:6px!important;
+    padding:10px 12px!important;
+  }
+  #sales .sale-form-panel > .panel-head.sale-head-with-status > div:first-child{min-width:0!important;}
+  #sales .sale-form-panel > .panel-head.sale-head-with-status h3{font-size:19px!important;}
+  #sales .sale-form-panel > .panel-head.sale-head-with-status > div:first-child span{font-size:11px!important;}
+  #sales .sale-form-panel > .panel-head.sale-head-with-status .quick-status-line{font-size:11px!important;gap:3px 8px!important;}
+}
