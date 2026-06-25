@@ -637,3 +637,73 @@ table{max-width:100%;}
 
 /* CUSTOMER_SEARCH_EDIT_V26 */
 .customer-toolbar{display:flex;align-items:center;gap:10px;margin:16px 0 8px;flex-wrap:wrap}.customer-toolbar .search{max-width:520px;min-width:280px}.muted-small{color:var(--muted);font-size:13px;font-weight:700}.customer-edit-anchor{scroll-margin-top:110px}@media(max-width:720px){.customer-toolbar{align-items:stretch}.customer-toolbar .search{max-width:none;min-width:0;width:100%}.customer-toolbar .btn{width:100%}}
+
+/* ===== v29: Auto scale theo độ phân giải màn hình máy tính ===== */
+:root{
+  --ui-scale: clamp(.88, calc(100vw / 1440), 1.08);
+  --sidebar-w: clamp(220px, 18vw, 280px);
+  --content-pad: clamp(12px, 1.4vw, 22px);
+  --panel-pad: clamp(12px, 1.2vw, 20px);
+  --radius-lg: clamp(14px, 1.4vw, 22px);
+  --font-base: clamp(13px, .86vw, 15px);
+}
+html{font-size:var(--font-base);}
+body{overflow-x:hidden;}
+.sidebar{width:var(--sidebar-w)!important;padding:clamp(12px,1.2vw,18px)!important;}
+.main{margin-left:var(--sidebar-w)!important;width:calc(100% - var(--sidebar-w))!important;padding:var(--content-pad)!important;}
+.panel{padding:var(--panel-pad)!important;border-radius:var(--radius-lg)!important;}
+.topbar{height:auto!important;min-height:clamp(62px,5.5vw,78px)!important;padding:clamp(12px,1.1vw,18px)!important;border-radius:var(--radius-lg)!important;}
+.topbar h2{font-size:clamp(18px,1.55vw,24px)!important;}
+.topbar p{font-size:clamp(12px,.92vw,14px)!important;}
+.logo span{width:clamp(42px,3.6vw,52px)!important;height:clamp(42px,3.6vw,52px)!important;font-size:clamp(20px,1.9vw,26px)!important;}
+.menu-toggle{font-size:clamp(12px,.95vw,14px)!important;padding:clamp(10px,.9vw,13px) clamp(10px,1vw,14px)!important;}
+.submenu button{font-size:clamp(12px,.9vw,13px)!important;padding-top:clamp(8px,.75vw,10px)!important;padding-bottom:clamp(8px,.75vw,10px)!important;}
+.kpi-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;gap:clamp(10px,1.1vw,16px)!important;}
+.kpi{padding:clamp(16px,1.6vw,22px)!important;border-radius:clamp(18px,1.7vw,24px)!important;}
+.kpi b{font-size:clamp(22px,2.1vw,30px)!important;}
+.dashboard-grid{grid-template-columns:minmax(0,1.35fr) minmax(320px,.9fr)!important;gap:clamp(12px,1.2vw,18px)!important;}
+.grid,.form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;gap:clamp(10px,1vw,14px)!important;}
+.report-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))!important;}
+.permission-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;}
+input,select,textarea{min-height:clamp(38px,3.2vw,46px);padding:clamp(8px,.8vw,12px)!important;border-radius:clamp(10px,.9vw,14px)!important;}
+.btn{padding:clamp(8px,.8vw,11px) clamp(10px,1vw,14px)!important;border-radius:clamp(10px,.9vw,14px)!important;font-size:clamp(12px,.9vw,14px)!important;}
+table{font-size:clamp(12px,.86vw,14px);}
+th,td{padding:clamp(7px,.75vw,10px)!important;}
+.panel-head{gap:clamp(8px,1vw,12px)!important;}
+.panel-head h3{font-size:clamp(17px,1.35vw,21px)!important;}
+.total-box{gap:clamp(8px,1vw,16px)!important;padding:clamp(10px,1vw,14px)!important;}
+.search{max-width:min(520px,100%)!important;}
+
+/* Bán hàng scale riêng để màn hình 1366/1440/1920 đều gọn */
+#sales .sale-form-panel{padding:clamp(14px,1.35vw,22px)!important;}
+#sales .sale-layout,#sales .sale-layout-single{gap:clamp(12px,1.2vw,18px)!important;}
+#sales .sale-main-box,#sales .sale-side-box{padding:clamp(12px,1.15vw,16px)!important;border-radius:clamp(16px,1.5vw,22px)!important;}
+#sales .sale-total-main div{min-width:clamp(92px,7.8vw,118px)!important;padding:clamp(5px,.55vw,8px) clamp(7px,.7vw,10px)!important;}
+#sales.active .sale-sticky-actions{left:calc(var(--sidebar-w) + var(--content-pad))!important;right:var(--content-pad)!important;bottom:clamp(8px,1vw,14px)!important;}
+#sales .sticky-total{min-width:clamp(170px,14vw,230px)!important;}
+#sales .sticky-total b{font-size:clamp(18px,1.6vw,24px)!important;}
+
+/* Màn hình nhỏ dạng laptop: thu sidebar vừa phải nhưng vẫn hiện đủ chữ */
+@media(min-width:721px) and (max-width:1280px){
+  :root{--sidebar-w:240px;--content-pad:14px;}
+  .logo div{font-size:13px!important;}
+  .submenu button{padding-left:26px!important;}
+  .dashboard-grid{grid-template-columns:1fr!important;}
+  .price-workspace,.warehouse-action-board{grid-template-columns:1fr!important;}
+}
+
+/* Màn hình rất rộng: giới hạn độ rộng nội dung để không bị trải quá xa */
+@media(min-width:1680px){
+  .main{max-width:calc(1920px - var(--sidebar-w));}
+  .panel{margin-bottom:22px!important;}
+  .dashboard-grid{grid-template-columns:1.5fr 1fr!important;}
+}
+
+/* Mobile giữ layout v15, không dùng sidebar fixed theo desktop */
+@media(max-width:720px){
+  :root{--sidebar-w:100%;--content-pad:10px;--panel-pad:12px;--font-base:14px;}
+  .sidebar{width:100%!important;padding:10px!important;}
+  .main{margin-left:0!important;width:100%!important;padding:10px!important;}
+  .dashboard-grid,.grid,.form-grid,.report-grid,.permission-grid{grid-template-columns:1fr!important;}
+  #sales.active .sale-sticky-actions{left:8px!important;right:8px!important;}
+}
