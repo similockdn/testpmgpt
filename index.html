@@ -473,7 +473,21 @@
         </div>
       </section>
 
-      <section id="permissions" class="page"><div class="panel"><div class="panel-head"><h3>🔑 Bảng phân quyền chuẩn</h3><button class="btn primary" onclick="saveUserPermission()">Lưu phân quyền</button></div><div class="grid form-grid"><input id="uUid" type="hidden"><div><label>Email nhân viên</label><input id="uEmail" type="email"></div><div><label>Họ tên</label><input id="uName"></div><div><label>Vai trò</label><select id="uRole"><option>Admin</option><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kho Chính</option><option>Kho Văn Phòng</option><option>Kế toán</option></select></div></div><div><label>Phân quyền kho được xem/thao tác</label><div id="warehouseAccessBox" class="permission-grid"></div></div><div id="permBox" class="permission-grid"></div><div class="toolbar"><input class="search" id="permissionSearch" placeholder="Tìm phân quyền theo email / họ tên / vai trò / quyền" oninput="renderPermissions()" /><button class="btn ghost" onclick="clearPermissionSearch()">Xóa tìm</button><span id="permissionSearchCount" class="muted-small"></span></div><table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Quyền</th><th>Kho được xem</th><th>Hành động</th></tr></thead><tbody id="permissionTable"></tbody></table></div></section>
+      <section id="permissions" class="page">
+        <div class="panel permission-panel">
+          <div class="panel-head">
+            <div><h3>🔑 Phân quyền nhân viên</h3><span>Chọn vai trò mẫu, sau đó bật/tắt quyền theo từng nhóm để dễ kiểm soát.</span></div>
+            <div class="inline"><button class="btn ghost" type="button" onclick="applyRolePreset()">Áp dụng theo vai trò</button><button class="btn primary" onclick="saveUserPermission()">Lưu phân quyền</button></div>
+          </div>
+          <div class="grid form-grid"><input id="uUid" type="hidden"><div><label>Email nhân viên</label><input id="uEmail" type="email" placeholder="email đăng nhập"></div><div><label>Họ tên</label><input id="uName" placeholder="Tên nhân viên"></div><div><label>Vai trò mẫu</label><select id="uRole"><option>Admin</option><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kho Chính</option><option>Kho Văn Phòng</option><option>Kế toán</option></select></div></div>
+          <div class="perm-toolbar"><b>Quyền chức năng</b><div><button class="btn ghost" type="button" onclick="selectAllPermissions()">Chọn tất cả</button><button class="btn ghost" type="button" onclick="clearAllPermissions()">Bỏ chọn tất cả</button></div></div>
+          <div id="permBox" class="permission-groups"></div>
+          <div class="perm-toolbar"><b>Kho được xem / thao tác</b></div>
+          <div id="warehouseAccessBox" class="warehouse-grid"></div>
+          <div class="toolbar"><input class="search" id="permissionSearch" placeholder="Tìm phân quyền theo email / họ tên / vai trò / quyền" oninput="renderPermissions()" /><button class="btn ghost" onclick="clearPermissionSearch()">Xóa tìm</button><span id="permissionSearchCount" class="muted-small"></span></div>
+          <table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Tóm tắt quyền</th><th>Kho được xem</th><th>Hành động</th></tr></thead><tbody id="permissionTable"></tbody></table>
+        </div>
+      </section>
     </main>
   </div>
 

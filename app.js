@@ -128,6 +128,39 @@ const permissionMap={
 };
 const permLabels={dashboard:'Dashboard',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận',editSales:'Sửa đơn bán',deleteSales:'Xóa đơn bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký thao tác',salaries:'Lương nhân viên',viewSalary:'Xem lương',manageSalary:'Quản lý lương'};
 
+const permissionGroups=[
+  {title:'Tổng quan',desc:'Các màn hình điều hành chung',keys:['dashboard','reports','audit']},
+  {title:'Bán hàng & khách hàng',desc:'Tạo đơn, khách hàng, công nợ, bảo hành',keys:['sales','editSales','deleteSales','customers','debts','warranty','commissions']},
+  {title:'Kho & sản phẩm',desc:'Sản phẩm, tồn kho và chứng từ kho',keys:['products','inventory','stockbook','editStock','deleteStock']},
+  {title:'Tài chính nhạy cảm',desc:'Giá vốn, lợi nhuận, lương, chi phí',keys:['expenses','salaries','viewSalary','manageSalary','viewCost']},
+  {title:'Quản trị hệ thống',desc:'Nhân viên, phân quyền và thiết lập hệ thống',keys:['staff','prices','permissions','system']}
+];
+function permissionGroupHtml(selected=[]){
+  const sel=new Set(selected||[]);
+  return permissionGroups.map(g=>`<div class="perm-card"><div class="perm-card-head"><b>${g.title}</b><small>${g.desc}</small></div><div class="perm-actions-mini"><button class="btn ghost" type="button" onclick="togglePermissionGroup('${g.title}',true)">Chọn nhóm</button><button class="btn ghost" type="button" onclick="togglePermissionGroup('${g.title}',false)">Bỏ nhóm</button></div><div class="perm-options">${g.keys.map(k=>`<label><input type="checkbox" value="${k}" ${sel.has(k)?'checked':''}> <span>${permLabels[k]||k}</span></label>`).join('')}</div></div>`).join('');
+}
+window.togglePermissionGroup=(title,checked)=>{
+  const g=permissionGroups.find(x=>x.title===title); if(!g)return;
+  document.querySelectorAll('#permBox input').forEach(i=>{if(g.keys.includes(i.value))i.checked=!!checked;});
+};
+window.selectAllPermissions=()=>document.querySelectorAll('#permBox input').forEach(i=>i.checked=true);
+window.clearAllPermissions=()=>document.querySelectorAll('#permBox input').forEach(i=>i.checked=false);
+window.applyRolePreset=()=>{
+  const role=$('uRole')?.value||'Sale';
+  const preset=permissionMap[role]||[];
+  document.querySelectorAll('#permBox input').forEach(i=>i.checked=preset.includes(i.value));
+  document.querySelectorAll('#warehouseAccessBox input').forEach(i=>{i.checked=role==='Admin'||(role==='Kho Chính'&&i.value==='Kho Chính')||(role==='Kho Văn Phòng'&&i.value==='Kho Văn Phòng')});
+};
+function permissionSummary(perms=[]){
+  if(!perms.length)return '<span class="muted-small">Chưa cấp quyền</span>';
+  const set=new Set(perms);
+  return permissionGroups.map(g=>{
+    const count=g.keys.filter(k=>set.has(k)).length;
+    if(!count)return '';
+    return `<span class="perm-chip">${g.title}: ${count}</span>`;
+  }).join('') || perms.map(p=>`<span class="perm-chip">${permLabels[p]||p}</span>`).join('');
+}
+
 function normalizePermission(p={}){
   let role=p.role||'Chưa phân quyền';
   let wh=Array.isArray(p.warehouseAccess)?p.warehouseAccess.filter(w=>WAREHOUSES.includes(w)):[];
@@ -1375,6 +1408,43 @@ window.saveStockVoucher=async()=>{
   await loadAll();resetStockForm()
 }
 function stockVoucherText(v){return [v.code,v.date,stockTypeName(v.type),voucherWarehouse(v),v.fromWarehouse,v.toWarehouse,v.note,(v.items||[]).map(it=>[it.code,it.name,it.qty,it.inputQty,it.actualQty,it.note].join(' ')).join(' ')].join(' ').toLowerCase()}
+window.editStock=id=>{
+  const v=data.stockVouchers.find(x=>x.id===id);
+  if(!v)return alert('Không tìm thấy chứng từ kho');
+  if(!has('editStock'))return alert('Không có quyền sửa phiếu kho');
+  if(stockVoucherLocked(v)&&currentPerm.role!=='Admin')return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được sửa.');
+  editingStock=id;
+  $('stockCode').value=v.code||'';
+  $('stockDate').value=v.date||today();
+  $('stockType').value=v.type||'IN';
+  $('stockWarehouse').innerHTML=warehouseOptions(v.fromWarehouse||v.warehouse||defaultWarehouse());
+  $('stockWarehouse').value=v.fromWarehouse||v.warehouse||defaultWarehouse();
+  if($('stockToWarehouse')){
+    $('stockToWarehouse').innerHTML=warehouseOptions(v.toWarehouse||WAREHOUSES.find(w=>w!==($('stockWarehouse').value))||defaultWarehouse(),WAREHOUSES);
+    $('stockToWarehouse').value=v.toWarehouse||WAREHOUSES.find(w=>w!==($('stockWarehouse').value))||defaultWarehouse();
+  }
+  $('stockNote').value=v.note||'';
+  $('stockItems').innerHTML='';
+  (v.items||[]).forEach(it=>addStockItem({...it,inputQty:it.actualQty??it.inputQty??Math.abs(+it.qty||0)}));
+  if(!(v.items||[]).length)addStockItem();
+  updateStockHeader();
+  document.getElementById('inventory')?.scrollIntoView({behavior:'smooth',block:'start'});
+};
+window.printStock=id=>{
+  const v=data.stockVouchers.find(x=>x.id===id);
+  if(!v)return alert('Không tìm thấy chứng từ kho');
+  const wh=v.type==='TRANSFER'?`${v.fromWarehouse||v.warehouse||''} → ${v.toWarehouse||''}`:voucherWarehouse(v);
+  const html=`<div class="print-a5">${printHeader(stockTypeName(v.type).toUpperCase())}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;border-bottom:1px solid #999;padding-bottom:8px;margin-bottom:8px;line-height:1.55">
+      <div><b>Mã phiếu:</b> ${v.code||''}</div><div><b>Ngày:</b> ${v.date||''}</div>
+      <div><b>Kho:</b> ${wh}</div><div><b>Ghi chú:</b> ${v.note||''}</div>
+    </div>
+    <table><thead><tr><th>STT</th><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th class="view-cost">Giá vốn</th><th>Ghi chú</th></tr></thead><tbody>${(v.items||[]).map((it,i)=>`<tr><td>${i+1}</td><td>${it.code||''}</td><td>${it.name||''}</td><td>${it.actualQty??it.inputQty??it.qty??0}</td><td>${money(it.cost||0)}</td><td>${it.note||''}</td></tr>`).join('')}</tbody></table>
+    <div style="display:flex;justify-content:space-between;text-align:center;margin-top:35px"><div>Người lập phiếu<br><br><br></div><div>Thủ kho<br><br><br></div><div>Người nhận/giao<br><br><br></div></div>
+  </div>`;
+  doPrint(html);
+};
+
 function renderStock(){
   const q=($('stockVoucherSearch')?.value||'').toLowerCase().trim();
   const all=data.stockVouchers.filter(canAccessVoucher).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
@@ -1383,6 +1453,24 @@ function renderStock(){
   $('stockVoucherTable').innerHTML=rows.map(v=>{const locked=stockVoucherLocked(v);const canEdit=has('editStock')&&(!locked||currentPerm.role==='Admin');const canDelete=has('deleteStock')&&(!locked||currentPerm.role==='Admin');return `<tr><td>${v.code}</td><td>${v.date}</td><td>${stockTypeName(v.type)}${locked?'<br><small>Đã khóa</small>':''}</td><td>${v.type==='TRANSFER'?`${v.fromWarehouse||v.warehouse||''} → ${v.toWarehouse||''}`:voucherWarehouse(v)}</td><td>${(v.items||[]).length}</td><td>${has('viewCost')?money(v.value):'Ẩn'}</td><td><button class="btn ghost" onclick="printStock('${v.id}')">In A5</button> ${canEdit?`<button class="btn ghost" onclick="editStock('${v.id}')">Sửa</button>`:''} ${canDelete?`<button class="btn danger" onclick="removeDoc('stockVouchers','${v.id}')">Xóa</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy chứng từ kho phù hợp</td></tr>'
 }
 window.clearStockVoucherSearch=()=>{if($('stockVoucherSearch'))$('stockVoucherSearch').value='';renderStock();}
+
+function stockBookDateFilter(){
+  const from=($('stockBookFrom')?.value||'').trim();
+  const to=($('stockBookTo')?.value||'').trim();
+  return {from,to,active:!!(from||to)};
+}
+function stockDateInRange(date,from,to){
+  const d=String(date||'').slice(0,10);
+  if(!d)return false;
+  if(from && d<from)return false;
+  if(to && d>to)return false;
+  return true;
+}
+window.clearStockBookDateFilter=()=>{
+  if($('stockBookFrom'))$('stockBookFrom').value='';
+  if($('stockBookTo'))$('stockBookTo').value='';
+  renderStockBook();
+}
 
 function renderStockBook(){
   const dateFilter=stockBookDateFilter();
@@ -1536,18 +1624,18 @@ function renderReports(){
 }
 window.renderReports=renderReports;
 function renderPermissions(){
-  if(!$('uUid')) $('uEmail').insertAdjacentHTML('beforebegin','<input id="uUid" type="hidden">');
-  let keys=Object.keys(permLabels);
-  $('permBox').innerHTML=keys.map(k=>`<label><input type="checkbox" value="${k}"> ${permLabels[k]}</label>`).join('');
-  if($('warehouseAccessBox'))$('warehouseAccessBox').innerHTML=WAREHOUSES.map(w=>`<label><input type="checkbox" value="${w}"> ${w}</label>`).join('');
+  if(!$('uUid') && $('uEmail')) $('uEmail').insertAdjacentHTML('beforebegin','<input id="uUid" type="hidden">');
+  const selected=[...document.querySelectorAll('#permBox input:checked')].map(i=>i.value);
+  if($('permBox'))$('permBox').innerHTML=permissionGroupHtml(selected);
+  if($('warehouseAccessBox'))$('warehouseAccessBox').innerHTML=WAREHOUSES.map(w=>`<label class="warehouse-check"><input type="checkbox" value="${w}"> ${w}</label>`).join('');
   const q=($('permissionSearch')?.value||'').toLowerCase().trim();
   const rows=data.users.filter(u=>matchSearchText(q,u.email,u.name,u.role,(u.perms||[]).map(p=>permLabels[p]||p).join(' '),(u.warehouseAccess||[]).join(' ')));
   if($('permissionSearchCount'))$('permissionSearchCount').textContent=`Hiển thị ${rows.length}/${data.users.length}`;
-  $('permissionTable').innerHTML=rows.map(u=>`<tr><td>${u.email||''}<br><small>UID: ${u.id}</small></td><td>${u.name||''}</td><td>${u.role||''}</td><td>${(u.perms||[]).map(p=>permLabels[p]||p).join(', ')}</td><td>${(u.warehouseAccess||[]).join(', ')||'Không giới hạn/Chưa chọn'}</td><td><button class="btn ghost" onclick="editPermission('${u.id}')">Sửa</button> <button class="btn ghost admin-only" onclick="adminSendPasswordReset('${u.id}')">Reset mật khẩu</button></td></tr>`).join('')||'<tr><td colspan="6">Không tìm thấy phân quyền phù hợp</td></tr>'
+  if($('permissionTable'))$('permissionTable').innerHTML=rows.map(u=>`<tr><td><b>${u.email||''}</b><br><small>UID: ${u.id}</small></td><td>${u.name||''}</td><td><span class="badge green">${u.role||''}</span></td><td><div class="perm-chip-wrap">${permissionSummary(u.perms||[])}</div></td><td>${(u.warehouseAccess||[]).map(w=>`<span class="perm-chip">${w}</span>`).join('')||'<span class="muted-small">Không giới hạn/Chưa chọn</span>'}</td><td><button class="btn ghost" onclick="editPermission('${u.id}')">Sửa</button> <button class="btn ghost admin-only" onclick="adminSendPasswordReset('${u.id}')">Reset mật khẩu</button></td></tr>`).join('')||'<tr><td colspan="6">Không tìm thấy phân quyền phù hợp</td></tr>';
   applyPermissions();
 }
 window.clearPermissionSearch=()=>{if($('permissionSearch'))$('permissionSearch').value='';renderPermissions();}
-$('uRole')?.addEventListener('change',()=>{const role=$('uRole').value;document.querySelectorAll('#permBox input').forEach(i=>i.checked=(permissionMap[role]||[]).includes(i.value));document.querySelectorAll('#warehouseAccessBox input').forEach(i=>{i.checked=role==='Admin'||(role==='Kho Chính'&&i.value==='Kho Chính')||(role==='Kho Văn Phòng'&&i.value==='Kho Văn Phòng')})});
+$('uRole')?.addEventListener('change',()=>applyRolePreset());
 window.saveUserPermission=async()=>{
   let email=normEmail($('uEmail').value),role=$('uRole').value;
   if(!email)return alert('Nhập email');
@@ -1566,7 +1654,9 @@ window.editPermission=id=>{
   if(!u)return alert('Không tìm thấy user UID: '+id);
   $('uUid').value=u.id;$('uEmail').value=u.email||'';$('uName').value=u.name||'';$('uRole').value=u.role||'Sale';
   document.querySelectorAll('#permBox input').forEach(i=>i.checked=(u.perms||[]).includes(i.value));
-  document.querySelectorAll('#warehouseAccessBox input').forEach(i=>i.checked=((u.warehouseAccess||[]).includes(i.value) || u.role==='Admin'))
+  document.querySelectorAll('#warehouseAccessBox input').forEach(i=>i.checked=((u.warehouseAccess||[]).includes(i.value) || u.role==='Admin'));
+  $('permissions')?.scrollIntoView({behavior:'smooth',block:'start'});
+  $('uName')?.focus();
 }
 
 
