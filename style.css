@@ -634,3 +634,6 @@ table{max-width:100%;}
   }
 }
 .req{color:#dc2626;font-weight:800}
+
+/* CUSTOMER_SEARCH_EDIT_V26 */
+.customer-toolbar{display:flex;align-items:center;gap:10px;margin:16px 0 8px;flex-wrap:wrap}.customer-toolbar .search{max-width:520px;min-width:280px}.muted-small{color:var(--muted);font-size:13px;font-weight:700}.customer-edit-anchor{scroll-margin-top:110px}@media(max-width:720px){.customer-toolbar{align-items:stretch}.customer-toolbar .search{max-width:none;min-width:0;width:100%}.customer-toolbar .btn{width:100%}}
