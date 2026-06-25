@@ -1664,15 +1664,20 @@ function renderReports(){
   const expenses=data.expenses.filter(e=>inReportRange(e.date,from,to)&&!isSalaryCategory(e.category));
   const salaries=data.salaries.filter(e=>inReportRange(e.date,from,to));
   const rev=sales.reduce((a,s)=>a+(+s.grand||0),0);
+  const revenueBeforeVat=sales.reduce((a,s)=>a+calcCommissionBase(s),0);
   const paid=sales.reduce((a,s)=>a+(+s.paid||0),0);
   const debt=sales.reduce((a,s)=>a+(+s.debt||0),0);
+  const totalCost=sales.reduce((a,s)=>a+(+s.cost||((s.items||[]).reduce((b,it)=>b+costFor(it.code,s.date||today())*(+it.qty||0),0))),0);
+  const grossMargin=revenueBeforeVat-totalCost;
+  const comm=sales.reduce((a,s)=>a+(+s.saleCommission||0),0);
+  const techCostOnly=sales.reduce((a,s)=>a+(+s.techCost||0),0);
+  const techFuelOnly=sales.reduce((a,s)=>a+(+s.techFuel||0),0);
+  const tech=techCostOnly+techFuelOnly;
   const grossProfit=sales.reduce((a,s)=>a+(+s.profit||0),0);
   const op=expenses.reduce((a,e)=>a+(+e.amount||0),0);
   const sal=salaries.reduce((a,e)=>a+(+e.total||+e.amount||0),0);
   const totalCompanyCost=op+sal;
   const profit=grossProfit-totalCompanyCost;
-  const comm=sales.reduce((a,s)=>a+(+s.saleCommission||0),0);
-  const tech=sales.reduce((a,s)=>a+(+s.techCost||0)+(+s.techFuel||0),0);
   const surchargeTotal=sales.reduce((a,s)=>a+(+s.surcharge||0),0);
   const qty=sales.reduce((a,s)=>a+(s.items||[]).reduce((b,it)=>b+(+it.qty||0),0),0);
   $('reportBox').innerHTML=`
@@ -1680,10 +1685,25 @@ function renderReports(){
     <div class="report-card">Số đơn / Sản phẩm<b>${sales.length} đơn / ${qty} SP</b></div>
     <div class="report-card">Đã thu<b>${money(paid)}</b></div>
     <div class="report-card">Còn nợ<b>${money(debt)}</b></div>
+    <div class="report-card view-cost">Giá vốn<b>${money(totalCost)}</b></div>
+    <div class="report-card view-cost">Lãi gộp<b>${money(grossMargin)}</b></div>
     <div class="report-card view-cost">Lợi nhuận đơn hàng<b>${money(grossProfit)}</b></div>
     <div class="report-card view-cost">Chi phí vận hành<b>${money(op)}</b></div><div class="report-card salary-only">Lương nhân viên<b>${money(sal)}</b></div><div class="report-card view-cost">Tổng chi phí CTY<b>${money(totalCompanyCost)}</b></div>
     <div class="report-card view-cost">Lợi nhuận ròng<b>${money(profit)}</b></div>
     <div class="report-card">Tổng phụ thu<b>${money(surchargeTotal)}</b></div><div class="report-card view-cost">Sale + Kỹ thuật<b>${money(comm+tech)}</b></div>`;
+  if($('reportProfitBreakdownTable'))$('reportProfitBreakdownTable').innerHTML=[
+    ['Doanh thu trên đơn', rev, 'Tổng tiền khách phải trả sau chiết khấu, gồm phụ thu và VAT nếu có'],
+    ['Doanh thu trước VAT', revenueBeforeVat, 'Cơ sở tính lợi nhuận và hoa hồng'],
+    ['Giá vốn sản phẩm', -totalCost, 'Lấy từ Bảng giá vốn hiệu lực, nếu không có thì lấy Giá vốn trong Sản phẩm'],
+    ['Lãi gộp', grossMargin, 'Doanh thu trước VAT - Giá vốn'],
+    ['Hoa hồng Sale', -comm, 'Theo % hoa hồng trên đơn hàng'],
+    ['Công kỹ thuật', -techCostOnly, 'Tiền công lắp đặt nhập trong phiếu bán'],
+    ['Tiền xăng kỹ thuật', -techFuelOnly, 'Tiền xăng nhập trong phiếu bán'],
+    ['Lợi nhuận đơn hàng', grossProfit, 'Lãi gộp - hoa hồng - công kỹ thuật - tiền xăng'],
+    ['Chi phí vận hành', -op, 'Điện, nước, vận chuyển, marketing, văn phòng...'],
+    ['Lương nhân viên', -sal, 'Mục lương riêng, chỉ người có quyền được xem'],
+    ['Lợi nhuận ròng', profit, 'Lợi nhuận đơn hàng - chi phí vận hành - lương']
+  ].map(([name,val,note])=>`<tr><td><b>${name}</b></td><td class="${val<0?'text-red':'text-green'}"><b>${money(val)}</b></td><td>${note}</td></tr>`).join('');
 
   const byProduct={};
   sales.forEach(s=>(s.items||[]).forEach(it=>{
