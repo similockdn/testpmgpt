@@ -96,7 +96,12 @@
           <div class="panel-head">
             <div><h3>🛒 Bán hàng / Phiếu bán</h3><span>Tạo đơn, theo dõi công nợ và chọn kiêm xuất kho khi cần trừ tồn kho.</span></div>
           </div>
-          <div class="sale-layout">
+          <div class="quick-status-line">
+            <span class="quick-status-title">⚡ Trạng thái nhanh</span>
+            <span><b>Công nợ:</b> Thu đủ = <em class="badge green">Đã thu</em> · Thu một phần = <em class="badge orange">Một phần</em></span>
+            <span><b>Kho:</b> Tick <b>Kiêm xuất kho</b> mới trừ tồn</span>
+          </div>
+          <div class="sale-layout sale-layout-single">
             <div class="sale-main-box">
               <h4>Thông tin đơn hàng</h4>
               <div class="grid form-grid">
@@ -116,16 +121,6 @@
                 <div><label>Thanh toán ngay</label><input id="salePaid" type="number" value="0" /></div>
                 <div class="sale-stock-action"><label>Xuất kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
                 <div class="span2"><label>Ghi chú</label><input id="saleNote" placeholder="VD: khách thanh toán sau, lắp đặt chiều nay..." /></div>
-              </div>
-            </div>
-            <div class="sale-side-box compact-status-box">
-              <div class="compact-status-head">
-                <h4>Trạng thái nhanh</h4>
-                <span>Gọn để dễ nhập đơn</span>
-              </div>
-              <div class="status-chip-grid">
-                <div class="status-chip"><b>Công nợ</b><small>Thu đủ: <span class="badge green">Đã thu</span><br>Thu một phần: <span class="badge orange">Một phần</span></small></div>
-                <div class="status-chip"><b>Kho</b><small>Tick <b>Kiêm xuất kho</b> mới trừ tồn. Đã xuất sẽ có phiếu kho.</small></div>
               </div>
             </div>
           </div>

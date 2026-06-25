@@ -552,3 +552,41 @@ table{max-width:100%;}
   #sales .sticky-total b{font-size:18px!important;margin:0!important}
   #sales .sale-form-panel{padding-bottom:150px!important}
 }
+
+
+/* ===== v20: Trạng thái nhanh chuyển thành 1 dòng trên Phiếu bán hàng ===== */
+#sales .quick-status-line{
+  margin:12px 0 10px!important;
+  padding:8px 12px!important;
+  border:1px solid rgba(14,165,233,.18)!important;
+  border-radius:14px!important;
+  background:rgba(240,249,255,.88)!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px 16px!important;
+  flex-wrap:wrap!important;
+  color:#334155!important;
+  font-size:12px!important;
+  font-weight:700!important;
+}
+#sales .quick-status-line .quick-status-title{
+  color:#075985!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.2px!important;
+}
+#sales .quick-status-line b{color:#0f172a!important}
+#sales .quick-status-line .badge{
+  font-style:normal!important;
+  padding:2px 7px!important;
+  border-radius:999px!important;
+  font-size:10px!important;
+}
+#sales .sale-layout-single,
+#sales .sale-layout{
+  grid-template-columns:minmax(0,1fr)!important;
+}
+#sales .compact-status-box{display:none!important}
+@media(max-width:720px){
+  #sales .quick-status-line{font-size:11px!important;padding:7px 9px!important;gap:6px 10px!important}
+}
