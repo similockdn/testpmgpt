@@ -164,7 +164,7 @@
       
 <section id="commissions" class="page">
         <div class="panel wide">
-          <div class="panel-head"><h3>🔎 Lọc báo cáo hoa hồng</h3><div><button class="btn primary" onclick="applyCommissionFilter()">Xem</button> <button class="btn ghost" onclick="resetCommissionFilter()">Làm mới</button> <button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel tổng</button> <button class="btn primary" onclick="exportCommissionByStaff()">Xuất Excel theo nhân viên</button></div></div>
+          <div class="panel-head"><h3>🔎 Lọc báo cáo hoa hồng</h3><div><button class="btn primary" onclick="applyCommissionFilter()">Xem</button> <button class="btn ghost" onclick="resetCommissionFilter()">Làm mới</button> <button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel tổng</button> <button class="btn primary" onclick="exportCommissionByStaff()">Xuất Excel nhân viên đang chọn</button></div></div>
           <div class="grid form-grid">
             <div><label>Tìm kiếm</label><input id="commissionSearch" placeholder="Tên nhân viên / mã đơn / khách hàng" onkeydown="if(event.key==='Enter')applyCommissionFilter()" /></div>
             <div><label>Phòng ban</label><select id="commissionDept" onchange="refreshCommissionStaffOptions()"><option value="">Tất cả</option><option value="Sale">Sale</option><option value="Kỹ thuật">Kỹ thuật</option></select></div>
@@ -185,7 +185,7 @@
         </div>
         <div class="panel wide">
           <div class="panel-head"><h3 id="commissionOrderTitle">🧾 Hoa hồng / công kỹ thuật theo từng đơn hàng</h3></div>
-          <table><thead><tr><th>STT</th><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>Phụ thu</th><th>Chiết khấu</th><th>Doanh số tính HH</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng chi</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
+          <table><thead><tr><th>STT</th><th>Ngày</th><th>Mã đơn</th><th>Khách</th><th>Model</th><th>SL</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>Phụ thu</th><th>Chiết khấu</th><th>Doanh số tính HH</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng chi</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
         </div>
       </section>
 
