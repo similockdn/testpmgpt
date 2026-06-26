@@ -1013,35 +1013,45 @@ window.editSaleCustomer=()=>{
   const c=findCustomerBySearch();
   if(!c) return alert('Vui lòng chọn khách hàng trước khi sửa. Nếu là khách mới, bấm + Khách để tạo trước.');
   document.getElementById('saleCustomerEditModal')?.remove();
-  document.body.insertAdjacentHTML('beforeend', saleCustomerEditModalHtml(c));
+  // Đang sửa trên phiếu bán đang nhập: cho phép sửa nhanh các ô trên form, chưa ghi Firestore.
+  document.body.insertAdjacentHTML('beforeend', saleCustomerEditModalHtml(customerSnapshotFromCustomer(c, saleCustomerType()), ''));
   setTimeout(()=>$('sceName')?.focus(),80);
 }
 window.editSaleCustomerFromSale=(saleId)=>{
   const s=data.sales.find(x=>x.id===saleId);
   if(!s) return alert('Không tìm thấy phiếu bán');
+  // V55: Khi mở sửa khách từ phiếu bán đã lưu, LUÔN lấy snapshot đang nằm trên chính phiếu bán.
+  // Không lấy lại từ danh mục khách theo SĐT/Mã KH vì sẽ gây trộn dữ liệu giữa nhiều khách/đơn.
   const ci=saleCustomerInfo(s);
-  let c=data.customers.find(x=>x.id===s.customerId) || data.customers.find(x=>ensureCustomerCode(x)===ci.code) || data.customers.find(x=>normalizePhone(x.phone) && normalizePhone(x.phone)===normalizePhone(ci.phone)) || {id:s.customerId||'',customerCode:ci.code,name:ci.name,phone:ci.phone,address:ci.address,type:ci.type};
+  const snapshot={id:s.customerId||'', customerCode:ci.code||'', code:ci.code||'', name:ci.name||'', phone:ci.phone||'', address:ci.address||'', type:ci.type||'Khách lẻ'};
   document.getElementById('saleCustomerEditModal')?.remove();
-  document.body.insertAdjacentHTML('beforeend', saleCustomerEditModalHtml(c,saleId));
+  document.body.insertAdjacentHTML('beforeend', saleCustomerEditModalHtml(snapshot,saleId));
   setTimeout(()=>$('sceName')?.focus(),80);
 }
 window.applyExistingCustomerToSaleEdit=()=>{
   const val=$('sceExistingSearch')?.value||'';
   const parsed=parseCustomerInput(val);
-  const c=data.customers.find(x=>
-    (parsed.customerCode&&ensureCustomerCode(x)===parsed.customerCode) ||
-    (parsed.phone&&normalizePhone(x.phone)===normalizePhone(parsed.phone)) ||
-    (parsed.name&&searchKey(x.name)===searchKey(parsed.name))
-  );
+  const valKey=searchKey(val);
+  const valPhone=normalizePhone(val);
+  const c=data.customers.find(x=>{
+    const info=customerInfo(x);
+    return (parsed.customerCode&&ensureCustomerCode(x)===parsed.customerCode) ||
+      (parsed.phone&&normalizePhone(info.phone)===normalizePhone(parsed.phone)) ||
+      (parsed.name&&searchKey(info.name)===searchKey(parsed.name)) ||
+      (valPhone&&normalizePhone(info.phone)===valPhone) ||
+      (valKey&&searchKey(customerSearchValue(x))===valKey);
+  });
   if(!c) return alert('Không tìm thấy khách trong danh mục. Vui lòng kiểm tra lại từ khóa.');
   const i=customerInfo(c);
+  // V55: Áp dụng khách có sẵn phải ghi đè TOÀN BỘ trường theo một khách duy nhất.
   if($('sceExistingId')) $('sceExistingId').value=c.id||'';
   if($('sceId')) $('sceId').value=c.id||'';
   if($('sceCode')) $('sceCode').value=i.code||'';
   if($('sceName')) $('sceName').value=i.name==='Chưa cập nhật tên'?'':i.name;
   if($('scePhone')) $('scePhone').value=i.phone||'';
   if($('sceAddress')) $('sceAddress').value=i.address||'';
-  if($('sceType')) $('sceType').value=i.type||'Khách lẻ';
+  if($('sceType')) $('sceType').value=['Khách lẻ','CTV','Đại lý','Công ty'].includes(i.type)?i.type:'Khách lẻ';
+  if(window.showToast) window.showToast('Đã áp dụng khách có sẵn','success',i.name);
 };
 window.saveSaleCustomerEdit=async()=>{
   const saleId=$('sceSaleId')?.value||'';
@@ -1052,9 +1062,22 @@ window.saveSaleCustomerEdit=async()=>{
   const address=($('sceAddress')?.value||'').trim();
   const customerCode=($('sceCode')?.value||customerCodeFromPhone(phone)).trim();
   const name=cleanCustomerName(($('sceName')?.value||'').trim(),phone,customerCode);
-  if(!saleId || !sale) return alert('Không tìm thấy phiếu bán cần sửa khách');
   if(!name) return alert('Vui lòng nhập đúng tên khách hàng, không dùng SĐT hoặc mã KH làm tên.');
   if(!phone) return alert('Vui lòng nhập số điện thoại khách hàng');
+  // Nếu đang sửa khách trên phiếu bán CHƯA lưu, chỉ cập nhật form hiện tại, không ghi Firestore.
+  if(!saleId){
+    const snap={id:customerId, customerCode, code:customerCode, name, phone, address, type};
+    if($('saleCustomerId')) $('saleCustomerId').value=customerId||'';
+    if($('saleCustomerSearch')) $('saleCustomerSearch').value=name;
+    if($('saleCustomerPhone')) { $('saleCustomerPhone').value=phone; window.__saleCustomerPhoneManual=true; }
+    if($('saleCustomerAddress')) { $('saleCustomerAddress').value=address; window.__saleCustomerAddressManual=true; }
+    if($('saleCustomerType')) $('saleCustomerType').value=['Khách lẻ','CTV','Đại lý'].includes(type)?type:'Khách lẻ';
+    document.getElementById('saleCustomerEditModal')?.remove();
+    refreshSaleItemPricesByCustomerType();
+    if(window.showToast) window.showToast('Đã cập nhật khách trên phiếu đang nhập','success',name);
+    return;
+  }
+  if(!sale) return alert('Không tìm thấy phiếu bán cần sửa khách');
 
   const oldCustomerId=sale.customerId||'';
   const oldPay=salePaymentInfo(sale);
@@ -1076,7 +1099,7 @@ window.saveSaleCustomerEdit=async()=>{
   if(allocatedReceipts.length){
     let batch=writeBatch(db); let count=0;
     for(const r of allocatedReceipts){
-      batch.update(doc(db,'receipts',r.id),{customerId,customerCode,customerName:name,customerPhone:phone,updatedAt:serverTimestamp()});
+      batch.update(doc(db,'receipts',r.id),{customerId,customerCode,customerName:name,customerPhone:phone,customerAddress:address,customerType:type,updatedAt:serverTimestamp()});
       count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;}
     }
     if(count>0) await batch.commit();
@@ -1461,7 +1484,7 @@ async function syncReceiptsForSaleCustomer(saleId,salePayload={},oldSale={}){
   if(!list.length) return;
   let batch=writeBatch(db), count=0;
   for(const r of list){
-    const patch={customerId:salePayload.customerId||'',customerCode:salePayload.customerCode||'',customerName:salePayload.customerName||'',customerPhone:salePayload.customerPhone||'',updatedAt:serverTimestamp()};
+    const patch={customerId:salePayload.customerId||'',customerCode:salePayload.customerCode||'',customerName:salePayload.customerName||'',customerPhone:salePayload.customerPhone||'',customerAddress:salePayload.customerAddress||'',customerType:salePayload.customerType||'',updatedAt:serverTimestamp()};
     batch.update(doc(db,'receipts',r.id),patch);
     count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;}
   }
