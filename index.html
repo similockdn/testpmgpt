@@ -114,6 +114,7 @@
                 <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
                 <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
                 <div class="span2"><label>Khách hàng</label><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm mã KH / tên / SĐT hoặc nhập khách mới" oninput="saleCustomerChanged()" onchange="saleCustomerChanged()" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button><button class="btn ghost" onclick="editSaleCustomer()">Sửa KH</button></div><datalist id="customerList"></datalist><datalist id="productCodesList"></datalist></div>
+                <div class="span2"><label>Địa chỉ giao/lắp đặt</label><input id="saleCustomerAddress" placeholder="Địa chỉ khách hàng / địa chỉ lắp đặt" oninput="updateSaleCustomerAddressManual()" /><small class="field-note">Có thể sửa riêng địa chỉ trên phiếu bán nếu địa chỉ lắp đặt khác hồ sơ khách</small></div>
                 <div><label>Loại khách</label><select id="saleCustomerType" onchange="saleCustomerTypeChanged()"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select><small class="field-note">Áp dụng bảng giá theo loại khách</small></div>
                 <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
                 <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
