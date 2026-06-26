@@ -1437,16 +1437,53 @@ window.clearStaffSearch=()=>{if($('staffSearch'))$('staffSearch').value='';rende
 window.editStaff=id=>{let e=data.staff.find(x=>x.id===id);$('eId').value=id;$('eName').value=e.name;$('eDept').value=e.dept||'Sale';$('ePhone').value=e.phone||'';if($('eCommissionPercent'))$('eCommissionPercent').value=e.commissionPercent??5;if($('eTechFee'))$('eTechFee').value=e.techFee??100000;setStaffFunctions(staffFunctions(e))}
 
 
+
+function receiptSaleId(r={}){
+  if(!r) return '';
+  if(r.saleId) return String(r.saleId);
+  if(Array.isArray(r.allocations)){
+    const a=r.allocations.find(x=>x && (x.saleId||x.saleCode));
+    if(a?.saleId) return String(a.saleId);
+    if(a?.saleCode){
+      const sale=data.sales.find(s=>String(s.code||'')===String(a.saleCode));
+      return sale?.id||'';
+    }
+  }
+  if(r.saleCode){
+    const sale=data.sales.find(s=>String(s.code||'')===String(r.saleCode));
+    return sale?.id||'';
+  }
+  if(r.debtKey && String(r.debtKey).startsWith('sale:')) return String(r.debtKey).slice(5);
+  return '';
+}
+function receiptsForSalePayment(s={}){
+  const sid=String(s.id||'');
+  const scode=String(s.code||'');
+  return activeReceipts().filter(r=>{
+    const rid=receiptSaleId(r);
+    if(rid && sid && rid===sid) return true;
+    if(r.saleCode && scode && String(r.saleCode)===scode) return true;
+    if(r.debtKey && sid && String(r.debtKey)===`sale:${sid}`) return true;
+    return false;
+  });
+}
 function allocationForCustomer(customerId){
-  const c=data.customers.find(x=>x.id===customerId);
-  const key=c?customerDebtKeyFromCustomer(c):`id:${customerId||''}`;
-  const sales=activeSales().filter(x=>saleDebtKey(x)===key).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.code||'').localeCompare(String(b.code||'')));
-  let totalPaid=sales.reduce((a,x)=>a+(+x.paid||0),0)+activeReceipts().filter(r=>receiptDebtKey(r)===key).reduce((a,r)=>a+(+r.amount||0),0);
+  // ERP-FIX: Không còn phân bổ tiền theo khách hàng/tên khách.
+  // Công nợ được quản lý theo từng phiếu bán riêng để tránh khách trùng tên/SĐT khác nhau bị trừ nhầm.
   const map={};
-  sales.forEach(x=>{const grand=+x.grand||0;const paid=Math.min(grand,Math.max(0,totalPaid));const debt=Math.max(0,grand-paid);map[x.id]={paidTotal:paid,debtLeft:debt,paymentStatus:debt<=0?'Đã thu tiền':(paid>0?'Thanh toán một phần':'Chưa thu tiền')};totalPaid-=paid;});
+  activeSales().filter(s=>!customerId || s.customerId===customerId).forEach(s=>{map[s.id]=salePaymentInfo(s)});
   return map;
 }
-function salePaymentInfo(s){if(isSaleCanceled(s))return {paidTotal:0,debtLeft:0,paymentStatus:'Đã hủy'};const byId=allocationForCustomer(s.customerId||'')[s.id]; if(byId) return byId; const key=saleDebtKey(s); const g=calcDebtRows().find(x=>(x.sales||[]).some(y=>y.id===s.id)); if(g){const totalPaid=(g.sales||[]).reduce((a,x)=>a+(+x.paid||0),0)+(g.receipts||[]).reduce((a,r)=>a+(+r.amount||0),0); let remain=totalPaid; const sorted=(g.sales||[]).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.code||'').localeCompare(String(b.code||''))); for(const x of sorted){const paid=Math.min(+x.grand||0,Math.max(0,remain)); const debt=Math.max(0,(+x.grand||0)-paid); if(x.id===s.id)return {paidTotal:paid,debtLeft:debt,paymentStatus:debt<=0?'Đã thu tiền':(paid>0?'Thanh toán một phần':'Chưa thu tiền')}; remain-=paid;}} return {paidTotal:+s.paid||+s.paidTotal||0,debtLeft:+s.debtLeft||+s.debt||Math.max(0,(+s.grand||0)-(+s.paid||0)),paymentStatus:s.paymentStatus||s.status||'Chưa thu tiền'};}
+function salePaymentInfo(s){
+  if(isSaleCanceled(s))return {paidTotal:0,debtLeft:0,paymentStatus:'Đã hủy'};
+  const grand=+s.grand||0;
+  const paidAtSale=+s.paid||0;
+  const receiptPaid=receiptsForSalePayment(s).reduce((a,r)=>a+(+r.amount||0),0);
+  const paidTotal=paidAtSale+receiptPaid;
+  const debtLeft=Math.max(0,grand-paidTotal);
+  const paymentStatus=debtLeft<=0?'Đã thu tiền':(paidTotal>0?'Thanh toán một phần':'Chưa thu tiền');
+  return {paidTotal,debtLeft,paymentStatus};
+}
 function saleMoneyStatus(s){
   const pay=salePaymentInfo(s);
   const paid=+pay.paidTotal||0, grand=+s.grand||0, over=Math.max(0,paid-grand);
@@ -1455,13 +1492,14 @@ function saleMoneyStatus(s){
   return {overPaid:0,label:'Đã thu đủ',badge:'green'};
 }
 async function updatePaymentStatusesForCustomer(customerId){
-  const map=allocationForCustomer(customerId);
-  for(const [id,st] of Object.entries(map)){
-    try{await updateDoc(doc(db,'sales',id),{paidTotal:st.paidTotal,debtLeft:st.debtLeft,paymentStatus:st.paymentStatus,status:st.paymentStatus,updatedAt:serverTimestamp()});}catch(e){console.warn('Không cập nhật trạng thái công nợ đơn '+id,e.message)}
+  // Chỉ cập nhật trạng thái từng phiếu bán, không cộng dồn theo khách.
+  const rows=activeSales().filter(s=>!customerId || s.customerId===customerId);
+  for(const s of rows){
+    const st=salePaymentInfo(s);
+    try{await updateDoc(doc(db,'sales',s.id),{paidTotal:st.paidTotal,debtLeft:st.debtLeft,paymentStatus:st.paymentStatus,status:st.paymentStatus,updatedAt:serverTimestamp()});}catch(e){console.warn('Không cập nhật trạng thái công nợ đơn '+s.id,e.message)}
   }
 }
 async function updatePaymentStatusForSaleSnapshot(saleId){
-  // Tính lại riêng phiếu đang sửa dựa trên nhóm công nợ hiện tại để tránh tạo công nợ ảo.
   const s=data.sales.find(x=>x.id===saleId); if(!s) return;
   const pay=salePaymentInfo(s);
   try{await updateDoc(doc(db,'sales',saleId),{paidTotal:pay.paidTotal,debtLeft:pay.debtLeft,paymentStatus:pay.paymentStatus,status:pay.paymentStatus,updatedAt:serverTimestamp()});}catch(e){console.warn('Không cập nhật công nợ phiếu '+saleId,e.message)}
@@ -2087,12 +2125,10 @@ function renderExpenses(){if(!$('expenseTable'))return;let visibleExpenses=data.
 window.clearExpenseSearch=()=>{if($('expenseSearch'))$('expenseSearch').value='';renderExpenses();}
 window.editExpense=id=>{let e=data.expenses.find(x=>x.id===id);if(!e)return;editingExpense=id;$('exDate').value=e.date||today();$('exCategory').value=e.category||'Khác';$('exAmount').value=e.amount||0;$('exNote').value=e.note||'';showPage('expenses')}
 
+
 function debtClean(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ')}
 function debtAddressKey(v){return debtClean(v).replace(/[.,;:]/g,'').replace(/\s+/g,' ')}
 function debtSnapshotKey(o={}){
-  // Công nợ tuyệt đối không được gom theo tên khách.
-  // Ưu tiên SĐT + địa chỉ trong snapshot phiếu để tránh trường hợp nhân viên chọn nhầm master customerId
-  // hoặc 2 khách trùng tên bị hệ thống cộng/trừ chéo tiền đã thu.
   const phone=normalizePhone(o.customerPhone||o.phone||'');
   const address=debtAddressKey(o.customerAddress||o.address||'');
   const code=debtClean(o.customerCode||o.code||'');
@@ -2104,120 +2140,72 @@ function debtSnapshotKey(o={}){
   if(id) return `id:${id}`;
   return `tmp:${uid()}`;
 }
-function customerDebtKeyFromCustomer(c={}){
-  const phone=normalizePhone(c.phone||'');
-  const address=debtAddressKey(c.address||'');
-  const code=debtClean(ensureCustomerCode(c)||c.customerCode||'');
-  const id=debtClean(c.id||'');
-  if(phone && address) return `snap:${phone}|${address}`;
-  if(phone) return `phone:${phone}`;
-  if(code && address) return `snapcode:${code}|${address}`;
-  if(code) return `code:${code}`;
-  if(id) return `id:${id}`;
-  return `tmp:${uid()}`;
-}
+function customerDebtKeyFromCustomer(c={}){return debtSnapshotKey({customerId:c.id,customerCode:ensureCustomerCode(c)||c.customerCode,customerPhone:c.phone,customerAddress:c.address})}
 function findCustomerForSale(s={}){
-  // DEBT-STRICT-FIX: Không dò khách theo tên. Ưu tiên SĐT + địa chỉ snapshot để tách khách trùng tên.
+  const sid=debtClean(s.customerId||'');
+  if(sid){const c=data.customers.find(x=>debtClean(x.id)===sid); if(c) return c;}
   const phone=normalizePhone(s.customerPhone||s.phone||'');
   const address=debtAddressKey(s.customerAddress||s.address||'');
   if(phone && address){const c=data.customers.find(x=>normalizePhone(x.phone)===phone && debtAddressKey(x.address)===address); if(c) return c;}
-  if(phone){const c=data.customers.find(x=>normalizePhone(x.phone)===phone); if(c) return c;}
   const code=debtClean(s.customerCode||'');
-  if(code && address){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code && debtAddressKey(x.address)===address); if(c) return c;}
   if(code){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code); if(c) return c;}
-  const sid=debtClean(s.customerId||'');
-  if(sid){const c=data.customers.find(x=>debtClean(x.id)===sid); if(c) return c;}
+  if(phone){const c=data.customers.find(x=>normalizePhone(x.phone)===phone); if(c) return c;}
   return null;
 }
 function findCustomerForReceipt(r={}){
-  if(r.debtKey){const s=data.sales.find(x=>saleDebtKey(x)===String(r.debtKey)); if(s){const c=findCustomerForSale(s); if(c) return c;}}
-  // Phiếu thu có saleId/allocation thì đi theo đúng phiếu bán đó, không phân bổ qua khách trùng tên.
-  const saleId=r.saleId || (Array.isArray(r.allocations)&&r.allocations[0]?.saleId) || '';
-  if(saleId){
-    const s=data.sales.find(x=>x.id===saleId || x.code===saleId);
-    if(s){const c=findCustomerForSale(s); if(c) return c;}
-  }
+  const sid=receiptSaleId(r);
+  if(sid){const s=data.sales.find(x=>x.id===sid); if(s){const c=findCustomerForSale(s); if(c) return c;}}
+  const rid=debtClean(r.customerId||'');
+  if(rid){const c=data.customers.find(x=>debtClean(x.id)===rid); if(c) return c;}
   const phone=normalizePhone(r.customerPhone||r.phone||'');
   const address=debtAddressKey(r.customerAddress||r.address||'');
   if(phone && address){const c=data.customers.find(x=>normalizePhone(x.phone)===phone && debtAddressKey(x.address)===address); if(c) return c;}
-  if(phone){const c=data.customers.find(x=>normalizePhone(x.phone)===phone); if(c) return c;}
   const code=debtClean(r.customerCode||'');
-  if(code && address){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code && debtAddressKey(x.address)===address); if(c) return c;}
   if(code){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code); if(c) return c;}
-  const rid=debtClean(r.customerId||'');
-  if(rid){const c=data.customers.find(x=>debtClean(x.id)===rid); if(c) return c;}
   return null;
 }
-function saleDebtKey(s={}){
-  return debtSnapshotKey(s);
-}
+function saleDebtKey(s={}){return `sale:${s.id||s.code||uid()}`;}
 function receiptDebtKey(r={}){
-  if(r.debtKey) return String(r.debtKey);
-  const saleId=r.saleId || (Array.isArray(r.allocations)&&r.allocations[0]?.saleId) || '';
-  if(saleId){
-    const s=data.sales.find(x=>x.id===saleId || x.code===saleId);
-    if(s) return saleDebtKey(s);
-  }
-  // RECEIPT-STRICT-FIX: Không dùng tên hoặc customerId đơn lẻ để trừ công nợ.
-  // Chỉ phiếu thu có saleId hoặc có snapshot SĐT/Mã KH/Địa chỉ rõ ràng mới được phân bổ vào công nợ.
-  const phone=normalizePhone(r.customerPhone||r.phone||'');
-  const address=debtAddressKey(r.customerAddress||r.address||'');
-  const code=debtClean(r.customerCode||r.code||'');
-  if(phone && address) return `snap:${phone}|${address}`;
-  if(phone) return `phone:${phone}`;
-  if(code && address) return `snapcode:${code}|${address}`;
-  if(code) return `code:${code}`;
+  const sid=receiptSaleId(r);
+  if(sid) return `sale:${sid}`;
+  if(r.debtKey && String(r.debtKey).startsWith('sale:')) return String(r.debtKey);
+  // Phiếu thu cũ không có saleId không được tự động trừ vào công nợ để tránh trừ nhầm khách trùng tên.
   return `receipt:${r.id||uid()}`;
 }
 function debtGroupProducts(g){
   const m={};
-  (g.sales||[]).forEach(s=>(s.items||[]).forEach(it=>{
-    const code=it.code||it.model||''; if(!code)return;
-    m[code]=(m[code]||0)+(+it.qty||0);
-  }));
+  (g.sales||[]).forEach(s=>(s.items||[]).forEach(it=>{const code=it.code||it.model||''; if(!code)return; m[code]=(m[code]||0)+(+it.qty||0)}));
   return Object.entries(m).map(([code,qty])=>`${code} x${qty}`).join(', ');
 }
 function customerFromDebtGroup(g){
   if(g.customer) return g.customer;
-  const firstSale=g.sales[0]||{};
-  const firstReceipt=g.receipts[0]||{};
-  return {
-    id:firstSale.customerId||firstReceipt.customerId||g.key,
-    customerCode:firstSale.customerCode||firstReceipt.customerCode||'',
-    name:firstSale.customerName||firstReceipt.customerName||'Chưa cập nhật tên khách',
-    phone:firstSale.customerPhone||firstReceipt.customerPhone||'',
-    address:firstSale.customerAddress||firstReceipt.customerAddress||'',
-    type:firstSale.customerType||firstReceipt.customerType||firstSale.customerGroup||'Khách lẻ',
-    openingDebt:0
-  };
+  const firstSale=g.sales?.[0]||{};
+  const firstReceipt=g.receipts?.[0]||{};
+  return {id:firstSale.customerId||firstReceipt.customerId||g.key,customerCode:firstSale.customerCode||firstReceipt.customerCode||'',name:firstSale.customerName||firstReceipt.customerName||'Chưa cập nhật tên khách',phone:firstSale.customerPhone||firstReceipt.customerPhone||'',address:firstSale.customerAddress||firstReceipt.customerAddress||'',type:firstSale.customerType||firstReceipt.customerType||firstSale.customerGroup||'Khách lẻ',openingDebt:0};
 }
 function calcDebtRows(){
-  const groups=new Map();
-  const ensureGroup=(key,customer=null)=>{
-    if(!groups.has(key)) groups.set(key,{key,customer,sales:[],receipts:[]});
-    const g=groups.get(key);
-    if(customer && !g.customer) g.customer=customer;
-    return g;
-  };
-  data.customers.forEach(c=>ensureGroup(customerDebtKeyFromCustomer(c),c));
-  activeSales().forEach(s=>ensureGroup(saleDebtKey(s),findCustomerForSale(s)).sales.push(s));
-  activeReceipts().forEach(r=>ensureGroup(receiptDebtKey(r),findCustomerForReceipt(r)).receipts.push(r));
-  return [...groups.values()].map(g=>{
-    const c=customerFromDebtGroup(g);
-    const saleTotal=g.sales.reduce((a,s)=>a+(+s.grand||0),0);
-    const opening=+c.openingDebt||0;
-    const total=saleTotal+opening;
-    const paidFromSales=g.sales.reduce((a,s)=>a+(+s.paid||+s.paidTotalOriginal||0),0);
-    const paidFromReceipts=g.receipts.reduce((a,r)=>a+(+r.amount||0),0);
-    // DEBT-FINAL-FIX: Không dùng paidTotal cũ để tính công nợ vì paidTotal chỉ là trạng thái phân bổ
-    // có thể bị sai sau khi sửa khách/đổi snapshot. Nguồn tiền thật là paid lúc tạo phiếu + phiếu thu hợp lệ.
-    const paid=paidFromSales+paidFromReceipts;
+  const rows=[];
+  // Mỗi phiếu bán là một dòng công nợ riêng. Tuyệt đối không gom theo tên/khách.
+  activeSales().forEach(s=>{
+    const c=findCustomerForSale(s)||customerFromDebtGroup({key:saleDebtKey(s),sales:[s],receipts:[]});
+    const receipts=receiptsForSalePayment(s);
+    const total=+s.grand||0;
+    const paid=(+s.paid||0)+receipts.reduce((a,r)=>a+(+r.amount||0),0);
     const rawDebt=total-paid;
-    return{debtKey:g.key,customer:c,total,paid,debt:Math.max(0,rawDebt),overPaid:Math.max(0,-rawDebt),settled:total>0&&rawDebt<=0,sales:g.sales,receipts:g.receipts};
-  }).filter(x=>x.total||x.paid||x.debt||x.overPaid)
+    rows.push({debtKey:saleDebtKey(s),saleId:s.id,saleCode:s.code,customer:c,total,paid,debt:Math.max(0,rawDebt),overPaid:Math.max(0,-rawDebt),settled:total>0&&rawDebt<=0,sales:[s],receipts});
+  });
+  // Công nợ đầu kỳ nếu có thì là dòng riêng, không trộn vào phiếu bán.
+  data.customers.filter(c=>(+c.openingDebt||0)>0).forEach(c=>{
+    const related=activeReceipts().filter(r=>!receiptSaleId(r) && receiptDebtKey(r)===`opening:${c.id}`);
+    const paid=related.reduce((a,r)=>a+(+r.amount||0),0);
+    const total=+c.openingDebt||0;
+    const rawDebt=total-paid;
+    rows.push({debtKey:`opening:${c.id}`,saleId:'',saleCode:'Công nợ đầu kỳ',customer:c,total,paid,debt:Math.max(0,rawDebt),overPaid:Math.max(0,-rawDebt),settled:total>0&&rawDebt<=0,sales:[],receipts:related});
+  });
+  return rows.filter(x=>x.total||x.paid||x.debt||x.overPaid);
 }
 function calcDebts(){return calcDebtRows().filter(x=>x.debt>0)}
-function calcSettledDebts(){return calcDebtRows().filter(x=>x.settled).sort((a,b)=>String(ensureCustomerCode(a.customer)).localeCompare(String(ensureCustomerCode(b.customer))))}
+function calcSettledDebts(){return calcDebtRows().filter(x=>x.settled).sort((a,b)=>String(a.saleCode||'').localeCompare(String(b.saleCode||'')))}
 function fillReceiptCustomerOptions(includeAll=false){
   const el=$('receiptCustomer'); if(!el)return;
   const debts=calcDebts().sort((a,b)=>b.debt-a.debt);
@@ -2238,13 +2226,13 @@ function renderDebts(){
   if($('debtActiveTotal'))$('debtActiveTotal').textContent=money(activeAll.reduce((a,d)=>a+d.debt,0));
   if($('debtSettledCount'))$('debtSettledCount').textContent=settledAll.length;
   if($('debtSearchCount'))$('debtSearchCount').textContent=`Hiển thị ${active.length}/${activeAll.length} công nợ phải thu`;
-  $('debtTable').innerHTML=active.map(d=>{const ci=customerInfo(d.customer);const productText=debtGroupProducts(d)||'-';return `<tr><td><b>${ci.code}</b></td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><small>${ci.address||''}</small></td><td><small>${productText}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><b class="text-danger debt-money">${money(d.debt)}</b></td><td><button class="btn primary debt-action" onclick="receiptFor('${encodeURIComponent(d.debtKey)}')">Thu tiền</button></td></tr>`}).join('')||'<tr><td colspan="8">Không tìm thấy công nợ phù hợp</td></tr>';
-  if($('settledDebtTable'))$('settledDebtTable').innerHTML=settled.map(d=>{const ci=customerInfo(d.customer);const productText=debtGroupProducts(d)||'-';return `<tr class="settled-row"><td>${ci.code}</td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><small>${ci.address||''}</small></td><td><small>${productText}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><span class="badge green">Đã thu đủ</span>${d.overPaid?` <span class="badge orange">Thu dư ${money(d.overPaid)}</span>`:''}</td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy công nợ đã tất toán phù hợp</td></tr>';
+  $('debtTable').innerHTML=active.map(d=>{const ci=customerInfo(d.customer);const productText=debtGroupProducts(d)||'-';return `<tr><td><b>${d.saleCode||''}</b></td><td><b>${ci.code}</b></td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><small>${ci.address||''}</small></td><td><small>${productText}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><b class="text-danger debt-money">${money(d.debt)}</b></td><td><button class="btn primary debt-action" onclick="receiptFor('${encodeURIComponent(d.debtKey)}')">Thu tiền</button></td></tr>`}).join('')||'<tr><td colspan="9">Không tìm thấy công nợ phù hợp</td></tr>';
+  if($('settledDebtTable'))$('settledDebtTable').innerHTML=settled.map(d=>{const ci=customerInfo(d.customer);const productText=debtGroupProducts(d)||'-';return `<tr class="settled-row"><td>${d.saleCode||''}</td><td>${ci.code}</td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><small>${ci.address||''}</small></td><td><small>${productText}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><span class="badge green">Đã thu đủ</span>${d.overPaid?` <span class="badge orange">Thu dư ${money(d.overPaid)}</span>`:''}</td></tr>`}).join('')||'<tr><td colspan="8">Không tìm thấy công nợ đã tất toán phù hợp</td></tr>';
 }
 window.clearDebtSearch=()=>{if($('debtSearch'))$('debtSearch').value='';renderDebts();}
 window.resetReceiptForm=()=>{editingReceipt=null;fillReceiptCustomerOptions();$('receiptCustomer').value='';$('receiptAmount').value='';$('receiptDate').value=today();$('receiptNote').value=''}
-window.receiptFor=keyEnc=>{const key=decodeURIComponent(keyEnc||'');let d=calcDebts().find(x=>x.debtKey===key)||calcDebtRows().find(x=>x.customer.id===key);if(d&&d.debt<=0)return alert('Khách hàng này đã thu đủ tiền. Phiếu thu được lưu trong lịch sử đã tất toán.');resetReceiptForm();if(d){$('receiptCustomer').value='debtkey:'+encodeURIComponent(d.debtKey);if(d.debt>0)$('receiptAmount').value=d.debt;}$('receiptDate').value=today();showPage('debts');setTimeout(()=>$('receiptAmount')?.focus(),0)};window.openReceiptForm=()=>{resetReceiptForm();showPage('debts');setTimeout(()=>$('receiptCustomer')?.focus(),0)}
-window.saveReceipt=async()=>{let cid=$('receiptCustomer').value,amount=+$('receiptAmount').value||0;if(!cid||!amount)return alert('Chọn khách/công nợ và nhập số tiền');let d=null,c=null,ci=null,receiptKey='';if(String(cid).startsWith('debtkey:')){receiptKey=decodeURIComponent(String(cid).slice(8));d=calcDebtRows().find(x=>x.debtKey===receiptKey);if(!d)return alert('Không tìm thấy công nợ cần thu. Vui lòng tải lại màn hình.');ci=customerInfo(d.customer);c=data.customers.find(x=>x.id===d.customer.id)||{};}else{c=data.customers.find(x=>x.id===cid)||{};ci=customerInfo(c);d=calcDebtRows().find(x=>x.customer.id===cid);}if(d&&d.debt<=0&&!editingReceipt)return alert('Khách hàng này đã thu đủ tiền, không còn công nợ phải thu.');if(d&&amount>d.debt&&!confirm(`Số tiền thu ${money(amount)} lớn hơn công nợ còn lại ${money(d.debt)}. Vẫn lưu phiếu thu?`))return;const firstSale=d?.sales?.[0]||{};let o={customerId:c.id||firstSale.customerId||'',customerCode:ci.code,customerName:ci.name,customerPhone:ci.phone,customerAddress:ci.address,customerType:ci.type,amount,date:$('receiptDate').value||today(),note:$('receiptNote').value||'',debtKey:receiptKey||'',saleId:(d?.sales?.length===1?d.sales[0].id:''),saleCode:(d?.sales?.length===1?d.sales[0].code:''),updatedAt:serverTimestamp()};if(editingReceipt){await updateDoc(doc(db,'receipts',editingReceipt),o);await logAction('Sửa phiếu thu',o.customerName+' '+o.amount)}else{await addDoc(col('receipts'),{code:nextCode('PT',data.receipts),...o,createdAt:serverTimestamp()});await logAction('Thêm phiếu thu',o.customerName+' '+o.amount)}resetReceiptForm();await loadAll();if(o.customerId) await updatePaymentStatusesForCustomer(o.customerId);await loadAll()}
+window.receiptFor=keyEnc=>{const key=decodeURIComponent(keyEnc||'');let d=calcDebts().find(x=>x.debtKey===key)||calcDebtRows().find(x=>x.debtKey===key);if(d&&d.debt<=0)return alert('Phiếu này đã thu đủ tiền. Phiếu thu được lưu trong lịch sử đã tất toán.');resetReceiptForm();if(d){$('receiptCustomer').value='debtkey:'+encodeURIComponent(d.debtKey);if(d.debt>0)$('receiptAmount').value=d.debt;}$('receiptDate').value=today();showPage('debts');setTimeout(()=>$('receiptAmount')?.focus(),0)};window.openReceiptForm=()=>{resetReceiptForm();showPage('debts');setTimeout(()=>$('receiptCustomer')?.focus(),0)}
+window.saveReceipt=async()=>{let cid=$('receiptCustomer').value,amount=+$('receiptAmount').value||0;if(!cid||!amount)return alert('Chọn đúng phiếu công nợ và nhập số tiền');let d=null,c=null,ci=null,receiptKey='';if(String(cid).startsWith('debtkey:')){receiptKey=decodeURIComponent(String(cid).slice(8));d=calcDebtRows().find(x=>x.debtKey===receiptKey);if(!d)return alert('Không tìm thấy công nợ cần thu. Vui lòng tải lại màn hình.');ci=customerInfo(d.customer);c=data.customers.find(x=>x.id===d.customer.id)||{};}else{return alert('Vui lòng chọn một dòng công nợ theo phiếu bán. Không thu tiền theo tên khách để tránh trừ nhầm.')}if(d&&d.debt<=0&&!editingReceipt)return alert('Phiếu này đã thu đủ tiền, không còn công nợ phải thu.');if(d&&amount>d.debt&&!confirm(`Số tiền thu ${money(amount)} lớn hơn công nợ còn lại ${money(d.debt)}. Vẫn lưu phiếu thu?`))return;const firstSale=d?.sales?.[0]||{};let o={customerId:c.id||firstSale.customerId||'',customerCode:ci.code,customerName:ci.name,customerPhone:ci.phone,customerAddress:ci.address,customerType:ci.type,amount,date:$('receiptDate').value||today(),note:$('receiptNote').value||'',debtKey:receiptKey||'',saleId:firstSale.id||'',saleCode:firstSale.code||'',updatedAt:serverTimestamp()};if(editingReceipt){await updateDoc(doc(db,'receipts',editingReceipt),o);await logAction('Sửa phiếu thu',`${o.saleCode||''} ${o.customerName} ${o.amount}`)}else{await addDoc(col('receipts'),{code:nextCode('PT',data.receipts),...o,createdAt:serverTimestamp()});await logAction('Thêm phiếu thu',`${o.saleCode||''} ${o.customerName} ${o.amount}`)}resetReceiptForm();await loadAll();if(o.saleId) await updatePaymentStatusForSaleSnapshot(o.saleId);await loadAll()}
 window.editReceipt=id=>{let r=data.receipts.find(x=>x.id===id);if(!r)return;editingReceipt=id;$('receiptCustomer').value=r.customerId||'';$('receiptAmount').value=r.amount||0;$('receiptDate').value=r.date||today();$('receiptNote').value=r.note||'';showPage('debts')}
 function receiptsForSale(s){
   if(isSaleCanceled(s))return [];
