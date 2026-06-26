@@ -952,3 +952,113 @@ th,td{padding:clamp(7px,.75vw,10px)!important;}
 .sce-customer-row{width:100%;text-align:left;border:1px solid #e3eefb;background:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;color:inherit}
 .sce-customer-row:hover{border-color:#0ea5e9;background:#f0f9ff}
 .sce-customer-row.selected{border-color:#0284c7;background:#e0f2fe;box-shadow:0 0 0 2px rgba(14,165,233,.12)}
+
+/* ===== V58 UI refresh: màu tím EduPerform + form phiếu bán ERP gọn ===== */
+:root{
+  --bg:#f6f7ff!important;
+  --panel:#ffffff!important;
+  --text:#111827!important;
+  --muted:#667085!important;
+  --line:#d7dbea!important;
+  --primary:#3326d9!important;
+  --primary2:#5b4dff!important;
+  --blue:#3326d9!important;
+  --shadow:0 10px 26px rgba(25,33,80,.08)!important;
+}
+body{background:#f6f7ff!important;color:#111827!important;}
+.app{background:#f6f7ff!important;}
+.sidebar{
+  background:#eef2ff!important;
+  color:#111827!important;
+  border-right:1px solid #d7dbea!important;
+  box-shadow:none!important;
+}
+.logo{background:transparent!important;border:0!important;border-radius:0!important;padding:6px 4px 20px!important;margin-bottom:10px!important;}
+.logo span,.brand-mark{background:#3326d9!important;color:#fff!important;border-radius:10px!important;}
+.logo b{color:#111827!important;}.logo small{color:#667085!important;}
+.menu-group{background:transparent!important;border:0!important;border-radius:0!important;}
+.menu-toggle{color:#111827!important;background:transparent!important;border-radius:0!important;padding:11px 10px!important;}
+.menu-toggle:after{color:#3326d9!important;}
+.menu-group.active-group{background:transparent!important;border:0!important;}
+.submenu{padding:0 0 8px!important;gap:4px!important;}
+.submenu button{background:transparent!important;color:#20243a!important;border-radius:6px!important;padding:10px 12px 10px 36px!important;font-weight:700!important;}
+.submenu button:before{background:#94a3b8!important;}
+.submenu button:hover{background:#e4e7ff!important;color:#3326d9!important;}
+.submenu button.active{background:#dfdefd!important;color:#2116bd!important;box-shadow:none!important;border-left:3px solid #3326d9!important;}
+.submenu button.active:before{background:#3326d9!important;}
+.main{background:#f6f7ff!important;}
+.topbar{background:#fff!important;border:0!important;border-bottom:1px solid #d7dbea!important;border-radius:0!important;box-shadow:none!important;top:0!important;margin:-20px -20px 20px!important;padding:14px 20px!important;}
+.topbar h2{color:#111827!important;font-weight:900!important;}.topbar p{color:#667085!important;}
+.panel{border:1px solid #d7dbea!important;border-radius:6px!important;box-shadow:none!important;background:#fff!important;}
+.panel-head h3{color:#111827!important;}
+.btn{border-radius:4px!important;font-weight:800!important;box-shadow:none!important;}
+.btn.primary{background:#3326d9!important;color:#fff!important;}
+.btn.ghost{background:#f1f3ff!important;color:#2116bd!important;border:1px solid #d7dbea!important;}
+.btn.danger{background:#fff1f2!important;color:#dc2626!important;border:1px solid #fecdd3!important;}
+input,select,textarea{border-radius:4px!important;border:1px solid #d0d5dd!important;background:#fff!important;min-height:38px!important;box-shadow:none!important;}
+input:focus,select:focus,textarea:focus{border-color:#3326d9!important;box-shadow:0 0 0 2px rgba(51,38,217,.12)!important;}
+label{font-size:12px!important;color:#344054!important;font-weight:800!important;margin-bottom:5px!important;}
+table{border-collapse:collapse!important;border-spacing:0!important;}
+th{background:#eef2ff!important;color:#111827!important;border:1px solid #d7dbea!important;font-weight:900!important;}
+td{border:1px solid #d7dbea!important;border-left:0!important;border-right:0!important;background:#fff!important;}
+td:first-child,th:first-child,td:last-child,th:last-child{border-radius:0!important;}
+.badge.green{background:#e8f7e9!important;color:#15803d!important}.badge.orange{background:#fff0d6!important;color:#b45309!important}.badge.red{background:#ffe4e6!important;color:#be123c!important}
+.kpi{border-radius:6px!important;box-shadow:none!important;}
+.kpi.blue,.kpi.green,.kpi.orange,.kpi.red{background:#fff!important;color:#111827!important;border:1px solid #d7dbea!important;}
+.kpi b{color:#3326d9!important;}.kpi span,.kpi small{color:#667085!important;opacity:1!important;}
+.kpi:after{display:none!important;}
+
+/* Phiếu bán: gom nhóm rõ, giảm chiều cao, nhập liệu nhanh */
+#sales .sales-tabbar{background:#fff!important;border:1px solid #d7dbea!important;border-radius:6px!important;padding:6px!important;box-shadow:none!important;margin-bottom:14px!important;}
+#sales .sales-tab{border-radius:4px!important;background:transparent!important;color:#344054!important;padding:9px 16px!important;}
+#sales .sales-tab.active{background:#3326d9!important;color:#fff!important;border-color:#3326d9!important;}
+#sales .sale-form-panel{padding:14px!important;padding-bottom:90px!important;}
+#sales .sale-form-panel > .panel-head.sale-head-with-status{background:#fff!important;border:1px solid #d7dbea!important;border-radius:6px!important;padding:12px 14px!important;grid-template-columns:1fr auto!important;min-height:0!important;}
+#sales .sale-form-panel > .panel-head.sale-head-with-status h3{font-size:22px!important;color:#2116bd!important;}
+#sales .sale-form-panel > .panel-head.sale-head-with-status > div:first-child span{color:#667085!important;font-size:12px!important;}
+#sales .sale-form-panel > .panel-head.sale-head-with-status .quick-status-line{font-size:12px!important;color:#344054!important;gap:6px 12px!important;}
+#sales .sale-form-panel > .panel-head.sale-head-with-status .quick-status-title{color:#3326d9!important;}
+#sales .sale-main-box{border:1px solid #d7dbea!important;border-radius:6px!important;background:#fff!important;padding:12px!important;box-shadow:none!important;}
+#sales .sale-main-box>h4{margin:0 0 10px!important;color:#2116bd!important;font-size:15px!important;border-bottom:2px solid #3326d9!important;display:inline-block!important;padding-bottom:6px!important;}
+#sales .sale-erp-form{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;}
+#sales .sale-form-section{border:1px solid #d7dbea!important;border-radius:6px!important;background:#fff!important;padding:10px 12px!important;}
+#sales .sale-section-title{font-weight:900!important;color:#2116bd!important;font-size:13px!important;margin:0 0 8px!important;}
+#sales .sale-field-grid{display:grid!important;gap:10px 14px!important;align-items:end!important;}
+#sales .sale-grid-general{grid-template-columns:minmax(140px,.7fr) minmax(150px,.8fr) minmax(150px,.8fr) minmax(180px,1fr)!important;}
+#sales .sale-grid-customer{grid-template-columns:minmax(320px,1.35fr) minmax(150px,.65fr) minmax(280px,1.2fr)!important;}
+#sales .sale-grid-staff{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(130px,.7fr) minmax(150px,.8fr)!important;}
+#sales .sale-grid-money{grid-template-columns:repeat(4,minmax(130px,1fr))!important;}
+#sales .sale-customer-line{gap:6px!important;}
+#sales .sale-customer-line .btn{padding-left:10px!important;padding-right:10px!important;}
+#sales .field-note{display:none!important;}
+#sales .sale-stock-action .big-stock-check{height:38px!important;border:1px solid #d0d5dd!important;border-radius:4px!important;background:#f9fafb!important;padding:0 10px!important;display:flex!important;align-items:center!important;gap:8px!important;}
+#sales .sale-stock-action input{width:auto!important;min-height:0!important;}
+#sales .sale-items-head{border:1px solid #d7dbea!important;border-radius:6px 6px 0 0!important;background:#fff!important;margin-top:12px!important;padding:10px 12px!important;}
+#sales .sale-items-head h4{color:#2116bd!important;margin:0!important;font-size:14px!important;}
+#sales .quick-models{gap:6px!important;}
+#sales .quick-models .btn{padding:7px 10px!important;}
+#sales table.editable{margin-top:0!important;}
+#sales table.editable th{height:38px!important;}
+#sales table.editable td{padding:7px 8px!important;}
+#sales table.editable input,#sales table.editable select{min-height:34px!important;padding:6px 8px!important;}
+#sales .total-box.sale-total-main{border-radius:6px!important;background:#fff!important;border:1px solid #d7dbea!important;justify-content:flex-end!important;padding:10px 12px!important;gap:10px 18px!important;}
+#sales .total-box.sale-total-main div{font-size:12px!important;}
+#sales .total-box.sale-total-main b{color:#2116bd!important;font-size:15px!important;}
+#sales.active .sale-sticky-actions{background:#fff!important;border:1px solid #d7dbea!important;border-radius:6px!important;box-shadow:0 -8px 24px rgba(25,33,80,.10)!important;padding:10px 14px!important;}
+#sales .sticky-total{background:#f1f3ff!important;border:1px solid #d7dbea!important;border-radius:6px!important;}
+#sales .sticky-total b{color:#2116bd!important;}
+#sales .sale-sticky-actions .big-save{background:#3326d9!important;}
+@media(max-width:1280px){
+  #sales .sale-grid-general,#sales .sale-grid-staff,#sales .sale-grid-money{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  #sales .sale-grid-customer{grid-template-columns:1fr 190px!important;}
+  #sales .sale-address-field{grid-column:1/-1!important;}
+}
+@media(max-width:720px){
+  .topbar{margin:-10px -10px 12px!important;}
+  #sales .sale-form-panel > .panel-head.sale-head-with-status{grid-template-columns:1fr!important;}
+  #sales .sale-grid-general,#sales .sale-grid-customer,#sales .sale-grid-staff,#sales .sale-grid-money{grid-template-columns:1fr!important;}
+  #sales .sale-customer-line{flex-wrap:wrap!important;}
+  #sales .sale-customer-line input{flex-basis:100%!important;}
+  #sales .sale-customer-line .btn{flex:1!important;}
+  #sales .sale-form-panel{padding-bottom:150px!important;}
+}

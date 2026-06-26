@@ -109,27 +109,50 @@
           </div>
           <div class="sale-layout sale-layout-single">
             <div class="sale-main-box">
-              <h4>Thông tin đơn hàng</h4>
-              <div class="grid form-grid">
-                <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
-                <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
-                <div class="span2"><label>Khách hàng</label><input id="saleCustomerId" type="hidden"><div class="inline"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm tên / mã KH / SĐT hoặc nhập khách mới" oninput="saleCustomerChanged()" onchange="saleCustomerChanged()" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button><button class="btn ghost" onclick="editSaleCustomer()">Sửa KH</button></div><datalist id="customerList"></datalist><datalist id="productCodesList"></datalist><small class="field-note">Sau khi chọn khách, ô này chỉ hiển thị tên khách để phiếu gọn và dễ nhìn.</small></div>
-                <div><label>Số điện thoại</label><input id="saleCustomerPhone" placeholder="SĐT khách hàng" oninput="updateSaleCustomerPhoneManual()" /></div>
-                <div><label>Địa chỉ giao/lắp đặt</label><input id="saleCustomerAddress" placeholder="Địa chỉ khách hàng / địa chỉ lắp đặt" oninput="updateSaleCustomerAddressManual()" /><small class="field-note">Có thể sửa riêng địa chỉ trên phiếu bán nếu địa chỉ lắp đặt khác hồ sơ khách</small></div>
-                <div><label>Loại khách</label><select id="saleCustomerType" onchange="saleCustomerTypeChanged()"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select><small class="field-note">Áp dụng bảng giá theo loại khách</small></div>
-                <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
-                <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
-                <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select><small class="field-note">Tính trên tiền hàng + phụ thu - chiết khấu, không tính VAT</small></div>
-                <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" min="0" placeholder="VD: 300000" oninput="updateSaleTotals()" /><small class="field-note">Nhập tổng tiền công lắp đặt thực tế theo số bộ khóa trong đơn</small></div>
-                <div><label>Tiền xăng kỹ thuật</label><input id="saleTechFuel" type="number" value="0" min="0" placeholder="VD: 50000" oninput="updateSaleTotals()" /><small class="field-note">Tính riêng cho kỹ thuật và trừ vào lợi nhuận</small></div>
-                <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
-                <div><label>VAT</label><select id="saleVatMode"><option value="included8" selected>Giá đã gồm VAT 8%</option><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option></select></div>
-                <div><label>Phụ thu đơn hàng</label><input id="saleSurcharge" type="number" value="0" min="0" placeholder="VD: 100000" oninput="updateSaleTotals()" /><small class="field-note">Dùng cho đơn xa, phát sinh vận chuyển/lắp đặt</small></div>
-                <div><label>CK tổng đơn</label><select id="saleOrderDiscountType" onchange="updateSaleTotals()"><option value="none">Không chiết khấu</option><option value="percent">Theo % tổng đơn</option><option value="amount">Theo số tiền</option></select></div>
-                <div><label>Giá trị CK tổng đơn</label><input id="saleOrderDiscountValue" type="number" value="0" min="0" placeholder="VD: 5 hoặc 100000" oninput="updateSaleTotals()" /><small class="field-note">Áp dụng sau chiết khấu từng dòng</small></div>
-                <div><label>Thanh toán ngay</label><input id="salePaid" type="number" value="0" /></div>
-                <div class="sale-stock-action"><label>Xuất kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
-                <div class="span2"><label>Ghi chú</label><input id="saleNote" placeholder="VD: khách thanh toán sau, lắp đặt chiều nay..." /></div>
+              <h4>Thông tin phiếu</h4>
+              <div class="sale-erp-form">
+                <div class="sale-form-section sale-general-section">
+                  <div class="sale-section-title">Thông tin chung</div>
+                  <div class="sale-field-grid sale-grid-general">
+                    <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
+                    <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
+                    <div><label>Loại khách</label><select id="saleCustomerType" onchange="saleCustomerTypeChanged()"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select></div>
+                    <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
+                  </div>
+                </div>
+
+                <div class="sale-form-section sale-customer-section">
+                  <div class="sale-section-title">Khách hàng</div>
+                  <div class="sale-field-grid sale-grid-customer">
+                    <div class="sale-customer-name"><label>Tên khách hàng</label><input id="saleCustomerId" type="hidden"><div class="inline sale-customer-line"><input id="saleCustomerSearch" list="customerList" placeholder="Tìm tên / mã KH / SĐT hoặc nhập khách mới" oninput="saleCustomerChanged()" onchange="saleCustomerChanged()" /><button class="btn ghost" onclick="quickCreateCustomer()">+ Khách</button><button class="btn ghost" onclick="editSaleCustomer()">Sửa KH</button></div><datalist id="customerList"></datalist><datalist id="productCodesList"></datalist></div>
+                    <div><label>Số điện thoại</label><input id="saleCustomerPhone" placeholder="SĐT khách hàng" oninput="updateSaleCustomerPhoneManual()" /></div>
+                    <div class="sale-address-field"><label>Địa chỉ giao/lắp đặt</label><input id="saleCustomerAddress" placeholder="Địa chỉ khách hàng / địa chỉ lắp đặt" oninput="updateSaleCustomerAddressManual()" /></div>
+                  </div>
+                </div>
+
+                <div class="sale-form-section sale-staff-section">
+                  <div class="sale-section-title">Nhân viên & kho</div>
+                  <div class="sale-field-grid sale-grid-staff">
+                    <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
+                    <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
+                    <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
+                    <div class="sale-stock-action"><label>Xuất kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
+                  </div>
+                </div>
+
+                <div class="sale-form-section sale-money-section">
+                  <div class="sale-section-title">Chi phí & thanh toán</div>
+                  <div class="sale-field-grid sale-grid-money">
+                    <div><label>Phụ thu</label><input id="saleSurcharge" type="number" value="0" min="0" placeholder="VD: 100000" oninput="updateSaleTotals()" /></div>
+                    <div><label>Công kỹ thuật</label><input id="saleTechCost" type="number" value="100000" min="0" placeholder="VD: 300000" oninput="updateSaleTotals()" /></div>
+                    <div><label>Tiền xăng</label><input id="saleTechFuel" type="number" value="0" min="0" placeholder="VD: 50000" oninput="updateSaleTotals()" /></div>
+                    <div><label>VAT</label><select id="saleVatMode"><option value="included8" selected>Giá đã gồm VAT 8%</option><option value="none">Không VAT</option><option value="add10">Cộng VAT 10%</option><option value="included10">Giá đã gồm VAT 10%</option><option value="add8">Cộng VAT 8%</option></select></div>
+                    <div><label>CK tổng đơn</label><select id="saleOrderDiscountType" onchange="updateSaleTotals()"><option value="none">Không chiết khấu</option><option value="percent">Theo % tổng đơn</option><option value="amount">Theo số tiền</option></select></div>
+                    <div><label>Giá trị CK</label><input id="saleOrderDiscountValue" type="number" value="0" min="0" placeholder="VD: 5 hoặc 100000" oninput="updateSaleTotals()" /></div>
+                    <div><label>Thanh toán ngay</label><input id="salePaid" type="number" value="0" /></div>
+                    <div><label>Ghi chú</label><input id="saleNote" placeholder="VD: khách thanh toán sau, lắp đặt chiều nay..." /></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
