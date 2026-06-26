@@ -606,8 +606,8 @@ function calcSaleTotals(items,vatMode,paid,surcharge=0,orderDiscountType='none',
 function calcCommissionBase(totals){return Math.max(0,(+totals?.grand||0)-(+totals?.vat||0))}
 function calcCommission(totals,percent){let base=Math.max(0,calcCommissionBase(totals));return Math.round(base*(+percent||0)/100)}
 function saleCommissionBaseValue(s){return Math.max(0,+s?.commissionBase||calcCommissionBase(s)||0)}
-function saleCommissionAmount(s){return Math.round(saleCommissionBaseValue(s)*(+(s?.commissionPercent||0)||0)/100)}
-function saleProfitAmount(s){return saleCommissionBaseValue(s)-(+s?.cost||0)-saleCommissionAmount(s)-(+s?.techCost||0)-(+s?.techFuel||0)}
+function saleCommissionValue(s){const pct=+(s?.commissionPercent||0)||0;const calculated=Math.round(saleCommissionBaseValue(s)*pct/100);return pct?calculated:(+s?.saleCommission||0)}
+function saleProfitValue(s){const cost=+s?.cost||((s?.items||[]).reduce((a,it)=>a+costFor(it.code,s.date||today())*(+it.qty||0),0));return saleCommissionBaseValue(s)-cost-saleCommissionValue(s)-(+s?.techCost||0)-(+s?.techFuel||0)}
 function staffFunctions(staff){
   const list=Array.isArray(staff?.functions)?staff.functions:[];
   const legacy=staff?.dept||'';
@@ -1710,7 +1710,7 @@ window.saveSaleAndPrint=async()=>{const id=await saveSale(); if(id) setTimeout((
 function renderSales(){
   let q=($('saleSearch')?.value||'').toLowerCase();
   const rows=data.sales.filter(s=>(s.code+(s.customerCode||'')+s.customerName+(s.customerPhone||'')+(s.customerType||'')).toLowerCase().includes(q)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-  $('saleTable').innerHTML=rows.map((s,idx)=>{const pay=salePaymentInfo(s);const sv=stockVoucherForSale(s);const stockStatus=!!sv;const ci=saleCustomerInfo(s);return `<tr><td class="text-center">${idx+1}</td><td><b>${s.code}</b></td><td>${s.date||''}</td><td>${ci.code||''}</td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><b>${money(s.grand)}</b></td><td>${money(pay.paidTotal)}</td><td><b>${money(pay.debtLeft)}</b></td><td class="view-cost">${money(saleCommissionAmount(s))}</td><td class="view-cost">${money(saleProfitAmount(s))}</td><td><span class="badge ${pay.debtLeft>0?(pay.paidTotal>0?'orange':'red'):'green'}">${pay.paymentStatus}</span></td><td>${s.hasReturn?'<span class="badge orange">Có trả hàng</span><br>':''}${stockStatus?'<span class="badge green">Đã xuất kho</span>':(saleNeedSupplementStock(s)?'<span class="badge red">Cần xuất kho bổ sung</span>':'<span class="badge orange">Chưa xuất kho</span>')}</td><td><button class="btn ghost" onclick="viewSaleDetail('${s.id}')">Chi tiết</button> <button class="btn ghost" onclick="printSale('${s.id}')">In A5</button> ${has('editSales')?`<button class="btn ghost" onclick="editSale('${s.id}')">Sửa</button>`:''} ${has('deleteSales')?`<button class="btn danger" onclick="removeDoc('sales','${s.id}')">Xóa</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="13">Chưa có phiếu bán</td></tr>';
+  $('saleTable').innerHTML=rows.map((s,idx)=>{const pay=salePaymentInfo(s);const sv=stockVoucherForSale(s);const stockStatus=!!sv;const ci=saleCustomerInfo(s);return `<tr><td class="text-center">${idx+1}</td><td><b>${s.code}</b></td><td>${s.date||''}</td><td>${ci.code||''}</td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><b>${money(s.grand)}</b></td><td>${money(pay.paidTotal)}</td><td><b>${money(pay.debtLeft)}</b></td><td class="view-cost">${money(saleCommissionValue(s))}</td><td class="view-cost">${money(saleProfitValue(s))}</td><td><span class="badge ${pay.debtLeft>0?(pay.paidTotal>0?'orange':'red'):'green'}">${pay.paymentStatus}</span></td><td>${s.hasReturn?'<span class="badge orange">Có trả hàng</span><br>':''}${stockStatus?'<span class="badge green">Đã xuất kho</span>':(saleNeedSupplementStock(s)?'<span class="badge red">Cần xuất kho bổ sung</span>':'<span class="badge orange">Chưa xuất kho</span>')}</td><td><button class="btn ghost" onclick="viewSaleDetail('${s.id}')">Chi tiết</button> <button class="btn ghost" onclick="printSale('${s.id}')">In A5</button> ${has('editSales')?`<button class="btn ghost" onclick="editSale('${s.id}')">Sửa</button>`:''} ${has('deleteSales')?`<button class="btn danger" onclick="removeDoc('sales','${s.id}')">Xóa</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="13">Chưa có phiếu bán</td></tr>';
 }
 window.viewSaleDetail=id=>{
   const s=data.sales.find(x=>x.id===id); if(!s)return;
@@ -1914,19 +1914,27 @@ function renderCommissions(){
   const rows=commissionFilteredSales();
   const bySale={};
   const byTech={};
-  let totalRevenue=0,totalSaleCommission=0,totalTechCost=0,totalTechFuel=0;
+  let totalRevenue=0,totalCommissionBase=0,totalSurcharge=0,totalDiscount=0,totalSaleCommission=0,totalTechCost=0,totalTechFuel=0;
 
   rows.forEach(s=>{
+    const commissionBase=saleCommissionBaseValue(s);
+    const saleCommissionAmt=saleCommissionValue(s);
     totalRevenue+=+s.grand||0;
-    totalSaleCommission+=saleCommissionAmount(s);
+    totalCommissionBase+=commissionBase;
+    totalSurcharge+=+s.surcharge||0;
+    totalDiscount+=+s.discountTotal||0;
+    totalSaleCommission+=saleCommissionAmt;
     totalTechCost+=+s.techCost||0;
     totalTechFuel+=+s.techFuel||0;
     let saleKey=s.staffId||'none';
     let saleName=s.staffName||data.staff.find(x=>x.id===s.staffId)?.name||'Chưa chọn sale';
-    bySale[saleKey]=bySale[saleKey]||{id:saleKey,name:saleName,count:0,revenue:0,commission:0};
+    bySale[saleKey]=bySale[saleKey]||{id:saleKey,name:saleName,count:0,revenue:0,commissionBase:0,surcharge:0,discount:0,commission:0};
     bySale[saleKey].count++;
     bySale[saleKey].revenue+=+s.grand||0;
-    bySale[saleKey].commission+=saleCommissionAmount(s);
+    bySale[saleKey].commissionBase+=commissionBase;
+    bySale[saleKey].surcharge+=+s.surcharge||0;
+    bySale[saleKey].discount+=+s.discountTotal||0;
+    bySale[saleKey].commission+=saleCommissionAmt;
 
     let techKey=s.techId||'none';
     let techName=s.techName||data.staff.find(x=>x.id===s.techId)?.name||'Chưa chọn kỹ thuật';
@@ -1937,12 +1945,12 @@ function renderCommissions(){
     byTech[techKey].techFuel+=+s.techFuel||0;
   });
 
-  if($('commissionSummary')) $('commissionSummary').innerHTML=`<div>Tổng doanh thu: <b>${money(totalRevenue)}</b></div><div>Hoa hồng Sale: <b>${money(totalSaleCommission)}</b></div><div>Công kỹ thuật: <b>${money(totalTechCost)}</b></div><div>Tiền xăng KT: <b>${money(totalTechFuel)}</b></div><div>Tổng chi: <b>${money(totalSaleCommission+totalTechCost+totalTechFuel)}</b></div>`;
+  if($('commissionSummary')) $('commissionSummary').innerHTML=`<div>Tổng doanh thu: <b>${money(totalRevenue)}</b></div><div>Doanh số tính HH: <b>${money(totalCommissionBase)}</b></div><div>Tổng phụ thu: <b>${money(totalSurcharge)}</b></div><div>Tổng chiết khấu: <b>${money(totalDiscount)}</b></div><div>Hoa hồng Sale: <b>${money(totalSaleCommission)}</b></div><div>Công kỹ thuật: <b>${money(totalTechCost)}</b></div><div>Tiền xăng KT: <b>${money(totalTechFuel)}</b></div><div>Tổng chi: <b>${money(totalSaleCommission+totalTechCost+totalTechFuel)}</b></div>`;
 
   $('commissionByStaff').innerHTML=Object.values(bySale)
     .sort((a,b)=>b.commission-a.commission)
-    .map(v=>`<tr><td>${v.name}</td><td>${v.count}</td><td>${money(v.revenue)}</td><td><b>${money(v.commission)}</b></td><td>${v.id==='none'?'':`<button class="btn ghost" onclick="viewCommissionStaff('${v.id}','Sale')">Xem chi tiết</button>`}</td></tr>`)
-    .join('')||'<tr><td colspan="5">Không có dữ liệu hoa hồng Sale theo bộ lọc</td></tr>';
+    .map(v=>`<tr><td>${v.name}</td><td>${v.count}</td><td>${money(v.revenue)}</td><td>${money(v.commissionBase)}</td><td>${money(v.surcharge)}</td><td>${money(v.discount)}</td><td><b>${money(v.commission)}</b></td><td>${v.id==='none'?'':`<button class="btn ghost" onclick="viewCommissionStaff('${v.id}','Sale')">Xem chi tiết</button>`}</td></tr>`)
+    .join('')||'<tr><td colspan="8">Không có dữ liệu hoa hồng Sale theo bộ lọc</td></tr>';
 
   if($('commissionByTech')){
     $('commissionByTech').innerHTML=Object.values(byTech)
@@ -1958,54 +1966,9 @@ function renderCommissions(){
   }
   $('commissionByOrder').innerHTML=rows.slice()
     .sort((a,b)=>String(b.date).localeCompare(String(a.date)))
-    .map((s,idx)=>`<tr><td class="text-center">${idx+1}</td><td>${s.date||''}</td><td>${s.code}</td><td>${saleCustomerInfo(s).name||''}</td><td>${s.staffName||data.staff.find(x=>x.id===s.staffId)?.name||''}</td><td>${s.techName||data.staff.find(x=>x.id===s.techId)?.name||''}</td><td>${money(s.grand)}</td><td>${money(s.surcharge||0)}</td><td>${money(saleCommissionBaseValue(s))}</td><td>${s.commissionPercent||0}%</td><td><b>${money(saleCommissionAmount(s))}</b></td><td><b>${money(s.techCost||0)}</b></td><td><b>${money(s.techFuel||0)}</b></td><td><b>${money(saleCommissionAmount(s)+(+s.techCost||0)+(+s.techFuel||0))}</b></td></tr>`)
-    .join('')||'<tr><td colspan="14">Không có đơn bán theo bộ lọc</td></tr>'; 
+    .map((s,idx)=>{const saleCom=saleCommissionValue(s);return `<tr><td class="text-center">${idx+1}</td><td>${s.date||''}</td><td>${s.code}</td><td>${saleCustomerInfo(s).name||''}</td><td>${s.staffName||data.staff.find(x=>x.id===s.staffId)?.name||''}</td><td>${s.techName||data.staff.find(x=>x.id===s.techId)?.name||''}</td><td>${money(s.grand)}</td><td>${money(s.surcharge||0)}</td><td>${money(s.discountTotal||0)}</td><td>${money(saleCommissionBaseValue(s))}</td><td>${s.commissionPercent||0}%</td><td><b>${money(saleCom)}</b></td><td><b>${money(s.techCost||0)}</b></td><td><b>${money(s.techFuel||0)}</b></td><td><b>${money(saleCom+(+s.techCost||0)+(+s.techFuel||0))}</b></td></tr>`})
+    .join('')||'<tr><td colspan="15">Không có đơn bán theo bộ lọc</td></tr>'; 
 }
-
-window.exportCommissionEmployee=()=>{
-  try{
-    assertExcel();
-    const rows=commissionFilteredSales().slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.code||'').localeCompare(String(b.code||'')));
-    if(!rows.length) return alert('Không có dữ liệu hoa hồng để xuất Excel');
-    const f=commissionAppliedFilter||{};
-    const staff=data.staff.find(x=>x.id===f.staffId);
-    const titleStaff=staff?staff.name:'Tat_ca_nhan_vien';
-    const saleRows=rows.map((s,i)=>({
-      STT:i+1,
-      'Ngày':s.date||'',
-      'Mã phiếu':s.code||'',
-      'Khách hàng':saleCustomerInfo(s).name||'',
-      'Nhân viên Sale':s.staffName||data.staff.find(x=>x.id===s.staffId)?.name||'',
-      'Kỹ thuật':s.techName||data.staff.find(x=>x.id===s.techId)?.name||'',
-      'Tiền hàng trước CK':+(s.goodsBeforeDiscount||0),
-      'Chiết khấu':+(s.discountTotal||0),
-      'Phụ thu':+(s.surcharge||0),
-      'Doanh số tính HH':saleCommissionBaseValue(s),
-      'Tổng đơn':+(s.grand||0),
-      '% HH Sale':+(s.commissionPercent||0),
-      'Hoa hồng Sale':saleCommissionAmount(s),
-      'Công kỹ thuật':+(s.techCost||0),
-      'Tiền xăng KT':+(s.techFuel||0),
-      'Tổng chi HH/Công':saleCommissionAmount(s)+(+s.techCost||0)+(+s.techFuel||0)
-    }));
-    saleRows.push({STT:'', 'Ngày':'', 'Mã phiếu':'TỔNG', 'Khách hàng':'', 'Nhân viên Sale':'', 'Kỹ thuật':'',
-      'Tiền hàng trước CK':saleRows.reduce((a,r)=>a+(+r['Tiền hàng trước CK']||0),0),
-      'Chiết khấu':saleRows.reduce((a,r)=>a+(+r['Chiết khấu']||0),0),
-      'Phụ thu':saleRows.reduce((a,r)=>a+(+r['Phụ thu']||0),0),
-      'Doanh số tính HH':saleRows.reduce((a,r)=>a+(+r['Doanh số tính HH']||0),0),
-      'Tổng đơn':saleRows.reduce((a,r)=>a+(+r['Tổng đơn']||0),0),
-      '% HH Sale':'',
-      'Hoa hồng Sale':saleRows.reduce((a,r)=>a+(+r['Hoa hồng Sale']||0),0),
-      'Công kỹ thuật':saleRows.reduce((a,r)=>a+(+r['Công kỹ thuật']||0),0),
-      'Tiền xăng KT':saleRows.reduce((a,r)=>a+(+r['Tiền xăng KT']||0),0),
-      'Tổng chi HH/Công':saleRows.reduce((a,r)=>a+(+r['Tổng chi HH/Công']||0),0)
-    });
-    const wb=makeWorkbook({'Hoa_hong_nhan_vien':saleRows});
-    const safe=String(titleStaff).replace(/[^\w\-]+/g,'_');
-    XLSX.writeFile(wb,`hoa_hong_${safe}_${f.from||'all'}_${f.to||today()}.xlsx`);
-  }catch(err){alert(err.message||err)}
-};
-
 window.resetExpenseForm=()=>{editingExpense=null;$('exDate').value=today();$('exCategory').value='Tiền điện';$('exAmount').value='';$('exNote').value=''}
 function isSalaryCategory(c){return /lương|luong|salary|payroll/i.test(String(c||''))}
 
@@ -2389,11 +2352,11 @@ function renderReports(){
   const debt=sales.reduce((a,s)=>a+(+salePaymentInfo(s).debtLeft||0),0);
   const totalCost=sales.reduce((a,s)=>a+(+s.cost||((s.items||[]).reduce((b,it)=>b+costFor(it.code,s.date||today())*(+it.qty||0),0))),0);
   const grossMargin=revenueBeforeVat-totalCost;
-  const comm=sales.reduce((a,s)=>a+saleCommissionAmount(s),0);
+  const comm=sales.reduce((a,s)=>a+saleCommissionValue(s),0);
   const techCostOnly=sales.reduce((a,s)=>a+(+s.techCost||0),0);
   const techFuelOnly=sales.reduce((a,s)=>a+(+s.techFuel||0),0);
   const tech=techCostOnly+techFuelOnly;
-  const grossProfit=sales.reduce((a,s)=>a+saleProfitAmount(s),0);
+  const grossProfit=sales.reduce((a,s)=>a+saleProfitValue(s),0);
   const op=expenses.reduce((a,e)=>a+(+e.amount||0),0);
   const sal=salaries.reduce((a,e)=>a+(+e.total||+e.amount||0),0);
   const totalCompanyCost=op+sal;
@@ -2441,7 +2404,7 @@ function renderReports(){
   sales.forEach(s=>{
     const k=groupKeyByPeriod(s.date,period);
     byTime[k]=byTime[k]||{key:k,orders:0,qty:0,revenue:0,surcharge:0,paid:0,debt:0,comm:0,tech:0,profit:0};
-    const pay=salePaymentInfo(s);byTime[k].orders++;byTime[k].qty+=(s.items||[]).reduce((a,it)=>a+(+it.qty||0),0);byTime[k].revenue+=+s.grand||0;byTime[k].surcharge+=+s.surcharge||0;byTime[k].paid+=+pay.paidTotal||0;byTime[k].debt+=+pay.debtLeft||0;byTime[k].comm+=saleCommissionAmount(s);byTime[k].tech+=(+s.techCost||0)+(+s.techFuel||0);byTime[k].profit+=saleProfitAmount(s);
+    const pay=salePaymentInfo(s);byTime[k].orders++;byTime[k].qty+=(s.items||[]).reduce((a,it)=>a+(+it.qty||0),0);byTime[k].revenue+=+s.grand||0;byTime[k].surcharge+=+s.surcharge||0;byTime[k].paid+=+pay.paidTotal||0;byTime[k].debt+=+pay.debtLeft||0;byTime[k].comm+=saleCommissionValue(s);byTime[k].tech+=(+s.techCost||0)+(+s.techFuel||0);byTime[k].profit+=saleProfitValue(s);
   });
   if($('reportRevenueTable'))$('reportRevenueTable').innerHTML=Object.values(byTime).sort((a,b)=>String(b.key).localeCompare(String(a.key))).map(x=>`<tr><td><b>${x.key}</b></td><td>${x.orders}</td><td>${x.qty}</td><td>${money(x.revenue)}</td><td>${money(x.surcharge)}</td><td>${money(x.paid)}</td><td>${money(x.debt)}</td><td class="view-cost">${money(x.comm)}</td><td class="view-cost">${money(x.tech)}</td><td class="view-cost">${money(x.profit)}</td></tr>`).join('')||'<tr><td colspan="10">Chưa có doanh thu trong kỳ</td></tr>';
 
@@ -2566,7 +2529,7 @@ const excelSchemas={
   warranties:{sheet:'Bao_hanh',headers:['saleId','customer','phone','serial','start','months','end','status','note'],sample:[{saleId:'',customer:'Nguyễn Văn A',phone:'0902950816',serial:'F07-001',start:today(),months:24,end:'',status:'Còn bảo hành',note:''}]},
   stockVouchers:{sheet:'Chung_tu_kho',headers:['code','date','type','warehouse','productCode','productName','qty','cost','note'],sample:[{code:'NK000001',date:today(),type:'IN',warehouse:defaultWarehouse(),productCode:'F07',productName:'Khóa thông minh F07',qty:10,cost:950000,note:'Nhập kho'}]},
   sales:{sheet:'Ban_hang',headers:['code','date','customerCode','customerName','customerPhone','staffName','techName','goodsBeforeDiscount','lineDiscountTotal','orderDiscountType','orderDiscountValue','orderDiscountTotal','discountTotal','grand','paid','debt','commissionPercent','saleCommission','techCost','techFuel','surcharge','profit','itemsJson','note'],sample:[{code:'BH000001',date:today(),customerCode:'KL0902950816',customerName:'Nguyễn Văn A',customerPhone:'0902950816',staffName:'Nguyễn Sale',techName:'Lê Kỹ Thuật',grand:1850000,paid:1850000,debt:0,commissionPercent:5,saleCommission:85648,techCost:100000,techFuel:0,surcharge:0,goodsBeforeDiscount:1850000,lineDiscountTotal:0,orderDiscountType:'none',orderDiscountValue:0,orderDiscountTotal:0,discountTotal:0,profit:577315,itemsJson:'[{"code":"F07","name":"Khóa thông minh F07","qty":1,"price":1850000,"discount":0}]',note:''}]},
-  commissions:{sheet:'Hoa_hong',headers:['date','code','customer','saleStaff','techStaff','goodsBeforeDiscount','discountTotal','surcharge','commissionBase','grand','commissionPercent','saleCommission','techCost','techFuel','totalCommission'],sample:[]},
+  commissions:{sheet:'Hoa_hong',headers:['date','code','customer','saleStaff','techStaff','grand','commissionPercent','saleCommission','techCost','techFuel','totalCommission'],sample:[]},
   stockbook:{sheet:'So_kho',headers:['code','name','inQty','outQty','transferQty','adjustQty','khoChinh','khoVanPhong','stock'],sample:[]},
   returns:{sheet:'Hang_tra_lai',headers:['date','voucherCode','saleCode','customer','warehouse','code','name','qty','amount','settlement','note'],sample:[]},
   logs:{sheet:'Nhat_ky',headers:['time','email','action','detail'],sample:[]}
@@ -2581,8 +2544,8 @@ function exportRows(type){let rows=[];
   if(type==='salaries')rows=data.salaries.map(e=>({date:e.date,staffName:e.staffName,base:e.base,allowance:e.allowance,bonus:e.bonus,deduct:e.deduct,total:e.total,note:e.note}));
   if(type==='warranties')rows=data.warranties.map(w=>({saleId:w.saleId||'',customer:w.customer,phone:w.phone,serial:w.serial,start:w.start,months:w.months,end:w.end,status:w.status,note:w.note}));
   if(type==='stockVouchers')rows=data.stockVouchers.flatMap(v=>(v.items||[]).map(it=>({code:v.code,date:v.date,type:v.type,warehouse:voucherWarehouse(v),productCode:it.code,productName:it.name,qty:it.actualQty??it.inputQty??it.qty,cost:it.cost,note:it.note||v.note||''})));
-  if(type==='sales')rows=data.sales.map(s=>({code:s.code,date:s.date,customerCode:s.customerCode||'',customerName:saleCustomerInfo(s).name,customerPhone:saleCustomerInfo(s).phone||'',staffName:s.staffName,techName:s.techName,goodsBeforeDiscount:s.goodsBeforeDiscount||0,lineDiscountTotal:s.lineDiscountTotal||0,orderDiscountType:s.orderDiscountType||'none',orderDiscountValue:s.orderDiscountValue||0,orderDiscountTotal:s.orderDiscountTotal||0,discountTotal:s.discountTotal||0,grand:s.grand,paid:s.paid,debt:s.debt,commissionPercent:s.commissionPercent,saleCommission:saleCommissionAmount(s),techCost:s.techCost,techFuel:s.techFuel||0,surcharge:s.surcharge||0,profit:saleProfitAmount(s),itemsJson:JSON.stringify(s.items||[]),note:s.note||''}));
-  if(type==='commissions')rows=data.sales.map(s=>({date:s.date,code:s.code,customer:saleCustomerInfo(s).name,saleStaff:s.staffName,techStaff:s.techName,goodsBeforeDiscount:s.goodsBeforeDiscount||0,discountTotal:s.discountTotal||0,surcharge:s.surcharge||0,commissionBase:saleCommissionBaseValue(s),grand:s.grand,commissionPercent:s.commissionPercent,saleCommission:saleCommissionAmount(s),techCost:s.techCost,techFuel:s.techFuel||0,totalCommission:saleCommissionAmount(s)+(+s.techCost||0)+(+s.techFuel||0)}));
+  if(type==='sales')rows=data.sales.map(s=>({code:s.code,date:s.date,customerCode:s.customerCode||'',customerName:saleCustomerInfo(s).name,customerPhone:saleCustomerInfo(s).phone||'',staffName:s.staffName,techName:s.techName,goodsBeforeDiscount:s.goodsBeforeDiscount||0,lineDiscountTotal:s.lineDiscountTotal||0,orderDiscountType:s.orderDiscountType||'none',orderDiscountValue:s.orderDiscountValue||0,orderDiscountTotal:s.orderDiscountTotal||0,discountTotal:s.discountTotal||0,grand:s.grand,paid:s.paid,debt:s.debt,commissionPercent:s.commissionPercent,saleCommission:saleCommissionValue(s),techCost:s.techCost,techFuel:s.techFuel||0,surcharge:s.surcharge||0,profit:saleProfitValue(s),itemsJson:JSON.stringify(s.items||[]),note:s.note||''}));
+  if(type==='commissions')rows=data.sales.map(s=>{const saleCom=saleCommissionValue(s);return {date:s.date,code:s.code,customer:saleCustomerInfo(s).name,saleStaff:s.staffName,techStaff:s.techName,grand:s.grand,surcharge:s.surcharge||0,discountTotal:s.discountTotal||0,commissionBase:saleCommissionBaseValue(s),commissionPercent:s.commissionPercent,saleCommission:saleCom,techCost:s.techCost,techFuel:s.techFuel||0,totalCommission:saleCom+(+s.techCost||0)+(+s.techFuel||0)}});
   if(type==='returns'){rows=data.stockVouchers.filter(v=>v.type==='RETURN'&&canAccessVoucher(v)).flatMap(v=>(v.items||[]).map(it=>{const sale=data.sales.find(s=>s.id===v.saleId||s.code===v.saleCode)||{};const priceLine=(sale.items||[]).find(x=>x.code===it.code)||{};return{date:v.date||'',voucherCode:v.code||'',saleCode:v.saleCode||sale.code||'',customer:v.customerName||saleCustomerInfo(sale).name||'',warehouse:voucherWarehouse(v),code:it.code||'',name:it.name||'',qty:+it.qty||0,amount:lineNet({...priceLine,qty:+it.qty||0}),settlement:v.settlement||sale.returnSettlement||'',note:v.note||''}}));}
   if(type==='logs')rows=(data.logs||[]).map(l=>({time:logTime(l.at),email:l.email||'',action:l.action||'',detail:l.detail||''}));
   if(type==='stockbook'){const df=stockBookDateFilter();rows=stockBookRows(df.from,df.to).filter(r=>!df.active||r.periodMovement).map(r=>({tuNgay:df.from||'',denNgay:df.to||'',model:r.code,sanPham:r.name,nhap:r.totalIn,xuat:r.totalOut,chuyenKho:r.totalTransfer,dieuChinh:r.totalAdj,khoChinh:canAccessWarehouse('Kho Chính')?r.khoChinh:'Ẩn',khoVanPhong:canAccessWarehouse('Kho Văn Phòng')?r.khoVanPhong:'Ẩn',tongTonHienTai:r.stock,giaVon:has('viewCost')?r.cost:'Ẩn',giaTriTon:has('viewCost')?r.value:'Ẩn'}));}
@@ -2590,6 +2553,57 @@ function exportRows(type){let rows=[];
 }
 function stockQtyByType(code,type){let q=0;data.stockVouchers.forEach(v=>{if(v.type!==type)return;(v.items||[]).forEach(it=>{if(it.code===code)q+=+it.qty||0})});return q}
 function makeWorkbook(sheets){assertExcel();const wb=XLSX.utils.book_new();Object.entries(sheets).forEach(([name,rows])=>{const ws=XLSX.utils.json_to_sheet(rows.length?rows:[{}]);XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31));});return wb;}
+
+function safeSheetName(name){return String(name||'Nhan_vien').replace(/[\/?*\[\]:]/g,' ').slice(0,31)||'Nhan_vien'}
+function commissionExportRowsForSales(rows){
+  return rows.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).map((s,idx)=>{const saleCom=saleCommissionValue(s);return {
+    STT:idx+1,
+    'Ngày':s.date||'',
+    'Mã phiếu':s.code||'',
+    'Khách hàng':saleCustomerInfo(s).name||'',
+    'SĐT':saleCustomerInfo(s).phone||'',
+    'Sale':s.staffName||data.staff.find(x=>x.id===s.staffId)?.name||'',
+    'Kỹ thuật':s.techName||data.staff.find(x=>x.id===s.techId)?.name||'',
+    'Tiền hàng':+(s.subtotal||0)||0,
+    'Phụ thu':+(s.surcharge||0)||0,
+    'Chiết khấu':+(s.discountTotal||0)||0,
+    'Doanh số tính HH':saleCommissionBaseValue(s),
+    '% HH':+(s.commissionPercent||0)||0,
+    'Hoa hồng Sale':saleCom,
+    'Công kỹ thuật':+(s.techCost||0)||0,
+    'Tiền xăng KT':+(s.techFuel||0)||0,
+    'Tổng nhận':saleCom+(+s.techCost||0)+(+s.techFuel||0)
+  }});
+}
+function commissionSummaryRows(rows){
+  const total=(key)=>rows.reduce((a,r)=>a+(+r[key]||0),0);
+  return [{STT:'', 'Ngày':'', 'Mã phiếu':'TỔNG', 'Khách hàng':'', 'SĐT':'', 'Sale':'', 'Kỹ thuật':'', 'Tiền hàng':total('Tiền hàng'), 'Phụ thu':total('Phụ thu'), 'Chiết khấu':total('Chiết khấu'), 'Doanh số tính HH':total('Doanh số tính HH'), '% HH':'', 'Hoa hồng Sale':total('Hoa hồng Sale'), 'Công kỹ thuật':total('Công kỹ thuật'), 'Tiền xăng KT':total('Tiền xăng KT'), 'Tổng nhận':total('Tổng nhận')}];
+}
+window.exportCommissionByStaff=()=>{try{
+  assertExcel();
+  const rows=commissionFilteredSales();
+  if(!rows.length)return alert('Không có dữ liệu hoa hồng để xuất Excel');
+  const f=commissionAppliedFilter||{};
+  const wb=XLSX.utils.book_new();
+  if(f.staffId){
+    const staff=data.staff.find(x=>x.id===f.staffId);
+    const detail=commissionExportRowsForSales(rows);
+    const out=detail.concat(commissionSummaryRows(detail));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out),safeSheetName(staff?.name||'Hoa_hong'));
+    XLSX.writeFile(wb,`Hoa_hong_${(staff?.name||'Nhan_vien').replace(/\s+/g,'_')}_${today()}.xlsx`);
+    return;
+  }
+  const groups={};
+  rows.forEach(s=>{const key=s.staffId||'none';groups[key]=groups[key]||[];groups[key].push(s)});
+  Object.entries(groups).forEach(([staffId,list])=>{
+    const staff=data.staff.find(x=>x.id===staffId);
+    const detail=commissionExportRowsForSales(list);
+    const out=detail.concat(commissionSummaryRows(detail));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out),safeSheetName(staff?.name||'Chua_chon_sale'));
+  });
+  XLSX.writeFile(wb,`Hoa_hong_theo_nhan_vien_${today()}.xlsx`);
+}catch(err){alert(err.message)}};
+
 window.exportExcel=(type)=>{try{const schema=excelSchemas[type]||{sheet:type};const rows=exportRows(type);const wb=makeWorkbook({[schema.sheet||type]:rows.length?rows:(schema.sample||[])});XLSX.writeFile(wb,`${type}_${today()}.xlsx`);}catch(err){alert(err.message)}};
 window.downloadTemplateExcel=(type)=>{try{const schema=excelSchemas[type];if(!schema)return alert('Chưa có mẫu Excel cho mục này');const sample=schema.sample?.length?schema.sample:[Object.fromEntries(schema.headers.map(h=>[h,'']))];const wb=makeWorkbook({[schema.sheet]:sample});XLSX.writeFile(wb,`mau_import_${type}.xlsx`);}catch(err){alert(err.message)}};
 window.exportAllExcel=()=>{try{const sheets={};['customers','products','prices','staff','sales','stockVouchers','expenses','salaries','warranties','commissions','stockbook','returns','logs'].forEach(t=>{sheets[excelSchemas[t]?.sheet||t]=exportRows(t)});const wb=makeWorkbook(sheets);XLSX.writeFile(wb,`Similock_Da_Nang_Toan_bo_${today()}.xlsx`);}catch(err){alert(err.message)}};
