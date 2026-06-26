@@ -441,15 +441,7 @@ function parseCustomerInput(raw=''){
   out.name=/^[0-9+ .\-()]+$/.test(name)?'':name;
   return out;
 }
-function customerDisplayValue(c={}){const i=customerInfo(c);return i.name||i.phone||i.code||'';}
-function setSaleCustomerFields(c={}, opts={}){
-  const i=customerInfo(c);
-  if($('saleCustomerId')) $('saleCustomerId').value=c.id||'';
-  if($('saleCustomerSearch') && opts.setName!==false) $('saleCustomerSearch').value=i.name||'';
-  if($('saleCustomerPhone') && !window.__saleCustomerPhoneManual) $('saleCustomerPhone').value=i.phone||'';
-  if($('saleCustomerAddress') && (!window.__saleCustomerAddressManual || opts.forceAddress)) $('saleCustomerAddress').value=i.address||'';
-  if($('saleCustomerType')) $('saleCustomerType').value=['Khách lẻ','CTV','Đại lý'].includes(i.type)?i.type:'Khách lẻ';
-}
+function customerDisplayValue(c={}){const i=customerInfo(c);return `${i.code} | ${i.name} | ${i.phone} | ${i.type} | ${i.address}`;}
 function customerShortLabel(c={}){const i=customerInfo(c);return `${i.code} - ${i.name}${i.phone?' - '+i.phone:''}`;}
 function validateDate(v){return !v || /^\d{4}-\d{2}-\d{2}$/.test(v)}
 function normalizeDateInput(v, fallback=today()){
@@ -984,7 +976,8 @@ window.saveQuickCustomerFromSale=async()=>{
   if(!phone) return alert('Bắt buộc nhập số điện thoại khách hàng.');
   const dup=data.customers.find(c=>normalizePhone(c.phone)===normalizePhone(phone));
   if(dup && !confirm('SĐT này đã có trong danh mục khách hàng. Vẫn tạo khách mới?')){
-    setSaleCustomerFields(dup,{forceAddress:true});
+    $('saleCustomerSearch').value=customerDisplayValue(dup);
+    if($('saleCustomerType')) $('saleCustomerType').value=customerInfo(dup).type;
     document.getElementById('quickCustomerModal')?.remove();
     saleCustomerChanged();
     return;
@@ -994,9 +987,8 @@ window.saveQuickCustomerFromSale=async()=>{
   await logAction('Tạo nhanh khách hàng',name+' '+phone);
   await loadAll();
   const c=data.customers.find(x=>normalizePhone(x.phone)===normalizePhone(phone) && (x.name||'')===name) || data.customers.find(x=>ensureCustomerCode(x)===customerCode) || {customerCode,name,phone,type,address};
-  setSaleCustomerFields(c,{forceAddress:true});
+  $('saleCustomerSearch').value=customerDisplayValue(c);
   if($('saleCustomerType')) $('saleCustomerType').value=type;
-  if($('saleCustomerPhone')) { $('saleCustomerPhone').value=phone||customerInfo(c).phone||''; window.__saleCustomerPhoneManual=false; }
   if($('saleCustomerAddress')) { $('saleCustomerAddress').value=address||customerInfo(c).address||''; window.__saleCustomerAddressManual=false; }
   document.getElementById('quickCustomerModal')?.remove();
   saleCustomerChanged();
@@ -1382,7 +1374,7 @@ window.createSupplementStockVoucher=async(id)=>{
   viewSaleDetail(id);
 }
 
-window.resetSaleForm=()=>{editingSale=null;$('saleCode').value=nextCode('BH',data.sales);$('saleDate').value=today();$('saleCustomerSearch').value='';if($('saleCustomerId'))$('saleCustomerId').value='';if($('saleCustomerPhone')){$('saleCustomerPhone').value=''; window.__saleCustomerPhoneManual=false;}if($('saleCustomerAddress')){$('saleCustomerAddress').value=''; window.__saleCustomerAddressManual=false;}if($('saleCustomerType'))$('saleCustomerType').value='Khách lẻ';if($('saleVatMode'))$('saleVatMode').value='included8';$('salePaid').value=0;if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff')?.value);if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech')?.value);if($('saleTechFuel'))$('saleTechFuel').value=0;if($('saleSurcharge'))$('saleSurcharge').value=0;if($('saleOrderDiscountType'))$('saleOrderDiscountType').value='none';if($('saleOrderDiscountValue'))$('saleOrderDiscountValue').value=0;$('saleNote').value='';if($('saleWarehouse'))$('saleWarehouse').value='Kho Văn Phòng';if($('saleExportStock'))$('saleExportStock').checked=false;if($('saleExportStockSticky'))$('saleExportStockSticky').checked=false;ensureProductDatalist();$('saleItems').innerHTML='';addSaleItem();updateSaleTotals()}
+window.resetSaleForm=()=>{editingSale=null;$('saleCode').value=nextCode('BH',data.sales);$('saleDate').value=today();$('saleCustomerSearch').value='';if($('saleCustomerAddress')){$('saleCustomerAddress').value=''; window.__saleCustomerAddressManual=false;}if($('saleCustomerType'))$('saleCustomerType').value='Khách lẻ';if($('saleVatMode'))$('saleVatMode').value='included8';$('salePaid').value=0;if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff')?.value);if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech')?.value);if($('saleTechFuel'))$('saleTechFuel').value=0;if($('saleSurcharge'))$('saleSurcharge').value=0;if($('saleOrderDiscountType'))$('saleOrderDiscountType').value='none';if($('saleOrderDiscountValue'))$('saleOrderDiscountValue').value=0;$('saleNote').value='';if($('saleWarehouse'))$('saleWarehouse').value='Kho Văn Phòng';if($('saleExportStock'))$('saleExportStock').checked=false;if($('saleExportStockSticky'))$('saleExportStockSticky').checked=false;ensureProductDatalist();$('saleItems').innerHTML='';addSaleItem();updateSaleTotals()}
 window.addSaleItem=(it={})=>{let tr=document.createElement('tr');tr.innerHTML=`<td><input list="productCodesList" placeholder="Tìm model..." value="${it.code||''}" onchange="saleProductChanged(this)" oninput="saleProductChanged(this)"></td><td><input value="${it.name||''}" readonly></td><td><input type="number" value="${it.qty||1}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td><input type="number" value="${it.price||0}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td><select onchange="updateSaleTotals()"><option value="percent" ${(it.discountType||'percent')==='percent'?'selected':''}>%</option><option value="amount" ${(it.discountType||'percent')==='amount'?'selected':''}>VNĐ</option></select></td><td><input type="number" value="${it.discount||0}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td class="line-total">0</td><td><button class="btn danger" onclick="this.closest('tr').remove();updateSaleTotals()">X</button></td>`;$('saleItems').appendChild(tr);updateSaleTotals();setTimeout(()=>tr.querySelector('input')?.focus(),30);return tr}
 window.saleItemKeyNav=(e,el)=>{if(e.key!=='Enter')return;e.preventDefault();const tr=el.closest('tr');const inputs=[...tr.querySelectorAll('input:not([readonly]),select')];let i=inputs.indexOf(el);if(i<inputs.length-1){inputs[i+1].focus();inputs[i+1].select?.();}else{addSaleItem();}}
 window.addQuickSaleModel=(code)=>{let p=data.products.find(x=>String(x.code).toLowerCase()===String(code).toLowerCase() || String(x.code).toLowerCase().includes(String(code).toLowerCase()));if(!p)return alert('Chưa có model '+code+' trong danh mục sản phẩm'); if(p.active==='inactive')return alert('Model '+p.code+' đang ngừng bán, không thể thêm vào phiếu bán.');let customer=findCustomerBySearch();let bp=activePriceFor(p.code,saleCustomerType(),saleDateValue());let tr=addSaleItem({code:p.code,name:p.name,qty:1,price:bp?.price||p.price||0,discount:customer?.discount||0});saleProductChanged(tr.children[0].querySelector('input'));setTimeout(()=>tr.children[2].querySelector('input')?.focus(),30)}
@@ -1390,16 +1382,13 @@ window.syncSaleExportStockFromSticky=()=>{if($('saleExportStock')&&$('saleExport
 window.syncSaleExportStockToSticky=()=>{if($('saleExportStock')&&$('saleExportStockSticky'))$('saleExportStockSticky').checked=$('saleExportStock').checked}
 window.saleProductChanged=sel=>{let p=productByInput(sel.value)||{};if(!p.code)return;if(p.active==='inactive'){alert('Model '+p.code+' đang ngừng bán, không thể bán.');sel.value='';return;}let tr=sel.closest('tr');tr.children[1].querySelector('input').value=p.name||'';let customer=findCustomerBySearch();let bp=activePriceFor(p.code,saleCustomerType(),saleDateValue());let price=bp?.price||p.price||0;tr.children[3].querySelector('input').value=price;tr.children[4].querySelector('select').value='percent';tr.children[5].querySelector('input').value=customer?.discount||0;updateSaleTotals()}
 function saleItems(){return [...$('saleItems').querySelectorAll('tr')].map(tr=>{const inp=[...tr.querySelectorAll('input')];return{code:productCodeFromInput(inp[0]?.value||''),name:inp[1]?.value||'',qty:+(inp[2]?.value||0)||0,price:+(inp[3]?.value||0)||0,discountType:tr.children[4]?.querySelector('select')?.value||'percent',discount:+(inp[4]?.value||0)||0}}).filter(x=>x.code&&x.qty>0)}
-window.updateSaleTotals=()=>{let t=calcSaleTotals(saleItems(),$('saleVatMode')?.value||'included8',$('salePaid')?.value||0,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);[...$('saleItems').querySelectorAll('tr')].forEach(tr=>{const inp=[...tr.querySelectorAll('input')];let it={qty:+(inp[2]?.value||0)||0,price:+(inp[3]?.value||0)||0,discountType:tr.children[4]?.querySelector('select')?.value||'percent',discount:+(inp[4]?.value||0)||0};const line=tr.querySelector('.line-total'); if(line) line.textContent=money(lineNet(it))});if($('saleGoodsBeforeDiscount'))$('saleGoodsBeforeDiscount').textContent=money(t.goodsBeforeDiscount);if($('saleDiscountText'))$('saleDiscountText').textContent=money(t.discountTotal);$('saleSubTotal').textContent=money(t.subtotal);$('saleVat').textContent=money(t.vat);if($('saleSurchargeText'))$('saleSurchargeText').textContent=money(t.surcharge);$('saleGrand').textContent=money(t.grand);$('saleDebt').textContent=money(t.debt);if($('saleGrandSticky'))$('saleGrandSticky').textContent=money(t.grand);if($('saleDebtSticky'))$('saleDebtSticky').textContent=money(t.debt);syncSaleExportStockToSticky()};['saleVatMode','salePaid','saleCustomerSearch','saleCustomerPhone','saleCommissionPercent','saleTechCost','saleSurcharge','saleTechFuel','saleOrderDiscountType','saleOrderDiscountValue'].forEach(id=>setTimeout(()=>$(id)?.addEventListener('input',updateSaleTotals),0));setTimeout(()=>$('saleStaff')?.addEventListener('change',()=>{if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff').value);updateSaleTotals()}),0);setTimeout(()=>$('saleTech')?.addEventListener('change',()=>{if($('saleTechCost'))$('saleTechCost').value=suggestedTechCost()||techFeeDefault($('saleTech').value);updateSaleTotals()}),0);
+window.updateSaleTotals=()=>{let t=calcSaleTotals(saleItems(),$('saleVatMode')?.value||'included8',$('salePaid')?.value||0,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);[...$('saleItems').querySelectorAll('tr')].forEach(tr=>{const inp=[...tr.querySelectorAll('input')];let it={qty:+(inp[2]?.value||0)||0,price:+(inp[3]?.value||0)||0,discountType:tr.children[4]?.querySelector('select')?.value||'percent',discount:+(inp[4]?.value||0)||0};const line=tr.querySelector('.line-total'); if(line) line.textContent=money(lineNet(it))});if($('saleGoodsBeforeDiscount'))$('saleGoodsBeforeDiscount').textContent=money(t.goodsBeforeDiscount);if($('saleDiscountText'))$('saleDiscountText').textContent=money(t.discountTotal);$('saleSubTotal').textContent=money(t.subtotal);$('saleVat').textContent=money(t.vat);if($('saleSurchargeText'))$('saleSurchargeText').textContent=money(t.surcharge);$('saleGrand').textContent=money(t.grand);$('saleDebt').textContent=money(t.debt);if($('saleGrandSticky'))$('saleGrandSticky').textContent=money(t.grand);if($('saleDebtSticky'))$('saleDebtSticky').textContent=money(t.debt);syncSaleExportStockToSticky()};['saleVatMode','salePaid','saleCustomerSearch','saleCommissionPercent','saleTechCost','saleSurcharge','saleTechFuel','saleOrderDiscountType','saleOrderDiscountValue'].forEach(id=>setTimeout(()=>$(id)?.addEventListener('input',updateSaleTotals),0));setTimeout(()=>$('saleStaff')?.addEventListener('change',()=>{if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff').value);updateSaleTotals()}),0);setTimeout(()=>$('saleTech')?.addEventListener('change',()=>{if($('saleTechCost'))$('saleTechCost').value=suggestedTechCost()||techFeeDefault($('saleTech').value);updateSaleTotals()}),0);
 function findCustomerBySearch(){
-  const selectedId=($('saleCustomerId')?.value||'').trim();
-  if(selectedId){const byId=data.customers.find(x=>x.id===selectedId); if(byId) return byId;}
   const raw=($('saleCustomerSearch')?.value||'').trim();
-  const phoneRaw=($('saleCustomerPhone')?.value||'').trim();
-  if(!raw && !phoneRaw) return null;
-  const parsed=parseCustomerInput(raw || phoneRaw);
+  if(!raw) return null;
+  const parsed=parseCustomerInput(raw);
   const code=String(parsed.customerCode||'').trim().toLowerCase();
-  const phone=normalizePhone(parsed.phone||phoneRaw||raw);
+  const phone=normalizePhone(parsed.phone||raw);
   const nameKey=searchKey(parsed.name||raw);
   let c=null;
   if(code) c=data.customers.find(x=>String(ensureCustomerCode(x)||'').trim().toLowerCase()===code);
@@ -1420,53 +1409,18 @@ function saleCustomerAddressValue(customer=null){
   const c=customer||findCustomerBySearch();
   return (c?(customerInfo(c).address||''):'') || inputVal;
 }
-function saleCustomerPhoneValue(customer=null){
-  const manual=!!window.__saleCustomerPhoneManual;
-  const inputVal=($('saleCustomerPhone')?.value||'').trim();
-  if(manual) return inputVal;
-  const c=customer||findCustomerBySearch();
-  return (c?(customerInfo(c).phone||''):'') || inputVal;
-}
 window.updateSaleCustomerAddressManual=()=>{ window.__saleCustomerAddressManual=true; };
-window.updateSaleCustomerPhoneManual=()=>{ window.__saleCustomerPhoneManual=true; };
-function syncSaleCustomerContact(force=false){
+function syncSaleCustomerAddress(force=false){
+  const el=$('saleCustomerAddress'); if(!el) return;
   const c=findCustomerBySearch();
-  if(c){
-    if(force || !window.__saleCustomerPhoneManual){ if($('saleCustomerPhone')) $('saleCustomerPhone').value=customerInfo(c).phone||''; window.__saleCustomerPhoneManual=false; }
-    if(force || !window.__saleCustomerAddressManual){ if($('saleCustomerAddress')) $('saleCustomerAddress').value=customerInfo(c).address||''; window.__saleCustomerAddressManual=false; }
-  }
+  if(force || !window.__saleCustomerAddressManual){ el.value=c?(customerInfo(c).address||''):''; window.__saleCustomerAddressManual=false; }
 }
 
 function saleCustomerType(){return $('saleCustomerType')?.value||findCustomerBySearch()?.type||'Khách lẻ'}
-window.saleCustomerChanged=()=>{
-  const raw=($('saleCustomerSearch')?.value||'').trim();
-  const c=findCustomerBySearch();
-  if(c){
-    const full=customerSearchValue(c);
-    const exact=searchKey(raw)===searchKey(full) || searchKey(raw)===searchKey(customerInfo(c).name) || normalizePhone(raw)===normalizePhone(customerInfo(c).phone) || searchKey(raw)===searchKey(customerInfo(c).code);
-    if(exact) setSaleCustomerFields(c,{forceAddress:true}); else { if($('saleCustomerId'))$('saleCustomerId').value=c.id||''; syncSaleCustomerContact(false); if($('saleCustomerType'))$('saleCustomerType').value=(['Khách lẻ','CTV','Đại lý'].includes(c.type)?c.type:'Khách lẻ'); }
-  }else{ if($('saleCustomerId'))$('saleCustomerId').value=''; }
-  refreshSaleItemPricesByCustomerType();
-}
+window.saleCustomerChanged=()=>{const c=findCustomerBySearch();if(c && $('saleCustomerType'))$('saleCustomerType').value=(['Khách lẻ','CTV','Đại lý'].includes(c.type)?c.type:'Khách lẻ');syncSaleCustomerAddress(true);refreshSaleItemPricesByCustomerType()}
 window.saleCustomerTypeChanged=()=>{refreshSaleItemPricesByCustomerType()}
 setTimeout(()=>$('saleDate')?.addEventListener('change',()=>{saleDateValue();refreshSaleItemPricesByCustomerType()}),0);
 function refreshSaleItemPricesByCustomerType(){const type=saleCustomerType();const c=findCustomerBySearch();[...$('saleItems').querySelectorAll('tr')].forEach(tr=>{const code=productCodeFromInput(tr.children[0]?.querySelector('input')?.value||'');if(!code)return;const p=data.products.find(x=>x.code===code)||{};const bp=activePriceFor(code,type,saleDateValue());tr.children[3].querySelector('input').value=bp?.price||p.price||0;if(c)tr.children[5].querySelector('input').value=c.discount||0;});updateSaleTotals()}
-
-async function syncReceiptsForSaleCustomer(saleId,salePayload={},oldSale={}){
-  const receiptMap=new Map();
-  const before={...oldSale,id:saleId};
-  try{receiptsForSale(before).forEach(r=>receiptMap.set(r.id,r));}catch(e){}
-  data.receipts.filter(r=>r.saleId===saleId || (Array.isArray(r.allocations)&&r.allocations.some(a=>a.saleId===saleId))).forEach(r=>receiptMap.set(r.id,r));
-  const list=[...receiptMap.values()].filter(r=>r&&r.id);
-  if(!list.length) return;
-  let batch=writeBatch(db), count=0;
-  for(const r of list){
-    const patch={customerId:salePayload.customerId||'',customerCode:salePayload.customerCode||'',customerName:salePayload.customerName||'',customerPhone:salePayload.customerPhone||'',updatedAt:serverTimestamp()};
-    batch.update(doc(db,'receipts',r.id),patch);
-    count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;}
-  }
-  if(count>0) await batch.commit();
-}
 window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quickCreateCustomer();return alert('Chưa có khách hàng hợp lệ. Vui lòng kiểm tra Tên/SĐT rồi bấm Lưu khách trong form Thêm khách hàng.')}let items=saleItems();if(!items.length)return alert('Chưa có sản phẩm'); const inactiveItem=items.find(it=>(data.products.find(p=>p.code===it.code)||{}).active==='inactive'); if(inactiveItem)return alert('Model '+inactiveItem.code+' đang ngừng bán, không thể lưu phiếu bán.');
   const exportStock=!!$('saleExportStock')?.checked;
   const saleWarehouse=$('saleWarehouse')?.value||'Kho Văn Phòng';
@@ -1474,15 +1428,8 @@ window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quic
   let excludeVoucherId=oldSale?.stockVoucherId||'';
   if(exportStock){for(const it of items){const available=stockOf(it.code,excludeVoucherId,saleWarehouse); if(it.qty>available && !confirm(`Sản phẩm ${it.code} tồn tại kho ${saleWarehouse} hiện có ${available}, vẫn lưu đơn kiêm xuất kho?`)) return;}}
   const saleDateVal=saleDateValue();
-  let totals=calcSaleTotals(items,$('saleVatMode').value,$('salePaid').value,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);let cost=items.reduce((a,it)=>a+costFor(it.code,saleDateVal)*it.qty,0);let commissionPercent=+($('saleCommissionPercent')?.value||0)||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+($('saleTechCost')?.value||0)||0;let techFuel=+($('saleTechFuel')?.value||0)||0;let commissionBase=calcCommissionBase(totals);let snap=customerSnapshotFromCustomer(customer,saleCustomerType()); snap.phone=saleCustomerPhoneValue(customer)||snap.phone; snap.address=saleCustomerAddressValue(customer); let o={code:$('saleCode').value,date:saleDateVal,...customerSnapshotPayload(snap),staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,techFuel,vatMode:$('saleVatMode').value,paid:+$('salePaid').value||0,note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost-techFuel,status:totals.debt>0?'Còn nợ':'Đã thu tiền',paymentStatus:totals.debt>0?(((+$('salePaid').value||0)>0)?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:+$('salePaid').value||0,debtLeft:totals.debt,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
-  if(editingSale){
-    if(!has('editSales'))return alert('Không có quyền sửa đơn');
-    await updateDoc(doc(db,'sales',editingSale),o);
-    if(oldSale && oldSale.customerId!==o.customerId){
-      await syncReceiptsForSaleCustomer(editingSale,o,oldSale);
-    }
-    await logAction('Sửa đơn bán',o.code)
-  }else{const saleRef=await addDoc(col('sales'),{...o,createdAt:serverTimestamp()});editingSale=saleRef.id;await logAction('Tạo đơn bán',o.code);}
+  let totals=calcSaleTotals(items,$('saleVatMode').value,$('salePaid').value,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);let cost=items.reduce((a,it)=>a+costFor(it.code,saleDateVal)*it.qty,0);let commissionPercent=+($('saleCommissionPercent')?.value||0)||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+($('saleTechCost')?.value||0)||0;let techFuel=+($('saleTechFuel')?.value||0)||0;let commissionBase=calcCommissionBase(totals);let snap=customerSnapshotFromCustomer(customer,saleCustomerType()); snap.address=saleCustomerAddressValue(customer); let o={code:$('saleCode').value,date:saleDateVal,...customerSnapshotPayload(snap),staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,techFuel,vatMode:$('saleVatMode').value,paid:+$('salePaid').value||0,note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost-techFuel,status:totals.debt>0?'Còn nợ':'Đã thu tiền',paymentStatus:totals.debt>0?(((+$('salePaid').value||0)>0)?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:+$('salePaid').value||0,debtLeft:totals.debt,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
+  if(editingSale){if(!has('editSales'))return alert('Không có quyền sửa đơn');await updateDoc(doc(db,'sales',editingSale),o);await logAction('Sửa đơn bán',o.code)}else{const saleRef=await addDoc(col('sales'),{...o,createdAt:serverTimestamp()});editingSale=saleRef.id;await logAction('Tạo đơn bán',o.code);}
   const savedSaleId=editingSale;
   // Kiêm xuất kho: tạo/cập nhật phiếu xuất kho OUT riêng để trừ tồn kho. Không tick thì chưa xuất kho.
   if(exportStock){
@@ -1528,9 +1475,7 @@ window.editSale=id=>{
   if($('saleCode')) $('saleCode').value=s.code||'';
   if($('saleDate')) $('saleDate').value=s.date||today();
   const ci=saleCustomerInfo(s);
-  if($('saleCustomerId')) $('saleCustomerId').value=s.customerId||'';
-  if($('saleCustomerSearch')) $('saleCustomerSearch').value=ci.name||'';
-  if($('saleCustomerPhone')) { $('saleCustomerPhone').value=ci.phone||''; window.__saleCustomerPhoneManual=false; }
+  if($('saleCustomerSearch')) $('saleCustomerSearch').value=`${ci.code||''} | ${ci.name||''} | ${ci.phone||''} | ${ci.type||''} | ${ci.address||''}`;
   if($('saleCustomerType')) $('saleCustomerType').value=s.customerType||s.customerGroup||ci.type||'Khách lẻ';
   if($('saleCustomerAddress')) { $('saleCustomerAddress').value=ci.address||''; window.__saleCustomerAddressManual=false; }
   if($('saleStaff')) $('saleStaff').value=s.staffId||'';
