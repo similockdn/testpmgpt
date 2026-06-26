@@ -1007,7 +1007,8 @@ function saleCustomerEditModalHtml(c,saleId=''){
   const ci=customerInfo(c);
   const title=saleId?'Sửa khách trên phiếu bán':'Sửa thông tin khách hàng';
   const note=saleId?'Chỉ cập nhật khách của phiếu đang mở. Đơn đã thu tiền vẫn được phép sửa thông tin khách do nhập liệu sai. Không thay đổi tiền, kho, sản phẩm.':'Đang sửa khách ở phiếu bán đang nhập.';
-  return `<div class="modal-backdrop" id="saleCustomerEditModal"><div class="modal-card sale-customer-edit-modal"><div class="panel-head"><h3>${title}</h3><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Đóng</button></div><input id="sceExistingId" type="hidden" value=""><div class="quick-pick-customer" style="margin-bottom:12px;padding:10px;border:1px dashed #cfe8ff;border-radius:14px;background:#f8fcff"><label>Chọn khách hàng đã có sẵn trong danh mục</label><div class="inline"><input id="sceExistingSearch" list="saleCustomerEditExistingList" placeholder="Tìm tên / SĐT / mã KH"><button class="btn ghost" onclick="applyExistingCustomerToSaleEdit()">Áp dụng khách có sẵn</button></div><datalist id="saleCustomerEditExistingList">${data.customers.map(x=>`<option value="${customerSearchValue(x)}"></option>`).join('')}</datalist><small class="field-note">Có thể chọn khách có sẵn hoặc nhập tay lại Tên / SĐT / Địa chỉ.</small></div><div class="grid form-grid"><input id="sceId" type="hidden" value="${c.id||''}"><input id="sceSaleId" type="hidden" value="${saleId||''}"><div><label>Mã KH</label><input id="sceCode" value="${ci.code||''}" placeholder="KL090..."></div><div><label>Tên khách <span class="req">*</span></label><input id="sceName" value="${ci.name==='Chưa cập nhật tên'?'':ci.name}" placeholder="Nhập đúng tên khách"></div><div><label>Loại khách</label><select id="sceType"><option ${ci.type==='Khách lẻ'?'selected':''}>Khách lẻ</option><option ${ci.type==='CTV'?'selected':''}>CTV</option><option ${ci.type==='Đại lý'?'selected':''}>Đại lý</option><option ${ci.type==='Công ty'?'selected':''}>Công ty</option></select></div><div><label>SĐT <span class="req">*</span></label><input id="scePhone" value="${ci.phone||''}" placeholder="090..."></div><div class="span2"><label>Địa chỉ</label><input id="sceAddress" value="${ci.address||''}" placeholder="Địa chỉ lắp đặt/giao hàng"></div></div><div class="muted-small" style="margin:10px 0">${note}</div><div style="text-align:right"><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Hủy</button><button class="btn primary" onclick="saveSaleCustomerEdit()">Lưu thông tin khách</button></div></div></div>`;
+  const customerOptions=data.customers.map(x=>{const i=customerInfo(x);const sel=(c.id&&x.id===c.id)?'selected':'';return `<option value="${x.id||''}" ${sel}>${i.code} | ${i.name} | ${i.phone} | ${i.type} | ${i.address}</option>`}).join('');
+  return `<div class="modal-backdrop" id="saleCustomerEditModal"><div class="modal-card sale-customer-edit-modal"><div class="panel-head"><h3>${title}</h3><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Đóng</button></div><input id="sceExistingId" type="hidden" value="${c.id||''}"><input id="sceAppliedExistingId" type="hidden" value=""><div class="quick-pick-customer" style="margin-bottom:12px;padding:10px;border:1px dashed #cfe8ff;border-radius:14px;background:#f8fcff"><label>Chọn đúng khách hàng đã có sẵn trong danh mục</label><div class="inline"><select id="sceExistingCustomerSelect" style="flex:1"><option value="">-- Chọn khách trong danh mục --</option>${customerOptions}</select><button class="btn ghost" onclick="applyExistingCustomerToSaleEdit()">Áp dụng khách có sẵn</button></div><small class="field-note">Hệ thống áp dụng theo ID khách hàng đã chọn, không dò theo tên nên không bị nhầm khi khách trùng tên. Nếu nhập tay Tên/SĐT/Địa chỉ, hệ thống chỉ sửa snapshot của phiếu này.</small></div><div class="grid form-grid"><input id="sceId" type="hidden" value="${c.id||''}"><input id="sceSaleId" type="hidden" value="${saleId||''}"><div><label>Mã KH</label><input id="sceCode" value="${ci.code||''}" placeholder="KL090..."></div><div><label>Tên khách <span class="req">*</span></label><input id="sceName" value="${ci.name==='Chưa cập nhật tên'?'':ci.name}" placeholder="Nhập đúng tên khách"></div><div><label>Loại khách</label><select id="sceType"><option ${ci.type==='Khách lẻ'?'selected':''}>Khách lẻ</option><option ${ci.type==='CTV'?'selected':''}>CTV</option><option ${ci.type==='Đại lý'?'selected':''}>Đại lý</option><option ${ci.type==='Công ty'?'selected':''}>Công ty</option></select></div><div><label>SĐT <span class="req">*</span></label><input id="scePhone" value="${ci.phone||''}" placeholder="090..."></div><div class="span2"><label>Địa chỉ</label><input id="sceAddress" value="${ci.address||''}" placeholder="Địa chỉ lắp đặt/giao hàng"></div></div><div class="muted-small" style="margin:10px 0">${note}</div><div style="text-align:right"><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Hủy</button><button class="btn primary" onclick="saveSaleCustomerEdit()">Lưu thông tin khách</button></div></div></div>`;
 }
 window.editSaleCustomer=()=>{
   const c=findCustomerBySearch();
@@ -1029,39 +1030,61 @@ window.editSaleCustomerFromSale=(saleId)=>{
   setTimeout(()=>$('sceName')?.focus(),80);
 }
 window.applyExistingCustomerToSaleEdit=()=>{
-  const val=$('sceExistingSearch')?.value||'';
-  const parsed=parseCustomerInput(val);
-  const valKey=searchKey(val);
-  const valPhone=normalizePhone(val);
-  const c=data.customers.find(x=>{
-    const info=customerInfo(x);
-    return (parsed.customerCode&&ensureCustomerCode(x)===parsed.customerCode) ||
-      (parsed.phone&&normalizePhone(info.phone)===normalizePhone(parsed.phone)) ||
-      (parsed.name&&searchKey(info.name)===searchKey(parsed.name)) ||
-      (valPhone&&normalizePhone(info.phone)===valPhone) ||
-      (valKey&&searchKey(customerSearchValue(x))===valKey);
-  });
-  if(!c) return alert('Không tìm thấy khách trong danh mục. Vui lòng kiểm tra lại từ khóa.');
+  const selectedId=($('sceExistingCustomerSelect')?.value||'').trim();
+  let c=null;
+  if(selectedId) c=data.customers.find(x=>x.id===selectedId);
+  // Fallback cũ chỉ dùng khi không có select, nhưng ưu tiên Mã KH/SĐT hơn tên để tránh trùng tên.
+  if(!c){
+    const val=$('sceExistingSearch')?.value||'';
+    const parsed=parseCustomerInput(val);
+    const valKey=searchKey(val);
+    const valPhone=normalizePhone(val);
+    c=data.customers.find(x=>{
+      const info=customerInfo(x);
+      return (parsed.customerCode&&ensureCustomerCode(x)===parsed.customerCode) ||
+        (parsed.phone&&normalizePhone(info.phone)===normalizePhone(parsed.phone)) ||
+        (valPhone&&normalizePhone(info.phone)===valPhone) ||
+        (valKey&&searchKey(customerSearchValue(x))===valKey);
+    }) || data.customers.find(x=>parsed.name&&searchKey(customerInfo(x).name)===searchKey(parsed.name));
+  }
+  if(!c) return alert('Vui lòng chọn khách hàng trong danh mục trước khi áp dụng.');
   const i=customerInfo(c);
-  // V55: Áp dụng khách có sẵn phải ghi đè TOÀN BỘ trường theo một khách duy nhất.
+  if(!i.name || i.name==='Chưa cập nhật tên' || !i.phone) return alert('Khách hàng này thiếu tên hoặc SĐT. Vui lòng cập nhật lại danh mục khách hàng trước.');
+  // V56: Áp dụng theo ID khách hàng đã chọn, ghi đè toàn bộ trường cùng một nguồn dữ liệu.
   if($('sceExistingId')) $('sceExistingId').value=c.id||'';
+  if($('sceAppliedExistingId')) $('sceAppliedExistingId').value=c.id||'';
   if($('sceId')) $('sceId').value=c.id||'';
   if($('sceCode')) $('sceCode').value=i.code||'';
   if($('sceName')) $('sceName').value=i.name==='Chưa cập nhật tên'?'':i.name;
   if($('scePhone')) $('scePhone').value=i.phone||'';
   if($('sceAddress')) $('sceAddress').value=i.address||'';
   if($('sceType')) $('sceType').value=['Khách lẻ','CTV','Đại lý','Công ty'].includes(i.type)?i.type:'Khách lẻ';
-  if(window.showToast) window.showToast('Đã áp dụng khách có sẵn','success',i.name);
+  if(window.showToast) window.showToast('Đã áp dụng khách có sẵn','success',`${i.name} - ${i.phone}`);
 };
 window.saveSaleCustomerEdit=async()=>{
   const saleId=$('sceSaleId')?.value||'';
   const sale=saleId?data.sales.find(x=>x.id===saleId):null;
-  const customerId=($('sceId')?.value||$('sceExistingId')?.value||'').trim();
+  const appliedExistingId=($('sceAppliedExistingId')?.value||'').trim();
+  const selectedExistingId=($('sceExistingCustomerSelect')?.value||'').trim();
+  let customerId=($('sceId')?.value||$('sceExistingId')?.value||'').trim();
   const phone=extractPhone($('scePhone')?.value||'');
   const type=$('sceType')?.value||'Khách lẻ';
   const address=($('sceAddress')?.value||'').trim();
-  const customerCode=($('sceCode')?.value||customerCodeFromPhone(phone)).trim();
+  let customerCode=($('sceCode')?.value||customerCodeFromPhone(phone)).trim();
   const name=cleanCustomerName(($('sceName')?.value||'').trim(),phone,customerCode);
+  const oldCi=sale?saleCustomerInfo(sale):{};
+  const selectedCustomer=appliedExistingId?data.customers.find(x=>x.id===appliedExistingId):null;
+  if(selectedCustomer){
+    customerId=selectedCustomer.id||customerId;
+  }else if(saleId){
+    // Nếu nhập tay và SĐT/Mã KH đã đổi khác khách cũ thì không giữ ID khách cũ, tránh gom nhầm công nợ/phiếu thu theo khách sai.
+    const phoneChanged=normalizePhone(phone)!==normalizePhone(oldCi.phone||'');
+    const codeChanged=String(customerCode||'').trim().toLowerCase()!==String(oldCi.code||'').trim().toLowerCase();
+    if(phoneChanged || codeChanged){
+      customerId='';
+      if(!customerCode || codeChanged) customerCode=customerCodeFromPhone(phone);
+    }
+  }
   if(!name) return alert('Vui lòng nhập đúng tên khách hàng, không dùng SĐT hoặc mã KH làm tên.');
   if(!phone) return alert('Vui lòng nhập số điện thoại khách hàng');
   // Nếu đang sửa khách trên phiếu bán CHƯA lưu, chỉ cập nhật form hiện tại, không ghi Firestore.
@@ -1096,14 +1119,8 @@ window.saveSaleCustomerEdit=async()=>{
     updatedAt:serverTimestamp()
   });
 
-  if(allocatedReceipts.length){
-    let batch=writeBatch(db); let count=0;
-    for(const r of allocatedReceipts){
-      batch.update(doc(db,'receipts',r.id),{customerId,customerCode,customerName:name,customerPhone:phone,customerAddress:address,customerType:type,updatedAt:serverTimestamp()});
-      count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;}
-    }
-    if(count>0) await batch.commit();
-  }
+  // Đồng bộ các chứng từ liên quan đến đúng phiếu này: phiếu thu, phiếu xuất kho/trả hàng, bảo hành.
+  await syncRelatedDocsForSaleCustomer(saleId,{...payload,code:sale.code||''},sale);
 
   await logAction('Sửa khách riêng trên phiếu bán',`${sale.code||saleId}: ${customerCode} - ${name}`);
   await loadAll();
@@ -1353,7 +1370,7 @@ window.saveSaleReturn=async(id)=>{
   }
   if(!returnItems.length)return alert('Nhập số lượng trả ít nhất 1 dòng');
   if(!confirm(`Xác nhận nhập lại ${returnItems.reduce((a,it)=>a+(+it.qty||0),0)} sản phẩm về ${wh} và giảm số lượng trên đơn ${s.code}?`))return;
-  const voucher={code:nextCode('TH',data.stockVouchers),date:$('returnDate')?.value||today(),type:'RETURN',warehouse:wh,saleId:s.id,saleCode:s.code,customerName:saleCustomerInfo(s).name,note:$('returnNote')?.value||`Trả lại hàng bán từ đơn ${s.code}`,settlement:$('returnSettlement')?.value||'Khách đang dư tiền',items:returnItems,value:returnItems.reduce((a,it)=>a+(+it.qty||0)*(+it.cost||0),0),locked:true,updatedAt:serverTimestamp()};
+  const rci=saleCustomerInfo(s); const voucher={code:nextCode('TH',data.stockVouchers),date:$('returnDate')?.value||today(),type:'RETURN',warehouse:wh,saleId:s.id,saleCode:s.code,customerId:s.customerId||'',customerCode:rci.code||'',customerName:rci.name,customerPhone:rci.phone||'',customerAddress:rci.address||'',customerType:rci.type||'',note:$('returnNote')?.value||`Trả lại hàng bán từ đơn ${s.code}`,settlement:$('returnSettlement')?.value||'Khách đang dư tiền',items:returnItems,value:returnItems.reduce((a,it)=>a+(+it.qty||0)*(+it.cost||0),0),locked:true,updatedAt:serverTimestamp()};
   await addDoc(col('stockVouchers'),{...voucher,createdAt:serverTimestamp()});
   const newItems=(s.items||[]).map(it=>({...it,qty:Math.max(0,(+it.qty||0)-(+returnMap[it.code]||0))})).filter(it=>(+it.qty||0)>0);
   const newTotals=calcSaleFromItemsForReturn(s,newItems);
@@ -1391,8 +1408,9 @@ window.createSupplementStockVoucher=async(id)=>{
   }
   const items=voucherItemsFromSaleItems(s.items||[]);
   const cost=(s.items||[]).reduce((a,it)=>a+costFor(it.code,s.date||today())*(+it.qty||0),0);
+  const sci=saleCustomerInfo(s);
   const voucher={
-    code:nextCode('XK',data.stockVouchers),date:today(),type:'OUT',warehouse,saleId:s.id,saleCode:s.code,customerName:saleCustomerInfo(s).name,
+    code:nextCode('XK',data.stockVouchers),date:s.date||today(),type:'OUT',warehouse,saleId:s.id,saleCode:s.code,customerId:s.customerId||'',customerCode:sci.code||'',customerName:sci.name,customerPhone:sci.phone||'',customerAddress:sci.address||'',customerType:sci.type||'',
     note:`Xuất kho bổ sung cho đơn bán ${s.code}`,
     items,value:cost,updatedAt:serverTimestamp()
   };
@@ -1490,6 +1508,56 @@ async function syncReceiptsForSaleCustomer(saleId,salePayload={},oldSale={}){
   }
   if(count>0) await batch.commit();
 }
+
+async function syncRelatedDocsForSaleCustomer(saleId,salePayload={},oldSale={}){
+  // Đồng bộ thông tin khách của CHÍNH phiếu bán đang sửa sang các chứng từ phát sinh từ phiếu đó.
+  // Không cập nhật hồ sơ khách hàng và không cập nhật các phiếu bán khác.
+  if(!saleId) return;
+  const saleCode=salePayload.code||oldSale.code||'';
+  const patchBase={
+    customerId:salePayload.customerId||'',
+    customerCode:salePayload.customerCode||'',
+    customerName:salePayload.customerName||'',
+    customerPhone:salePayload.customerPhone||'',
+    customerAddress:salePayload.customerAddress||'',
+    customerType:salePayload.customerType||'',
+    updatedAt:serverTimestamp()
+  };
+
+  await syncReceiptsForSaleCustomer(saleId,salePayload,oldSale);
+
+  const stockList=data.stockVouchers.filter(v=>v.id && (v.saleId===saleId || (!!saleCode && v.saleCode===saleCode)));
+  const warrantyList=data.warranties.filter(w=>w.id && (w.saleId===saleId || (!!saleCode && w.saleCode===saleCode)));
+  let batch=writeBatch(db), count=0;
+
+  for(const v of stockList){
+    batch.update(doc(db,'stockVouchers',v.id),{
+      customerId:patchBase.customerId,
+      customerCode:patchBase.customerCode,
+      customerName:patchBase.customerName,
+      customerPhone:patchBase.customerPhone,
+      customerAddress:patchBase.customerAddress,
+      customerType:patchBase.customerType,
+      updatedAt:serverTimestamp()
+    });
+    count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;}
+  }
+  for(const w of warrantyList){
+    batch.update(doc(db,'warranties',w.id),{
+      customer:patchBase.customerName,
+      customerName:patchBase.customerName,
+      phone:patchBase.customerPhone,
+      customerPhone:patchBase.customerPhone,
+      address:patchBase.customerAddress,
+      customerAddress:patchBase.customerAddress,
+      customerCode:patchBase.customerCode,
+      customerType:patchBase.customerType,
+      updatedAt:serverTimestamp()
+    });
+    count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;}
+  }
+  if(count>0) await batch.commit();
+}
 window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quickCreateCustomer();return alert('Chưa có khách hàng hợp lệ. Vui lòng kiểm tra Tên/SĐT rồi bấm Lưu khách trong form Thêm khách hàng.')}let items=saleItems();if(!items.length)return alert('Chưa có sản phẩm'); const inactiveItem=items.find(it=>(data.products.find(p=>p.code===it.code)||{}).active==='inactive'); if(inactiveItem)return alert('Model '+inactiveItem.code+' đang ngừng bán, không thể lưu phiếu bán.');
   const exportStock=!!$('saleExportStock')?.checked;
   const saleWarehouse=$('saleWarehouse')?.value||'Kho Văn Phòng';
@@ -1509,7 +1577,7 @@ window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quic
   const savedSaleId=editingSale;
   // Kiêm xuất kho: tạo/cập nhật phiếu xuất kho OUT riêng để trừ tồn kho. Không tick thì chưa xuất kho.
   if(exportStock){
-    const voucher={code:oldSale?.stockVoucherCode||nextCode('XK',data.stockVouchers),date:o.date,type:'OUT',warehouse:saleWarehouse,saleId:editingSale,saleCode:o.code,customerName:o.customerName,note:`Xuất kho theo đơn bán ${o.code}`,items:voucherItemsFromSaleItems(items),value:cost,updatedAt:serverTimestamp()};
+    const voucher={code:oldSale?.stockVoucherCode||nextCode('XK',data.stockVouchers),date:o.date,type:'OUT',warehouse:saleWarehouse,saleId:editingSale,saleCode:o.code,customerId:o.customerId||'',customerCode:o.customerCode||'',customerName:o.customerName,customerPhone:o.customerPhone||'',customerAddress:o.customerAddress||'',customerType:o.customerType||'',note:`Xuất kho theo đơn bán ${o.code}`,items:voucherItemsFromSaleItems(items),value:cost,updatedAt:serverTimestamp()};
     if(o.stockVoucherId){await updateDoc(doc(db,'stockVouchers',o.stockVoucherId),voucher)}
     else{const vr=await addDoc(col('stockVouchers'),{...voucher,createdAt:serverTimestamp()});await updateDoc(doc(db,'sales',editingSale),{stockVoucherId:vr.id,stockVoucherCode:voucher.code,orderStatus:'Hoàn tất'})}
   }else if(oldSale?.stockVoucherId){
@@ -1910,7 +1978,7 @@ function renderDebts(){
 window.clearDebtSearch=()=>{if($('debtSearch'))$('debtSearch').value='';renderDebts();}
 window.resetReceiptForm=()=>{editingReceipt=null;fillReceiptCustomerOptions();$('receiptCustomer').value='';$('receiptAmount').value='';$('receiptDate').value=today();$('receiptNote').value=''}
 window.receiptFor=id=>{let d=calcDebtRows().find(x=>x.customer.id===id);if(d&&d.debt<=0)return alert('Khách hàng này đã thu đủ tiền. Phiếu thu được lưu trong lịch sử đã tất toán.');resetReceiptForm();$('receiptCustomer').value=id;$('receiptDate').value=today();if(d&&d.debt>0)$('receiptAmount').value=d.debt;showPage('debts');setTimeout(()=>$('receiptAmount')?.focus(),0)};window.openReceiptForm=()=>{resetReceiptForm();showPage('debts');setTimeout(()=>$('receiptCustomer')?.focus(),0)}
-window.saveReceipt=async()=>{let cid=$('receiptCustomer').value,amount=+$('receiptAmount').value||0;if(!cid||!amount)return alert('Chọn khách và nhập số tiền');let d=calcDebtRows().find(x=>x.customer.id===cid);if(d&&d.debt<=0&&!editingReceipt)return alert('Khách hàng này đã thu đủ tiền, không còn công nợ phải thu.');if(d&&amount>d.debt&&!confirm(`Số tiền thu ${money(amount)} lớn hơn công nợ còn lại ${money(d.debt)}. Vẫn lưu phiếu thu?`))return;let c=data.customers.find(x=>x.id===cid)||{};let ci=customerInfo(c);let o={customerId:cid,customerCode:ci.code,customerName:ci.name,amount,date:$('receiptDate').value||today(),note:$('receiptNote').value||'',updatedAt:serverTimestamp()};if(editingReceipt){await updateDoc(doc(db,'receipts',editingReceipt),o);await logAction('Sửa phiếu thu',o.customerName+' '+o.amount)}else{await addDoc(col('receipts'),{code:nextCode('PT',data.receipts),...o,createdAt:serverTimestamp()});await logAction('Thêm phiếu thu',o.customerName+' '+o.amount)}resetReceiptForm();await loadAll();await updatePaymentStatusesForCustomer(cid);await loadAll()}
+window.saveReceipt=async()=>{let cid=$('receiptCustomer').value,amount=+$('receiptAmount').value||0;if(!cid||!amount)return alert('Chọn khách và nhập số tiền');let d=calcDebtRows().find(x=>x.customer.id===cid);if(d&&d.debt<=0&&!editingReceipt)return alert('Khách hàng này đã thu đủ tiền, không còn công nợ phải thu.');if(d&&amount>d.debt&&!confirm(`Số tiền thu ${money(amount)} lớn hơn công nợ còn lại ${money(d.debt)}. Vẫn lưu phiếu thu?`))return;let c=data.customers.find(x=>x.id===cid)||{};let ci=customerInfo(c);let o={customerId:cid,customerCode:ci.code,customerName:ci.name,customerPhone:ci.phone,customerAddress:ci.address,customerType:ci.type,amount,date:$('receiptDate').value||today(),note:$('receiptNote').value||'',updatedAt:serverTimestamp()};if(editingReceipt){await updateDoc(doc(db,'receipts',editingReceipt),o);await logAction('Sửa phiếu thu',o.customerName+' '+o.amount)}else{await addDoc(col('receipts'),{code:nextCode('PT',data.receipts),...o,createdAt:serverTimestamp()});await logAction('Thêm phiếu thu',o.customerName+' '+o.amount)}resetReceiptForm();await loadAll();await updatePaymentStatusesForCustomer(cid);await loadAll()}
 window.editReceipt=id=>{let r=data.receipts.find(x=>x.id===id);if(!r)return;editingReceipt=id;$('receiptCustomer').value=r.customerId||'';$('receiptAmount').value=r.amount||0;$('receiptDate').value=r.date||today();$('receiptNote').value=r.note||'';showPage('debts')}
 function receiptsForSale(s){
   const sameCustomer=data.receipts.filter(r=>r.customerId===s.customerId).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.code||'').localeCompare(String(b.code||'')));
@@ -1924,10 +1992,10 @@ function receiptsForSale(s){
   }
   return out;
 }
-window.printReceipt=id=>{let r=data.receipts.find(x=>x.id===id);if(!r)return alert('Không tìm thấy phiếu thu');let c=data.customers.find(x=>x.id===r.customerId)||{};let html=`<div class="print-a5">${printHeader('PHIẾU THU')}<p><b>Mã phiếu thu:</b> ${r.code||''} &nbsp; <b>Ngày:</b> ${r.date||''}<br><b>Mã KH:</b> ${r.customerCode||ensureCustomerCode(c)||''}<br><b>Khách hàng:</b> ${r.customerName||customerInfo(c).name||''}<br><b>Số tiền thu:</b> ${money(r.amount)}<br><b>Bằng chữ:</b> ${numberToVietnamese(r.amount)}<br><b>Ghi chú:</b> ${r.note||''}</p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:50px"><div>Người nộp tiền<br><br><br></div><div>Người thu tiền<br><br><br></div></div></div>`;doPrint(html)}
+window.printReceipt=id=>{let r=data.receipts.find(x=>x.id===id);if(!r)return alert('Không tìm thấy phiếu thu');let c=data.customers.find(x=>x.id===r.customerId)||{};let html=`<div class="print-a5">${printHeader('PHIẾU THU')}<p><b>Mã phiếu thu:</b> ${r.code||''} &nbsp; <b>Ngày:</b> ${r.date||''}<br><b>Mã KH:</b> ${r.customerCode||ensureCustomerCode(c)||''}<br><b>Khách hàng:</b> ${r.customerName||customerInfo(c).name||''}<br><b>SĐT:</b> ${r.customerPhone||customerInfo(c).phone||''}<br><b>Địa chỉ:</b> ${r.customerAddress||customerInfo(c).address||''}<br><b>Số tiền thu:</b> ${money(r.amount)}<br><b>Bằng chữ:</b> ${numberToVietnamese(r.amount)}<br><b>Ghi chú:</b> ${r.note||''}</p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:50px"><div>Người nộp tiền<br><br><br></div><div>Người thu tiền<br><br><br></div></div></div>`;doPrint(html)}
 function renderReceipts(){
   const q=($('receiptSearch')?.value||'').toLowerCase().trim();
-  const rows=data.receipts.filter(r=>{const c=data.customers.find(x=>x.id===r.customerId)||{};const ci=customerInfo(c);return matchSearchText(q,r.code,r.date,r.customerCode,ci.code,r.customerName,ci.name,ci.phone,ci.address,r.amount,money(r.amount),r.note)}).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const rows=data.receipts.filter(r=>{const c=data.customers.find(x=>x.id===r.customerId)||{};const ci=customerInfo(c);return matchSearchText(q,r.code,r.date,r.customerCode,ci.code,r.customerName,ci.name,r.customerPhone,ci.phone,r.customerAddress,ci.address,r.amount,money(r.amount),r.note)}).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   if($('receiptSearchCount'))$('receiptSearchCount').textContent=`Hiển thị ${rows.length}/${data.receipts.length}`;
   $('receiptTable').innerHTML=rows.map(r=>{const c=data.customers.find(x=>x.id===r.customerId)||{};const ci=customerInfo(c);return `<tr><td>${r.code||''}</td><td>${r.date||''}</td><td>${r.customerCode||ci.code||''}</td><td>${r.customerName||ci.name||''}</td><td>${money(r.amount)}</td><td>${r.note||''}</td><td><button class="btn ghost" onclick="printReceipt('${r.id}')">In</button> <button class="btn ghost" onclick="editReceipt('${r.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('receipts','${r.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy phiếu thu phù hợp</td></tr>'
 }
