@@ -2091,66 +2091,75 @@ function customerDebtKeyFromCustomer(c={}){
   return c.id ? `id:${c.id}` : (ensureCustomerCode(c) ? `code:${String(ensureCustomerCode(c)).toLowerCase()}` : (normalizePhone(c.phone) ? `phone:${normalizePhone(c.phone)}` : `tmp:${uid()}`));
 }
 function findCustomerForSale(s={}){
-  const sid=s.customerId||'';
+  // DEBT-STRICT-FIX: Công nợ không được dò khách theo tên vì có thể trùng tên.
+  // Chỉ khớp theo ID khách, mã KH hoặc SĐT. Nếu không có đủ khóa định danh thì giữ snapshot riêng của phiếu.
+  const sid=String(s.customerId||'').trim();
   if(sid){const c=data.customers.find(x=>x.id===sid); if(c) return c;}
   const code=String(s.customerCode||'').trim().toLowerCase();
   if(code){const c=data.customers.find(x=>String(ensureCustomerCode(x)||'').trim().toLowerCase()===code); if(c) return c;}
   const phone=normalizePhone(s.customerPhone||s.phone||'');
   if(phone){const c=data.customers.find(x=>normalizePhone(x.phone)===phone); if(c) return c;}
-  const name=searchKey(s.customerName||'');
-  if(name){const c=data.customers.find(x=>searchKey(x.name)===name && (!phone || normalizePhone(x.phone)===phone)); if(c) return c;}
   return null;
 }
 function findCustomerForReceipt(r={}){
-  // V60-DEBT-FIX: nếu phiếu thu có liên kết saleId/allocation thì luôn lấy khách theo phiếu bán hiện tại.
-  // Khi sửa khách trên phiếu bán đã thu tiền, phiếu thu phải đi theo phiếu bán để không tạo công nợ khách mới.
+  // DEBT-STRICT-FIX: Phiếu thu có saleId/allocation đi theo phiếu bán. Không dò theo tên khách.
   const saleId=r.saleId || (Array.isArray(r.allocations)&&r.allocations[0]?.saleId) || '';
   if(saleId){
     const s=data.sales.find(x=>x.id===saleId);
     if(s){const c=findCustomerForSale(s); if(c) return c;}
   }
-  const rid=r.customerId||'';
+  const rid=String(r.customerId||'').trim();
   if(rid){const c=data.customers.find(x=>x.id===rid); if(c) return c;}
   const code=String(r.customerCode||'').trim().toLowerCase();
   if(code){const c=data.customers.find(x=>String(ensureCustomerCode(x)||'').trim().toLowerCase()===code); if(c) return c;}
   const phone=normalizePhone(r.customerPhone||r.phone||'');
   if(phone){const c=data.customers.find(x=>normalizePhone(x.phone)===phone); if(c) return c;}
-  const name=searchKey(r.customerName||'');
-  if(name){const c=data.customers.find(x=>searchKey(x.name)===name && (!phone || normalizePhone(x.phone)===phone)); if(c) return c;}
   return null;
 }
 function saleDebtKey(s={}){
-  const c=findCustomerForSale(s);
-  if(c) return customerDebtKeyFromCustomer(c);
-  if(s.customerId) return `id:${s.customerId}`;
-  if(s.customerCode) return `code:${String(s.customerCode).toLowerCase()}`;
-  if(s.customerPhone) return `phone:${normalizePhone(s.customerPhone)}`;
+  const sid=String(s.customerId||'').trim();
+  if(sid) return `id:${sid}`;
+  const code=String(s.customerCode||'').trim().toLowerCase();
+  if(code) return `code:${code}`;
+  const phone=normalizePhone(s.customerPhone||s.phone||'');
+  if(phone) return `phone:${phone}`;
+  // Không dùng tên khách làm khóa công nợ. Hai khách trùng tên phải tách riêng.
   return `sale:${s.id||s.code||uid()}`;
 }
 function receiptDebtKey(r={}){
-  // V60-DEBT-FIX: phiếu thu có saleId/allocation phải gom theo phiếu bán, không gom theo khách cũ.
   const saleId=r.saleId || (Array.isArray(r.allocations)&&r.allocations[0]?.saleId) || '';
   if(saleId){
     const s=data.sales.find(x=>x.id===saleId);
     if(s) return saleDebtKey(s);
   }
-  const c=findCustomerForReceipt(r);
-  if(c) return customerDebtKeyFromCustomer(c);
-  if(r.customerId) return `id:${r.customerId}`;
-  if(r.customerCode) return `code:${String(r.customerCode).toLowerCase()}`;
-  if(r.customerPhone) return `phone:${normalizePhone(r.customerPhone)}`;
+  const rid=String(r.customerId||'').trim();
+  if(rid) return `id:${rid}`;
+  const code=String(r.customerCode||'').trim().toLowerCase();
+  if(code) return `code:${code}`;
+  const phone=normalizePhone(r.customerPhone||r.phone||'');
+  if(phone) return `phone:${phone}`;
+  // Không dùng tên khách làm khóa công nợ.
   return `receipt:${r.id||r.code||uid()}`;
+}
+function debtGroupProducts(g){
+  const m={};
+  (g.sales||[]).forEach(s=>(s.items||[]).forEach(it=>{
+    const code=it.code||it.model||''; if(!code)return;
+    m[code]=(m[code]||0)+(+it.qty||0);
+  }));
+  return Object.entries(m).map(([code,qty])=>`${code} x${qty}`).join(', ');
 }
 function customerFromDebtGroup(g){
   if(g.customer) return g.customer;
   const firstSale=g.sales[0]||{};
+  const firstReceipt=g.receipts[0]||{};
   return {
-    id:firstSale.customerId||g.key,
-    customerCode:firstSale.customerCode||'',
-    name:firstSale.customerName||'Chưa cập nhật tên khách',
-    phone:firstSale.customerPhone||'',
-    address:firstSale.customerAddress||'',
-    type:firstSale.customerType||firstSale.customerGroup||'Khách lẻ',
+    id:firstSale.customerId||firstReceipt.customerId||g.key,
+    customerCode:firstSale.customerCode||firstReceipt.customerCode||'',
+    name:firstSale.customerName||firstReceipt.customerName||'Chưa cập nhật tên khách',
+    phone:firstSale.customerPhone||firstReceipt.customerPhone||'',
+    address:firstSale.customerAddress||firstReceipt.customerAddress||'',
+    type:firstSale.customerType||firstReceipt.customerType||firstSale.customerGroup||'Khách lẻ',
     openingDebt:0
   };
 }
@@ -2188,7 +2197,7 @@ function fillReceiptCustomerOptions(includeAll=false){
   const customers=includeAll?data.customers:data.customers.filter(c=>activeIds.has(c.id));
   el.innerHTML='<option value="">-- Chọn khách còn công nợ --</option>'+customers.map(c=>`<option value="${c.id}">${customerShortLabel(c)}</option>`).join('');
 }
-function debtRowText(d){const ci=customerInfo(d.customer);return [ci.code,ci.name,ci.phone,ci.address,ci.type,d.total,d.paid,d.debt,money(d.total),money(d.paid),money(d.debt)].join(' ').toLowerCase()}
+function debtRowText(d){const ci=customerInfo(d.customer);return [ci.code,ci.name,ci.phone,ci.address,ci.type,debtGroupProducts(d),d.total,d.paid,d.debt,money(d.total),money(d.paid),money(d.debt)].join(' ').toLowerCase()}
 function renderDebts(){
   const q=($('debtSearch')?.value||'').toLowerCase().trim();
   const activeAll=calcDebts().sort((a,b)=>b.debt-a.debt);
@@ -2199,8 +2208,8 @@ function renderDebts(){
   if($('debtActiveTotal'))$('debtActiveTotal').textContent=money(activeAll.reduce((a,d)=>a+d.debt,0));
   if($('debtSettledCount'))$('debtSettledCount').textContent=settledAll.length;
   if($('debtSearchCount'))$('debtSearchCount').textContent=`Hiển thị ${active.length}/${activeAll.length} công nợ phải thu`;
-  $('debtTable').innerHTML=active.map(d=>{const ci=customerInfo(d.customer);return `<tr><td><b>${ci.code}</b></td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><b class="text-danger debt-money">${money(d.debt)}</b></td><td><button class="btn primary debt-action" onclick="receiptFor('${d.customer.id}')">Thu tiền</button></td></tr>`}).join('')||'<tr><td colspan="6">Không tìm thấy công nợ phù hợp</td></tr>';
-  if($('settledDebtTable'))$('settledDebtTable').innerHTML=settled.map(d=>{const ci=customerInfo(d.customer);return `<tr class="settled-row"><td>${ci.code}</td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><span class="badge green">Đã thu đủ</span>${d.overPaid?` <span class="badge orange">Thu dư ${money(d.overPaid)}</span>`:''}</td></tr>`}).join('')||'<tr><td colspan="5">Không tìm thấy công nợ đã tất toán phù hợp</td></tr>';
+  $('debtTable').innerHTML=active.map(d=>{const ci=customerInfo(d.customer);const productText=debtGroupProducts(d)||'-';return `<tr><td><b>${ci.code}</b></td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><small>${ci.address||''}</small></td><td><small>${productText}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><b class="text-danger debt-money">${money(d.debt)}</b></td><td><button class="btn primary debt-action" onclick="receiptFor('${d.customer.id}')">Thu tiền</button></td></tr>`}).join('')||'<tr><td colspan="8">Không tìm thấy công nợ phù hợp</td></tr>';
+  if($('settledDebtTable'))$('settledDebtTable').innerHTML=settled.map(d=>{const ci=customerInfo(d.customer);const productText=debtGroupProducts(d)||'-';return `<tr class="settled-row"><td>${ci.code}</td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td><small>${ci.address||''}</small></td><td><small>${productText}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><span class="badge green">Đã thu đủ</span>${d.overPaid?` <span class="badge orange">Thu dư ${money(d.overPaid)}</span>`:''}</td></tr>`}).join('')||'<tr><td colspan="7">Không tìm thấy công nợ đã tất toán phù hợp</td></tr>';
 }
 window.clearDebtSearch=()=>{if($('debtSearch'))$('debtSearch').value='';renderDebts();}
 window.resetReceiptForm=()=>{editingReceipt=null;fillReceiptCustomerOptions();$('receiptCustomer').value='';$('receiptAmount').value='';$('receiptDate').value=today();$('receiptNote').value=''}
