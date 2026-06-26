@@ -1062,3 +1062,18 @@ td:first-child,th:first-child,td:last-child,th:last-child{border-radius:0!import
   #sales .sale-customer-line .btn{flex:1!important;}
   #sales .sale-form-panel{padding-bottom:150px!important;}
 }
+/* Hủy phiếu bán: giữ lịch sử nhưng loại khỏi số liệu hiệu lực */
+.row-canceled{opacity:.72;background:#fff1f2!important;}
+.row-canceled td{text-decoration:none;color:#7f1d1d;}
+.alert.danger{background:#fff1f2;border:1px solid #fecdd3;color:#991b1b;border-radius:14px;padding:12px 14px;margin:10px 0 14px;}
+
+/* V58 customer search fix - custom dropdown for Sale form */
+.sale-customer-name{position:relative;}
+.sale-customer-results{display:none;position:absolute;z-index:80;left:0;right:0;top:100%;margin-top:6px;background:#fff;border:1px solid #d8ddf2;border-radius:12px;box-shadow:0 14px 30px rgba(20,20,60,.14);max-height:280px;overflow:auto;padding:6px;}
+.sale-customer-results.show{display:block;}
+.sale-customer-result-row{width:100%;display:block;text-align:left;background:#fff;border:0;border-bottom:1px solid #eef1fb;padding:10px 12px;cursor:pointer;border-radius:8px;color:#111827;}
+.sale-customer-result-row:last-child{border-bottom:0;}
+.sale-customer-result-row:hover{background:#f3f1ff;}
+.sale-customer-result-row b{color:#2f22c8;}
+.sale-customer-result-row small{display:block;color:#64748b;margin-top:3px;line-height:1.35;}
+.sale-customer-no-result{padding:10px 12px;color:#64748b;font-size:14px;}
