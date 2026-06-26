@@ -2087,59 +2087,76 @@ function renderExpenses(){if(!$('expenseTable'))return;let visibleExpenses=data.
 window.clearExpenseSearch=()=>{if($('expenseSearch'))$('expenseSearch').value='';renderExpenses();}
 window.editExpense=id=>{let e=data.expenses.find(x=>x.id===id);if(!e)return;editingExpense=id;$('exDate').value=e.date||today();$('exCategory').value=e.category||'Khác';$('exAmount').value=e.amount||0;$('exNote').value=e.note||'';showPage('expenses')}
 
+function debtClean(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ')}
+function debtAddressKey(v){return debtClean(v).replace(/[.,;:]/g,'').replace(/\s+/g,' ')}
+function debtSnapshotKey(o={}){
+  // Công nợ tuyệt đối không được gom theo tên khách.
+  // Ưu tiên SĐT + địa chỉ trong snapshot phiếu để tránh trường hợp nhân viên chọn nhầm master customerId
+  // hoặc 2 khách trùng tên bị hệ thống cộng/trừ chéo tiền đã thu.
+  const phone=normalizePhone(o.customerPhone||o.phone||'');
+  const address=debtAddressKey(o.customerAddress||o.address||'');
+  const code=debtClean(o.customerCode||o.code||'');
+  const id=debtClean(o.customerId||o.id||'');
+  if(phone && address) return `snap:${phone}|${address}`;
+  if(phone) return `phone:${phone}`;
+  if(code && address) return `snapcode:${code}|${address}`;
+  if(code) return `code:${code}`;
+  if(id) return `id:${id}`;
+  return `tmp:${uid()}`;
+}
 function customerDebtKeyFromCustomer(c={}){
-  return c.id ? `id:${c.id}` : (ensureCustomerCode(c) ? `code:${String(ensureCustomerCode(c)).toLowerCase()}` : (normalizePhone(c.phone) ? `phone:${normalizePhone(c.phone)}` : `tmp:${uid()}`));
+  const phone=normalizePhone(c.phone||'');
+  const address=debtAddressKey(c.address||'');
+  const code=debtClean(ensureCustomerCode(c)||c.customerCode||'');
+  const id=debtClean(c.id||'');
+  if(phone && address) return `snap:${phone}|${address}`;
+  if(phone) return `phone:${phone}`;
+  if(code && address) return `snapcode:${code}|${address}`;
+  if(code) return `code:${code}`;
+  if(id) return `id:${id}`;
+  return `tmp:${uid()}`;
 }
 function findCustomerForSale(s={}){
-  // DEBT-STRICT-FIX: Công nợ không được dò khách theo tên vì có thể trùng tên.
-  // Chỉ khớp theo ID khách, mã KH hoặc SĐT. Nếu không có đủ khóa định danh thì giữ snapshot riêng của phiếu.
-  const sid=String(s.customerId||'').trim();
-  if(sid){const c=data.customers.find(x=>x.id===sid); if(c) return c;}
-  const code=String(s.customerCode||'').trim().toLowerCase();
-  if(code){const c=data.customers.find(x=>String(ensureCustomerCode(x)||'').trim().toLowerCase()===code); if(c) return c;}
+  // DEBT-STRICT-FIX: Không dò khách theo tên. Ưu tiên SĐT + địa chỉ snapshot để tách khách trùng tên.
   const phone=normalizePhone(s.customerPhone||s.phone||'');
+  const address=debtAddressKey(s.customerAddress||s.address||'');
+  if(phone && address){const c=data.customers.find(x=>normalizePhone(x.phone)===phone && debtAddressKey(x.address)===address); if(c) return c;}
   if(phone){const c=data.customers.find(x=>normalizePhone(x.phone)===phone); if(c) return c;}
+  const code=debtClean(s.customerCode||'');
+  if(code && address){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code && debtAddressKey(x.address)===address); if(c) return c;}
+  if(code){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code); if(c) return c;}
+  const sid=debtClean(s.customerId||'');
+  if(sid){const c=data.customers.find(x=>debtClean(x.id)===sid); if(c) return c;}
   return null;
 }
 function findCustomerForReceipt(r={}){
-  // DEBT-STRICT-FIX: Phiếu thu có saleId/allocation đi theo phiếu bán. Không dò theo tên khách.
+  // Phiếu thu có saleId/allocation thì đi theo đúng phiếu bán đó, không phân bổ qua khách trùng tên.
   const saleId=r.saleId || (Array.isArray(r.allocations)&&r.allocations[0]?.saleId) || '';
   if(saleId){
-    const s=data.sales.find(x=>x.id===saleId);
+    const s=data.sales.find(x=>x.id===saleId || x.code===saleId);
     if(s){const c=findCustomerForSale(s); if(c) return c;}
   }
-  const rid=String(r.customerId||'').trim();
-  if(rid){const c=data.customers.find(x=>x.id===rid); if(c) return c;}
-  const code=String(r.customerCode||'').trim().toLowerCase();
-  if(code){const c=data.customers.find(x=>String(ensureCustomerCode(x)||'').trim().toLowerCase()===code); if(c) return c;}
   const phone=normalizePhone(r.customerPhone||r.phone||'');
+  const address=debtAddressKey(r.customerAddress||r.address||'');
+  if(phone && address){const c=data.customers.find(x=>normalizePhone(x.phone)===phone && debtAddressKey(x.address)===address); if(c) return c;}
   if(phone){const c=data.customers.find(x=>normalizePhone(x.phone)===phone); if(c) return c;}
+  const code=debtClean(r.customerCode||'');
+  if(code && address){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code && debtAddressKey(x.address)===address); if(c) return c;}
+  if(code){const c=data.customers.find(x=>debtClean(ensureCustomerCode(x))===code); if(c) return c;}
+  const rid=debtClean(r.customerId||'');
+  if(rid){const c=data.customers.find(x=>debtClean(x.id)===rid); if(c) return c;}
   return null;
 }
 function saleDebtKey(s={}){
-  const sid=String(s.customerId||'').trim();
-  if(sid) return `id:${sid}`;
-  const code=String(s.customerCode||'').trim().toLowerCase();
-  if(code) return `code:${code}`;
-  const phone=normalizePhone(s.customerPhone||s.phone||'');
-  if(phone) return `phone:${phone}`;
-  // Không dùng tên khách làm khóa công nợ. Hai khách trùng tên phải tách riêng.
-  return `sale:${s.id||s.code||uid()}`;
+  return debtSnapshotKey(s);
 }
 function receiptDebtKey(r={}){
   const saleId=r.saleId || (Array.isArray(r.allocations)&&r.allocations[0]?.saleId) || '';
   if(saleId){
-    const s=data.sales.find(x=>x.id===saleId);
+    const s=data.sales.find(x=>x.id===saleId || x.code===saleId);
     if(s) return saleDebtKey(s);
   }
-  const rid=String(r.customerId||'').trim();
-  if(rid) return `id:${rid}`;
-  const code=String(r.customerCode||'').trim().toLowerCase();
-  if(code) return `code:${code}`;
-  const phone=normalizePhone(r.customerPhone||r.phone||'');
-  if(phone) return `phone:${phone}`;
-  // Không dùng tên khách làm khóa công nợ.
-  return `receipt:${r.id||r.code||uid()}`;
+  return debtSnapshotKey(r);
 }
 function debtGroupProducts(g){
   const m={};
