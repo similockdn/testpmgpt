@@ -1456,14 +1456,40 @@ function receiptSaleId(r={}){
   if(r.debtKey && String(r.debtKey).startsWith('sale:')) return String(r.debtKey).slice(5);
   return '';
 }
+function receiptCustomerMatchesSale(r={},s={}){
+  // ERP-DEBT-V7: Tránh phiếu thu của khách trùng tên / saleCode cũ bị trừ nhầm.
+  // Chỉ xem là cùng phiếu khi có cùng mã KH, SĐT hoặc địa chỉ đủ rõ ràng.
+  const rCode=debtClean(r.customerCode||'');
+  const sCode=debtClean(s.customerCode||'');
+  const rPhone=normalizePhone(r.customerPhone||r.phone||'');
+  const sPhone=normalizePhone(s.customerPhone||s.phone||'');
+  const rAddr=debtAddressKey(r.customerAddress||r.address||'');
+  const sAddr=debtAddressKey(s.customerAddress||s.address||'');
+  if(rCode && sCode && rCode===sCode) return true;
+  if(rPhone && sPhone && rPhone===sPhone){
+    if(!rAddr || !sAddr) return true;
+    return rAddr===sAddr;
+  }
+  if(rAddr && sAddr && rAddr===sAddr && rCode && sCode && rCode===sCode) return true;
+  return false;
+}
 function receiptsForSalePayment(s={}){
   const sid=String(s.id||'');
   const scode=String(s.code||'');
   return activeReceipts().filter(r=>{
     const rid=receiptSaleId(r);
-    if(rid && sid && rid===sid) return true;
-    if(r.saleCode && scode && String(r.saleCode)===scode) return true;
-    if(r.debtKey && sid && String(r.debtKey)===`sale:${sid}`) return true;
+    // Khóa mạnh: receipt có saleId hoặc debtKey sale:id đúng phiếu thì nhận.
+    if(rid && sid && rid===sid){
+      // Nếu receipt có kèm thông tin khách thì phải khớp snapshot để tránh dữ liệu cũ bị sửa nhầm.
+      if(r.customerCode||r.customerPhone||r.customerAddress) return receiptCustomerMatchesSale(r,s);
+      return true;
+    }
+    if(r.debtKey && sid && String(r.debtKey)===`sale:${sid}`){
+      if(r.customerCode||r.customerPhone||r.customerAddress) return receiptCustomerMatchesSale(r,s);
+      return true;
+    }
+    // Khóa yếu saleCode chỉ dùng khi khách cũng khớp. Tuyệt đối không chỉ dựa vào tên.
+    if(r.saleCode && scode && String(r.saleCode)===scode) return receiptCustomerMatchesSale(r,s);
     return false;
   });
 }
