@@ -946,3 +946,9 @@ th,td{padding:clamp(7px,.75vw,10px)!important;}
   #sales .sale-form-panel > .panel-head.sale-head-with-status > div:first-child span{font-size:11px!important;}
   #sales .sale-form-panel > .panel-head.sale-head-with-status .quick-status-line{font-size:11px!important;gap:3px 8px!important;}
 }
+
+/* V58 customer edit popup - KiotViet style search list */
+.sce-customer-results{max-height:260px;overflow:auto;margin-top:10px;border:1px solid #d9ebff;border-radius:14px;background:#fff;padding:6px;display:grid;gap:6px}
+.sce-customer-row{width:100%;text-align:left;border:1px solid #e3eefb;background:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;color:inherit}
+.sce-customer-row:hover{border-color:#0ea5e9;background:#f0f9ff}
+.sce-customer-row.selected{border-color:#0284c7;background:#e0f2fe;box-shadow:0 0 0 2px rgba(14,165,233,.12)}
