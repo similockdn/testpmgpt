@@ -380,7 +380,9 @@ function saleCustomerInfo(s={}){
   const phone=snap.phone||s.customerPhone||c.phone||'';
   const address=snap.address||s.customerAddress||c.address||'';
   const type=snap.type||s.customerType||s.customerGroup||c.type||'Khách lẻ';
-  const name=cleanCustomerName(snap.name||s.customerName,phone,code)||cleanCustomerName(c.name,phone,code)||'Chưa cập nhật tên';
+  // Quan trọng: tên hiển thị của phiếu bán phải lấy từ snapshot của chính phiếu đó.
+  // Không tự lấy tên mới từ danh mục khách hàng, vì sửa hồ sơ khách sẽ làm đổi hàng loạt đơn cũ.
+  const name=cleanCustomerName(snap.name,phone,code)||cleanCustomerName(s.customerName,phone,code)||'Chưa cập nhật tên';
   return {name,code,phone,address,type};
 }
 function customerSnapshotFromCustomer(c={}, overrideType=''){
@@ -975,7 +977,9 @@ window.saveQuickCustomerFromSale=async()=>{
 
 function saleCustomerEditModalHtml(c,saleId=''){
   const ci=customerInfo(c);
-  return `<div class="modal-backdrop" id="saleCustomerEditModal"><div class="modal-card sale-customer-edit-modal"><div class="panel-head"><h3>Sửa thông tin khách hàng</h3><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Đóng</button></div><input id="sceExistingId" type="hidden" value=""><div class="quick-pick-customer" style="margin-bottom:12px;padding:10px;border:1px dashed #cfe8ff;border-radius:14px;background:#f8fcff"><label>Chọn khách hàng đã có sẵn trong danh mục</label><div class="inline"><input id="sceExistingSearch" list="saleCustomerEditExistingList" placeholder="Tìm tên / SĐT / mã KH"><button class="btn ghost" onclick="applyExistingCustomerToSaleEdit()">Áp dụng khách có sẵn</button></div><datalist id="saleCustomerEditExistingList">${data.customers.map(x=>`<option value="${customerSearchValue(x)}"></option>`).join('')}</datalist><small class="field-note">Chỉ đổi khách của phiếu đang sửa, không đổi hàng loạt đơn cũ.</small></div><div class="grid form-grid"><input id="sceId" type="hidden" value="${c.id||''}"><input id="sceSaleId" type="hidden" value="${saleId||''}"><div><label>Mã KH</label><input id="sceCode" value="${ci.code||''}" placeholder="KL090..."></div><div><label>Tên khách <span class="req">*</span></label><input id="sceName" value="${ci.name==='Chưa cập nhật tên'?'':ci.name}" placeholder="Nhập đúng tên khách"></div><div><label>Loại khách</label><select id="sceType"><option ${ci.type==='Khách lẻ'?'selected':''}>Khách lẻ</option><option ${ci.type==='CTV'?'selected':''}>CTV</option><option ${ci.type==='Đại lý'?'selected':''}>Đại lý</option><option ${ci.type==='Công ty'?'selected':''}>Công ty</option></select></div><div><label>SĐT <span class="req">*</span></label><input id="scePhone" value="${ci.phone||''}" placeholder="090..."></div><div class="span2"><label>Địa chỉ</label><input id="sceAddress" value="${ci.address||''}" placeholder="Địa chỉ lắp đặt/giao hàng"></div></div><div class="muted-small" style="margin:10px 0">Khi lưu, hệ thống sẽ cập nhật lại danh mục khách hàng và các phiếu bán/phiếu thu liên quan để tránh hiển thị sai tên.</div><div style="text-align:right"><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Hủy</button><button class="btn primary" onclick="saveSaleCustomerEdit()">Lưu thông tin khách</button></div></div></div>`;
+  const title=saleId?'Sửa khách trên phiếu bán':'Sửa thông tin khách hàng';
+  const note=saleId?'Chỉ cập nhật khách của phiếu đang mở. Đơn đã thu tiền vẫn được phép sửa thông tin khách do nhập liệu sai. Không thay đổi tiền, kho, sản phẩm.':'Đang sửa khách ở phiếu bán đang nhập.';
+  return `<div class="modal-backdrop" id="saleCustomerEditModal"><div class="modal-card sale-customer-edit-modal"><div class="panel-head"><h3>${title}</h3><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Đóng</button></div><input id="sceExistingId" type="hidden" value=""><div class="quick-pick-customer" style="margin-bottom:12px;padding:10px;border:1px dashed #cfe8ff;border-radius:14px;background:#f8fcff"><label>Chọn khách hàng đã có sẵn trong danh mục</label><div class="inline"><input id="sceExistingSearch" list="saleCustomerEditExistingList" placeholder="Tìm tên / SĐT / mã KH"><button class="btn ghost" onclick="applyExistingCustomerToSaleEdit()">Áp dụng khách có sẵn</button></div><datalist id="saleCustomerEditExistingList">${data.customers.map(x=>`<option value="${customerSearchValue(x)}"></option>`).join('')}</datalist><small class="field-note">Có thể chọn khách có sẵn hoặc nhập tay lại Tên / SĐT / Địa chỉ.</small></div><div class="grid form-grid"><input id="sceId" type="hidden" value="${c.id||''}"><input id="sceSaleId" type="hidden" value="${saleId||''}"><div><label>Mã KH</label><input id="sceCode" value="${ci.code||''}" placeholder="KL090..."></div><div><label>Tên khách <span class="req">*</span></label><input id="sceName" value="${ci.name==='Chưa cập nhật tên'?'':ci.name}" placeholder="Nhập đúng tên khách"></div><div><label>Loại khách</label><select id="sceType"><option ${ci.type==='Khách lẻ'?'selected':''}>Khách lẻ</option><option ${ci.type==='CTV'?'selected':''}>CTV</option><option ${ci.type==='Đại lý'?'selected':''}>Đại lý</option><option ${ci.type==='Công ty'?'selected':''}>Công ty</option></select></div><div><label>SĐT <span class="req">*</span></label><input id="scePhone" value="${ci.phone||''}" placeholder="090..."></div><div class="span2"><label>Địa chỉ</label><input id="sceAddress" value="${ci.address||''}" placeholder="Địa chỉ lắp đặt/giao hàng"></div></div><div class="muted-small" style="margin:10px 0">${note}</div><div style="text-align:right"><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Hủy</button><button class="btn primary" onclick="saveSaleCustomerEdit()">Lưu thông tin khách</button></div></div></div>`;
 }
 window.editSaleCustomer=()=>{
   const c=findCustomerBySearch();
@@ -1015,27 +1019,49 @@ window.saveSaleCustomerEdit=async()=>{
   const saleId=$('sceSaleId')?.value||'';
   const sale=saleId?data.sales.find(x=>x.id===saleId):null;
   const customerId=($('sceId')?.value||$('sceExistingId')?.value||'').trim();
-  const phone=($('scePhone')?.value||'').trim();
-  const name=($('sceName')?.value||'').trim();
+  const phone=extractPhone($('scePhone')?.value||'');
   const type=$('sceType')?.value||'Khách lẻ';
   const address=($('sceAddress')?.value||'').trim();
   const customerCode=($('sceCode')?.value||customerCodeFromPhone(phone)).trim();
+  const name=cleanCustomerName(($('sceName')?.value||'').trim(),phone,customerCode);
   if(!saleId || !sale) return alert('Không tìm thấy phiếu bán cần sửa khách');
-  if(!name) return alert('Vui lòng nhập tên khách hàng');
+  if(!name) return alert('Vui lòng nhập đúng tên khách hàng, không dùng SĐT hoặc mã KH làm tên.');
   if(!phone) return alert('Vui lòng nhập số điện thoại khách hàng');
+
+  const oldCustomerId=sale.customerId||'';
+  const oldPay=salePaymentInfo(sale);
+  // Lưu danh sách phiếu thu đang được phân bổ cho đơn trước khi đổi khách, để đơn đã thu tiền không bị mất trạng thái đã thu.
+  const allocatedReceipts=[...new Map([
+    ...receiptsForSale(sale),
+    ...data.receipts.filter(r=>r.saleId===saleId || (Array.isArray(r.allocations)&&r.allocations.some(a=>a.saleId===saleId)))
+  ].map(r=>[r.id,r])).values()];
+
   const payload=customerSnapshotPayload({id:customerId,code:customerCode,name,phone,address,type});
-  await updateDoc(doc(db,'sales',saleId),{...payload,updatedAt:serverTimestamp()});
-  const relReceipts=data.receipts.filter(r=>r.saleId===saleId || (Array.isArray(r.allocations)&&r.allocations.some(a=>a.saleId===saleId)));
-  if(relReceipts.length){
+  await updateDoc(doc(db,'sales',saleId),{
+    ...payload,
+    // giữ nguyên số tiền/kho/sản phẩm, chỉ sửa thông tin khách và lưu vết lịch sử
+    paidTotal:oldPay.paidTotal, debtLeft:oldPay.debtLeft, paymentStatus:oldPay.paymentStatus, status:oldPay.paymentStatus,
+    customerEditHistory:[...(sale.customerEditHistory||[]),{at:new Date().toISOString(),from:saleCustomerInfo(sale),to:{customerId,customerCode,name,phone,address,type}}],
+    updatedAt:serverTimestamp()
+  });
+
+  if(allocatedReceipts.length){
     let batch=writeBatch(db); let count=0;
-    for(const r of relReceipts){ batch.update(doc(db,'receipts',r.id),{customerId,customerCode,customerName:name,customerPhone:phone,updatedAt:serverTimestamp()}); count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;} }
+    for(const r of allocatedReceipts){
+      batch.update(doc(db,'receipts',r.id),{customerId,customerCode,customerName:name,customerPhone:phone,updatedAt:serverTimestamp()});
+      count++; if(count>=450){await batch.commit(); batch=writeBatch(db); count=0;}
+    }
     if(count>0) await batch.commit();
   }
+
   await logAction('Sửa khách riêng trên phiếu bán',`${sale.code||saleId}: ${customerCode} - ${name}`);
+  await loadAll();
+  const ids=[oldCustomerId,customerId].filter(Boolean);
+  for(const id of [...new Set(ids)]) await updatePaymentStatusesForCustomer(id);
   await loadAll();
   document.getElementById('saleCustomerEditModal')?.remove();
   if(saleId){document.getElementById('saleDetailModal')?.remove(); viewSaleDetail(saleId);}
-  refreshSaleItemPricesByCustomerType();
+  try{renderSales();renderDebts();renderReceipts();renderReports();}catch(e){console.warn('Refresh after customer edit',e)}
   if(window.showToast) window.showToast('Đã cập nhật khách trên phiếu','success',name);
 }
 
