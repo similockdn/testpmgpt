@@ -1101,7 +1101,10 @@ window.saveSaleCustomerEdit=async()=>{
     if($('saleCustomerAddress')) { $('saleCustomerAddress').value=address; window.__saleCustomerAddressManual=true; }
     if($('saleCustomerType')) $('saleCustomerType').value=['Khách lẻ','CTV','Đại lý'].includes(type)?type:'Khách lẻ';
     document.getElementById('saleCustomerEditModal')?.remove();
-    refreshSaleItemPricesByCustomerType();
+    // V58-NO-ITEM-CHANGE: Sửa/đổi thông tin khách chỉ cập nhật Tên/SĐT/Địa chỉ/Loại khách.
+    // Tuyệt đối không gọi refreshSaleItemPricesByCustomerType() tại đây để tránh đơn giá sản phẩm
+    // trên phiếu đang sửa bị tính lại hoặc nhảy về 0.
+    updateSaleTotals();
     if(window.showToast) window.showToast('Đã cập nhật khách trên phiếu đang nhập','success',name);
     return;
   }
