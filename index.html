@@ -56,7 +56,12 @@
             <button data-page="stockbook">Sổ kho</button>
             <button data-page="products">Sản phẩm</button>
             <button data-page="prices">Bảng giá</button>
-            <button data-page="warranty">Bảo hành</button>
+          </div>
+        </div>
+        <div class="menu-group">
+          <button type="button" class="menu-toggle">🛡️ Bảo hành</button>
+          <div class="submenu">
+            <button data-page="warranty">Phiếu bảo hành</button>
           </div>
         </div>
         <div class="menu-group">
@@ -349,6 +354,7 @@
             <button type="button" class="active" onclick="showWarrantyTab('form')">Phiếu bảo hành</button>
             <button type="button" onclick="showWarrantyTab('history')">Lịch sử bảo hành</button>
             <button type="button" onclick="showWarrantyTab('report')">Báo cáo nhanh</button>
+            <button type="button" onclick="showWarrantyTab('reasons')">Danh mục lỗi</button>
           </div>
         </div>
         <div id="warrantyFormTab" class="warranty-tab-panel">
@@ -368,8 +374,8 @@
               <div><label>Mức ưu tiên</label><select id="wPriority"><option>Bình thường</option><option>Gấp</option><option>Rất gấp</option></select></div>
               <div><label>Trạng thái</label><select id="wStatus"><option>Mới tiếp nhận</option><option>Đang kiểm tra</option><option>Đang sửa</option><option>Chờ linh kiện</option><option>Hoàn thành</option><option>Đã trả khách</option><option>Hết bảo hành</option></select></div>
               <div><label>Ngày hoàn thành</label><input id="wCompleteDate" type="date" /></div>
-              <div class="span4"><label>Lý do bảo hành</label><div id="wReasonOptions" class="warranty-reason-options"></div></div>
-              <div class="span2"><label>Lý do khác</label><input id="wReasonOther" placeholder="Nhập lý do khác nếu có" /></div>
+              <div class="span2"><label>Lý do bảo hành <span class="req">*</span></label><select id="wReasonSelect" onchange="handleWarrantyReasonChange()"></select></div>
+              <div class="span2" id="wReasonOtherWrap"><label>Lý do khác</label><input id="wReasonOther" placeholder="Nhập lý do khác nếu chọn Khác" /></div>
               <div class="span2"><label>Mô tả lỗi / tình trạng</label><textarea id="wProblem" rows="2" placeholder="Mô tả chi tiết lỗi khách báo"></textarea></div>
               <div class="span2"><label>Kết quả xử lý</label><textarea id="wResult" rows="2" placeholder="Đã xử lý/thay linh kiện/ghi chú kỹ thuật"></textarea></div>
               <div class="span2"><label>Ghi chú</label><textarea id="wNote" rows="2"></textarea></div>
@@ -382,6 +388,16 @@
         </div>
         <div id="warrantyReportTab" class="warranty-tab-panel hidden">
           <div class="panel"><div class="panel-head"><h3>Báo cáo nhanh bảo hành</h3><button class="btn ghost" onclick="renderWarrantyReport()">Làm mới</button></div><div id="warrantyReportBox" class="warranty-report-grid"></div></div>
+        </div>
+        <div id="warrantyReasonsTab" class="warranty-tab-panel hidden">
+          <div class="panel">
+            <div class="panel-head"><h3>Danh mục lỗi bảo hành</h3><span>Admin có thể thêm lý do mới để hiển thị trong dropdown bảo hành.</span></div>
+            <div class="grid form-grid">
+              <div class="span2"><label>Tên lý do</label><input id="wrName" placeholder="VD: Lỗi motor / không nhận FaceID" /></div>
+              <div><label>&nbsp;</label><button class="btn primary" onclick="saveWarrantyReasonCategory()">Thêm lý do</button></div>
+            </div>
+            <table><thead><tr><th>STT</th><th>Lý do</th><th>Hành động</th></tr></thead><tbody id="wReasonTable"></tbody></table>
+          </div>
         </div>
       </section>
 

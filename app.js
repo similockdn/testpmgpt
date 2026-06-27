@@ -107,7 +107,7 @@ const userProfileData = (u, extra={})=>({uid:u.uid,email:normEmail(u.email),...e
 const WAREHOUSES=['Kho Chính','Kho Văn Phòng'];
 let currentUser=null,currentPerm={role:'Admin',perms:[],warehouseAccess:WAREHOUSES},creatingAdmin=false;let editingSale=null,editingStock=null,editingWarranty=null,editingExpense=null,editingReceipt=null;
 let commissionAppliedFilter={q:'',dept:'',staffId:'',period:'all',from:'',to:''};
-const data={customers:[],products:[],productCategories:[],staff:[],prices:[],costPrices:[],sales:[],stockVouchers:[],receipts:[],warranties:[],expenses:[],salaries:[],users:[],logs:[]};
+const data={customers:[],products:[],productCategories:[],warrantyReasons:[],staff:[],prices:[],costPrices:[],sales:[],stockVouchers:[],receipts:[],warranties:[],expenses:[],salaries:[],users:[],logs:[]};
 function userWarehouses(){return currentPerm.role==='Admin'?WAREHOUSES:((currentPerm.warehouseAccess&&currentPerm.warehouseAccess.length)?currentPerm.warehouseAccess:WAREHOUSES)}
 function canAccessWarehouse(w){return currentPerm.role==='Admin'||userWarehouses().includes(w)}
 function canAccessVoucher(v){if(currentPerm.role==='Admin')return true; if(!has('inventory')&&!has('stockbook'))return false; if(v.type==='TRANSFER')return canAccessWarehouse(v.fromWarehouse||v.warehouse||'Kho Chính')||canAccessWarehouse(v.toWarehouse||'Kho Văn Phòng'); return canAccessWarehouse(voucherWarehouse(v));}
@@ -180,7 +180,7 @@ function activeStockVouchers(){return data.stockVouchers.filter(v=>!isVoucherCan
 function activeWarranties(){return data.warranties.filter(w=>!isWarrantyCanceled(w))}
 function col(n){return collection(db,n)}
 async function loadCol(n){try{const s=await getDocs(col(n));data[n]=s.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.warn('Không tải được collection '+n,e.message);data[n]=[];}}
-async function loadAll(){for(const n of ['customers','products','productCategories','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','expenses','salaries','users','logs']) await loadCol(n); renderAll();}
+async function loadAll(){for(const n of ['customers','products','productCategories','warrantyReasons','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','warrantyReasons','expenses','salaries','users','logs']) await loadCol(n); renderAll();}
 async function logAction(action,detail){try{await addDoc(col('logs'),{action,detail,email:currentUser?.email||'',at:serverTimestamp()})}catch(e){}}
 function fillSelect(el,arr,labelFn,valFn){if(!el)return;el.innerHTML='<option value="">-- Chọn --</option>'+arr.map(x=>`<option value="${valFn?valFn(x):x.id}">${labelFn(x)}</option>`).join('')}
 function nextCode(prefix,arr){let max=0;arr.forEach(x=>{const m=String(x.code||'').match(/(\d+)$/);if(m)max=Math.max(max,+m[1])});return prefix+String(max+1).padStart(6,'0')}
@@ -954,6 +954,7 @@ function renderAll(){
     ['renderStock',()=>renderStock()],
     ['renderStockBook',()=>renderStockBook()],
     ['renderWarranties',()=>renderWarranties()],
+    ['renderWarrantyReasonCategories',()=>renderWarrantyReasonCategories()],
     ['renderReports',()=>renderReports()],
     ['renderPermissions',()=>renderPermissions()],
     ['renderAuditLogs',()=>renderAuditLogs()],
@@ -2544,23 +2545,65 @@ function renderStockBook(){
 
 
 
-const WARRANTY_REASONS=['Không nhận vân tay','Không mở bằng App','Kẹt chốt','Hết pin','Khóa tự mở','Không nhận thẻ','Lỗi Wifi','Lỗi FaceID','Lỗi nguồn','Bảo trì định kỳ','Khác'];
+const DEFAULT_WARRANTY_REASONS=['Không nhận vân tay','Không mở bằng App','Kẹt chốt','Hết pin','Khóa tự mở','Không nhận thẻ','Lỗi Wifi','Lỗi FaceID','Lỗi nguồn','Lỗi Motor','Lỗi bo mạch','Bảo trì định kỳ','Khác'];
+function warrantyReasonList(){
+  const custom=(data.warrantyReasons||[]).map(r=>r.name||r.reason||r.title).filter(Boolean);
+  const list=[];
+  [...DEFAULT_WARRANTY_REASONS,...custom].forEach(r=>{ if(r&&!list.includes(r)) list.push(r); });
+  return list;
+}
 function selectedWarrantyReasons(){
-  return [...document.querySelectorAll('.w-reason:checked')].map(x=>x.value).filter(Boolean);
+  const val=String($('wReasonSelect')?.value||'').trim();
+  if(!val || val==='Khác') return [];
+  return [val];
 }
 function setWarrantyReasons(list){
-  const set=new Set(Array.isArray(list)?list:[]);
-  document.querySelectorAll('.w-reason').forEach(x=>x.checked=set.has(x.value));
+  const arr=Array.isArray(list)?list.filter(Boolean):[];
+  const sel=$('wReasonSelect');
+  if(!sel) return;
+  const first=arr[0]||'';
+  if(first && warrantyReasonList().includes(first)) sel.value=first;
+  else if(first){ sel.value='Khác'; if($('wReasonOther'))$('wReasonOther').value=first; }
+  else sel.value='';
+  handleWarrantyReasonChange();
 }
 function renderWarrantyReasonOptions(){
-  const box=$('wReasonOptions'); if(!box) return;
-  box.innerHTML=WARRANTY_REASONS.map(r=>`<label class="warranty-reason-chip"><input type="checkbox" class="w-reason" value="${htmlesc(r)}"> ${htmlesc(r)}</label>`).join('');
+  const sel=$('wReasonSelect'); if(!sel) return;
+  const current=sel.value;
+  sel.innerHTML='<option value="">-- Chọn lý do --</option>'+warrantyReasonList().map(r=>`<option value="${htmlesc(r)}">${htmlesc(r)}</option>`).join('');
+  if(current) sel.value=current;
+  handleWarrantyReasonChange();
 }
+window.handleWarrantyReasonChange=function(){
+  const wrap=$('wReasonOtherWrap');
+  const other=$('wReasonOther');
+  const isOther=String($('wReasonSelect')?.value||'')==='Khác';
+  if(wrap) wrap.style.display=isOther?'block':'none';
+  if(!isOther && other) other.value='';
+};
 function warrantyReasonsText(w){
   const arr=Array.isArray(w?.reasons)?w.reasons:[];
   const other=String(w?.reasonOther||'').trim();
   return [...arr,other].filter(Boolean).join(', ');
 }
+function renderWarrantyReasonCategories(){
+  const tb=$('wReasonTable'); if(!tb) return;
+  const rows=(data.warrantyReasons||[]).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
+  tb.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${htmlesc(r.name||'')}</td><td><button class="btn danger" onclick="deleteWarrantyReasonCategory('${r.id}')">Xóa</button></td></tr>`).join('')||'<tr><td colspan="3">Chưa có lý do tùy chỉnh</td></tr>';
+}
+window.saveWarrantyReasonCategory=async()=>{
+  const name=String($('wrName')?.value||'').trim();
+  if(!name)return alert('Vui lòng nhập lý do bảo hành');
+  if(warrantyReasonList().some(x=>searchKey(x)===searchKey(name)))return alert('Lý do này đã tồn tại');
+  await addDoc(col('warrantyReasons'),{name,createdAt:serverTimestamp()});
+  if($('wrName'))$('wrName').value='';
+  await loadAll();
+};
+window.deleteWarrantyReasonCategory=async(id)=>{
+  if(!confirm('Xóa lý do bảo hành này?'))return;
+  await deleteDoc(doc(db,'warrantyReasons',id));
+  await loadAll();
+};
 function warrantyCode(w){return w?.code||w?.warrantyCode||('BH-'+String(w?.id||'').slice(0,6));}
 function warrantyEmployeeOptions(){return '<option value="">-- Chọn --</option>'+data.staff.map(s=>`<option value="${htmlesc(s.id)}">${htmlesc(s.name||'')}</option>`).join('')}
 function renderWarrantyStaffSelectors(){
@@ -2569,15 +2612,16 @@ function renderWarrantyStaffSelectors(){
 }
 function warrantyStaffName(id){return data.staff.find(s=>s.id===id)?.name||''}
 window.showWarrantyTab=function(tab){
-  ['form','history','report'].forEach(t=>{
+  ['form','history','report','reasons'].forEach(t=>{
     const el=$('warranty'+t.charAt(0).toUpperCase()+t.slice(1)+'Tab');
     if(el)el.classList.toggle('hidden',t!==tab);
   });
   document.querySelectorAll('.warranty-tabs button').forEach(btn=>btn.classList.remove('active'));
-  const idx={form:0,history:1,report:2}[tab]||0;
+  const idx={form:0,history:1,report:2,reasons:3}[tab]||0;
   document.querySelectorAll('.warranty-tabs button')[idx]?.classList.add('active');
   if(tab==='history')renderWarrantyHistory();
   if(tab==='report')renderWarrantyReport();
+  if(tab==='reasons')renderWarrantyReasonCategories();
 };
 window.resetWarrantyForm=function(){
   editingWarranty=null;
@@ -2719,6 +2763,7 @@ window.editWarranty=id=>{
   if($('wStatus'))$('wStatus').value=w.status||'Mới tiếp nhận';
   if($('wCompleteDate'))$('wCompleteDate').value=w.completeDate||'';
   setWarrantyReasons(w.reasons||[]);
+  if((!Array.isArray(w.reasons)||!w.reasons.length) && w.reasonOther && $('wReasonSelect')){$('wReasonSelect').value='Khác';handleWarrantyReasonChange();}
   if($('wReasonOther'))$('wReasonOther').value=w.reasonOther||'';
   if($('wProblem'))$('wProblem').value=w.problem||'';
   if($('wResult'))$('wResult').value=w.result||'';
@@ -3163,7 +3208,7 @@ window.importCSV=(e,type)=>window.importExcel(e,type);
 
 
 window.exportBackup=()=>{
-  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v30'};
+  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v30'};
   let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));a.download='similock-da-nang-backup-'+today()+'.json';a.click()
 }
 
@@ -3182,7 +3227,7 @@ async function deleteCollectionDocs(collectionName){
   return deleted;
 }
 function resetLocalDataAfterClear(){
-  ['customers','products','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','expenses','salaries','logs'].forEach(n=>{data[n]=[]});
+  ['customers','products','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','warrantyReasons','expenses','salaries','logs'].forEach(n=>{data[n]=[]});
 }
 window.clearAllData=async()=>{
   if(currentPerm.role!=='Admin') return alert('Chỉ Admin mới được Clear Data');
@@ -3197,7 +3242,7 @@ window.clearAllData=async()=>{
     await reauthenticateWithCredential(auth.currentUser,credential);
 
     // Chỉ xóa dữ liệu vận hành. Giữ lại tài khoản và phân quyền để còn đăng nhập lại.
-    const collectionsToClear=['customers','products','prices','costPrices','staff','sales','stockVouchers','receipts','warranties','expenses','salaries','logs'];
+    const collectionsToClear=['customers','products','prices','costPrices','staff','sales','stockVouchers','receipts','warranties','warrantyReasons','expenses','salaries','logs'];
     let result=[];
     for(const name of collectionsToClear){
       const count=await deleteCollectionDocs(name);

@@ -1096,3 +1096,7 @@ td:first-child,th:first-child,td:last-child,th:last-child{border-radius:0!import
 .warranty-report-card p{display:flex;justify-content:space-between;gap:12px;margin:8px 0;border-bottom:1px dashed #eef1f7;padding-bottom:6px;}
 .empty-state{padding:16px;border:1px dashed #d8ddf2;border-radius:12px;color:#667085;background:#fbfcff;}
 @media(max-width:760px){.warranty-tabs button{flex:1}.warranty-history-box,.warranty-report-grid{grid-template-columns:1fr}}
+/* Warranty module: separate menu + compact reason dropdown */
+#wReasonOtherWrap{display:none}
+.warranty-tabs button{white-space:nowrap}
+.warranty-report-card p{display:flex;justify-content:space-between;gap:12px}
