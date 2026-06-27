@@ -61,7 +61,7 @@
         <div class="menu-group">
           <button type="button" class="menu-toggle">🛡️ Bảo hành</button>
           <div class="submenu">
-            <button data-page="warranty">Phiếu bảo hành</button>
+            <button data-page="warranty">Bảo hành</button>
           </div>
         </div>
         <div class="menu-group">
@@ -120,9 +120,8 @@
                   <div class="sale-section-title">Thông tin chung</div>
                   <div class="sale-field-grid sale-grid-general">
                     <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
-                    <div><label>Ngày bán</label><input id="saleDate" type="date" /></div><div><label>Ngày hoàn thành lắp</label><input id="saleInstallCompletedDate" type="date" /></div>
+                    <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
                     <div><label>Loại khách</label><select id="saleCustomerType" onchange="saleCustomerTypeChanged()"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select></div>
-                    <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
                   </div>
                 </div>
 
@@ -140,6 +139,8 @@
                   <div class="sale-field-grid sale-grid-staff">
                     <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
                     <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
+                    <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
+                    <div><label>Ngày hoàn thành lắp</label><input id="saleInstallCompletedDate" type="date" /></div>
                     <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
                     <div class="sale-stock-action"><label>Xuất kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
                   </div>
@@ -346,20 +347,37 @@
           <div class="panel-head">
             <div>
               <h3>🛡️ Bảo hành</h3>
-              <small>Quản lý phiếu bảo hành, tiếp nhận lỗi và lịch sử bảo hành theo từng phiếu bán.</small>
+              <small>Tách rõ: bảo hành phát sinh từ đơn đã lắp đặt và phiếu tiếp nhận khi khách cũ cần bảo hành.</small>
             </div>
             <div><input type="file" id="importWarranties" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'warranties')"><button class="btn ghost" onclick="downloadTemplateExcel('warranties')">Mẫu Excel</button><button class="btn ghost" onclick="importWarranties.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('warranties')">Xuất Excel</button><button class="btn primary" onclick="saveWarranty()">Lưu phiếu BH</button></div>
           </div>
           <div class="warranty-tabs">
-            <button type="button" class="active" onclick="showWarrantyTab('form')">Phiếu bảo hành</button>
+            <button type="button" class="active" onclick="showWarrantyTab('coverage')">Sản phẩm đang bảo hành</button>
+            <button type="button" onclick="showWarrantyTab('form')">Tạo phiếu bảo hành</button>
             <button type="button" onclick="showWarrantyTab('history')">Lịch sử bảo hành</button>
             <button type="button" onclick="showWarrantyTab('report')">Báo cáo nhanh</button>
             <button type="button" onclick="showWarrantyTab('reasons')">Danh mục lỗi</button>
           </div>
         </div>
-        <div id="warrantyFormTab" class="warranty-tab-panel">
+
+        <div id="warrantyCoverageTab" class="warranty-tab-panel">
           <div class="panel">
-            <div class="panel-head"><h3>Tiếp nhận / cập nhật bảo hành</h3><button class="btn ghost" onclick="resetWarrantyForm()">Phiếu mới</button></div>
+            <div class="panel-head">
+              <div>
+                <h3>Sản phẩm/đơn hàng đang bảo hành</h3>
+                <span>Danh sách được tính từ Ngày hoàn thành lắp trong Phiếu bán. Đây là hồ sơ bảo hành gốc, không phải phiếu xử lý lỗi.</span>
+              </div>
+              <input class="search" id="wCoverageSearch" placeholder="Tìm mã phiếu / khách / SĐT / địa chỉ / model" oninput="renderWarrantyCoverage()" />
+            </div>
+            <table>
+              <thead><tr><th>STT</th><th>Mã phiếu</th><th>Khách hàng</th><th>SĐT</th><th>Địa chỉ</th><th>Model / SL</th><th>Ngày lắp</th><th>Hết bảo hành</th><th>Tình trạng</th><th>Hành động</th></tr></thead>
+              <tbody id="warrantyCoverageTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="warrantyFormTab" class="warranty-tab-panel hidden">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Tiếp nhận / cập nhật phiếu bảo hành</h3><span>Chỉ tạo khi khách cũ phát sinh lỗi/bảo hành. Phiếu luôn gắn với mã phiếu bán, không gắn theo tên khách.</span></div><button class="btn ghost" onclick="resetWarrantyForm()">Phiếu mới</button></div>
             <div class="grid form-grid warranty-form-grid">
               <div class="span2 warranty-sale-search-wrap"><label>Mã phiếu bán <span class="req">*</span></label><input id="wSale" type="hidden" /><input id="wSaleSearch" autocomplete="off" placeholder="Gõ mã phiếu / tên khách / SĐT / model để tìm" onfocus="renderWarrantySaleSearchResults()" oninput="handleWarrantySaleSearchInput()" /><div id="wSaleResults" class="sale-customer-results warranty-sale-results"></div></div>
               <div><label>Khách hàng</label><input id="wCustomer" /></div>

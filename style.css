@@ -1100,3 +1100,109 @@ td:first-child,th:first-child,td:last-child,th:last-child{border-radius:0!import
 #wReasonOtherWrap{display:none}
 .warranty-tabs button{white-space:nowrap}
 .warranty-report-card p{display:flex;justify-content:space-between;gap:12px}
+
+/* V58 sale form optimization: compact modern ERP input layout */
+#sales .sale-form-panel{
+  background:#f8f7ff!important;
+}
+#sales .sale-main-box{
+  background:linear-gradient(180deg,#ffffff 0%,#fbfbff 100%)!important;
+  border-color:#ddd8ff!important;
+  padding:10px!important;
+}
+#sales .sale-main-box>h4{
+  display:none!important;
+}
+#sales .sale-erp-form{
+  gap:8px!important;
+}
+#sales .sale-form-section{
+  padding:9px 10px!important;
+  border-color:#ddd8ff!important;
+  border-radius:10px!important;
+}
+#sales .sale-section-title{
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  font-size:12px!important;
+  margin-bottom:7px!important;
+  color:#4c35d8!important;
+  letter-spacing:.01em!important;
+}
+#sales .sale-general-section .sale-section-title:before{content:'📄';}
+#sales .sale-customer-section .sale-section-title:before{content:'👤';}
+#sales .sale-staff-section .sale-section-title:before{content:'👷';}
+#sales .sale-money-section .sale-section-title:before{content:'💰';}
+#sales .sale-field-grid{
+  gap:8px 10px!important;
+}
+#sales .sale-grid-general{
+  grid-template-columns:minmax(130px,.75fr) minmax(150px,.85fr) minmax(150px,.85fr)!important;
+}
+#sales .sale-grid-customer{
+  grid-template-columns:minmax(300px,1.25fr) minmax(150px,.55fr) minmax(300px,1.15fr)!important;
+}
+#sales .sale-grid-staff{
+  grid-template-columns:minmax(170px,1fr) minmax(170px,1fr) minmax(160px,.9fr) minmax(150px,.85fr) minmax(120px,.65fr) minmax(135px,.7fr)!important;
+}
+#sales .sale-grid-money{
+  grid-template-columns:minmax(120px,.7fr) minmax(135px,.8fr) minmax(120px,.7fr) minmax(130px,.75fr) minmax(150px,.85fr) minmax(120px,.7fr) minmax(130px,.75fr) minmax(220px,1.2fr)!important;
+}
+#sales input,#sales select,#sales textarea{
+  min-height:34px!important;
+  padding:6px 9px!important;
+  font-size:13px!important;
+  border-radius:8px!important;
+}
+#sales label{
+  margin-bottom:4px!important;
+  font-size:11px!important;
+}
+#sales .sale-customer-line input{
+  min-width:0!important;
+}
+#sales .sale-customer-line .btn{
+  min-height:34px!important;
+  padding:6px 8px!important;
+  white-space:nowrap!important;
+}
+#sales .sale-stock-action .big-stock-check{
+  height:34px!important;
+  min-height:34px!important;
+  border-radius:8px!important;
+  background:#f6f5ff!important;
+  border-color:#ddd8ff!important;
+  justify-content:center!important;
+}
+#sales .sale-items-head{
+  margin-top:10px!important;
+  padding:8px 10px!important;
+  border-radius:10px 10px 0 0!important;
+  border-color:#ddd8ff!important;
+}
+#sales table.editable th{height:34px!important;font-size:12px!important;}
+#sales table.editable td{padding:5px 6px!important;}
+#sales table.editable input,#sales table.editable select{min-height:32px!important;font-size:12.5px!important;}
+#sales .total-box.sale-total-main{
+  padding:8px 10px!important;
+  gap:8px 14px!important;
+  border-radius:10px!important;
+  border-color:#ddd8ff!important;
+}
+#sales .sale-sticky-actions{
+  gap:10px!important;
+}
+#sales .sale-sticky-actions .btn{
+  min-height:38px!important;
+  padding:8px 12px!important;
+}
+@media(max-width:1500px){
+  #sales .sale-grid-staff{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+  #sales .sale-grid-money{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+}
+@media(max-width:1100px){
+  #sales .sale-grid-general,#sales .sale-grid-staff,#sales .sale-grid-money{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  #sales .sale-grid-customer{grid-template-columns:1fr 180px!important;}
+  #sales .sale-address-field{grid-column:1/-1!important;}
+}

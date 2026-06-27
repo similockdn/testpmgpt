@@ -953,6 +953,7 @@ function renderAll(){
     ['renderReceipts',()=>renderReceipts()],
     ['renderStock',()=>renderStock()],
     ['renderStockBook',()=>renderStockBook()],
+    ['renderWarrantyCoverage',()=>renderWarrantyCoverage()],
     ['renderWarranties',()=>renderWarranties()],
     ['renderWarrantyReasonCategories',()=>renderWarrantyReasonCategories()],
     ['renderReports',()=>renderReports()],
@@ -2612,13 +2613,14 @@ function renderWarrantyStaffSelectors(){
 }
 function warrantyStaffName(id){return data.staff.find(s=>s.id===id)?.name||''}
 window.showWarrantyTab=function(tab){
-  ['form','history','report','reasons'].forEach(t=>{
+  ['coverage','form','history','report','reasons'].forEach(t=>{
     const el=$('warranty'+t.charAt(0).toUpperCase()+t.slice(1)+'Tab');
     if(el)el.classList.toggle('hidden',t!==tab);
   });
   document.querySelectorAll('.warranty-tabs button').forEach(btn=>btn.classList.remove('active'));
-  const idx={form:0,history:1,report:2,reasons:3}[tab]||0;
+  const idx={coverage:0,form:1,history:2,report:3,reasons:4}[tab]||0;
   document.querySelectorAll('.warranty-tabs button')[idx]?.classList.add('active');
+  if(tab==='coverage')renderWarrantyCoverage();
   if(tab==='history')renderWarrantyHistory();
   if(tab==='report')renderWarrantyReport();
   if(tab==='reasons')renderWarrantyReasonCategories();
@@ -2635,6 +2637,51 @@ window.resetWarrantyForm=function(){
   if($('wReceiver'))$('wReceiver').value='';
   if($('wTech'))$('wTech').value='';
   setWarrantyReasons([]);
+};
+
+
+function warrantyMonthsFromSale(s){
+  const explicit=+(s.warrantyMonths||s.monthsWarranty||0);
+  if(explicit>0) return explicit;
+  return 24;
+}
+function warrantyEndFromStart(start, months=24){
+  if(!start) return '';
+  const d=new Date(start);
+  if(Number.isNaN(d.getTime())) return '';
+  d.setMonth(d.getMonth()+(+months||24));
+  return d.toISOString().slice(0,10);
+}
+function saleWarrantyModelsText(s){
+  return (s.items||[]).map(i=>`${i.code||''}${i.name?` - ${i.name}`:''}${i.qty?` x${i.qty}`:''}`).filter(Boolean).join(', ');
+}
+function warrantyCoverageRows(){
+  return activeSales()
+    .filter(s=>String(warrantyStartFromSale(s)||'').trim())
+    .map(s=>{
+      const ci=saleCustomerInfo(s);
+      const start=warrantyStartFromSale(s);
+      const months=warrantyMonthsFromSale(s);
+      const end=warrantyEndFromStart(start,months);
+      const isExpired=end && end<today();
+      return {sale:s,ci,start,months,end,isExpired,models:saleWarrantyModelsText(s)};
+    })
+    .sort((a,b)=>String(b.start||'').localeCompare(String(a.start||'')) || String(b.sale.code||'').localeCompare(String(a.sale.code||'')));
+}
+function renderWarrantyCoverage(){
+  const tb=$('warrantyCoverageTable'); if(!tb) return;
+  const q=searchKey($('wCoverageSearch')?.value||'');
+  const rows=warrantyCoverageRows().filter(r=>searchKey([r.sale.code,r.ci.code,r.ci.name,r.ci.phone,r.ci.address,r.models,r.start,r.end].join(' ')).includes(q));
+  tb.innerHTML=rows.map((r,idx)=>`<tr><td class="text-center">${idx+1}</td><td><b>${htmlesc(r.sale.code||'')}</b></td><td>${htmlesc(r.ci.name||'')}</td><td>${htmlesc(r.ci.phone||'')}</td><td>${htmlesc(r.ci.address||'')}</td><td>${htmlesc(r.models||'')}</td><td>${htmlesc(r.start||'')}</td><td>${htmlesc(r.end||'')}</td><td><span class="badge ${r.isExpired?'red':'green'}">${r.isExpired?'Hết bảo hành':'Còn bảo hành'}</span><br><small>${r.months} tháng</small></td><td><button class="btn primary" onclick="createWarrantyFromSale('${htmlesc(r.sale.id||'')}')">Tạo phiếu BH</button></td></tr>`).join('')||'<tr><td colspan="10">Chưa có đơn hàng đã hoàn thành lắp đặt phù hợp</td></tr>';
+}
+window.renderWarrantyCoverage=renderWarrantyCoverage;
+window.createWarrantyFromSale=function(id){
+  const s=data.sales.find(x=>x.id===id);
+  if(!s) return alert('Không tìm thấy phiếu bán');
+  resetWarrantyForm();
+  populateWarrantyFromSale(s);
+  showWarrantyTab('form');
+  setTimeout(()=>$('wReasonSelect')?.focus(),100);
 };
 
 function saleWarrantyLabel(s){
@@ -2682,6 +2729,7 @@ function populateWarrantyFromSale(s){
   if($('wAddress')) $('wAddress').value=ci.address||'';
   if($('wSerial')) $('wSerial').value=(s.items||[]).map(i=>`${i.code||''}${i.name?` - ${i.name}`:''}${i.qty?` x${i.qty}`:''}`).filter(Boolean).join(', ');
   if($('wStart')) $('wStart').value=warrantyStartFromSale(s)||s.date||today();
+  if($('wMonths')) $('wMonths').value=warrantyMonthsFromSale(s);
   if($('wReceiveDate') && !$('wReceiveDate').value) $('wReceiveDate').value=today();
 }
 window.selectWarrantySaleById=(id)=>{
@@ -2699,7 +2747,7 @@ window.saveWarranty=async()=>{
   let sale=data.sales.find(x=>x.id===$('wSale')?.value)||{};
   if(!sale.id) return alert('Vui lòng chọn phiếu bán từ danh sách tìm kiếm');
   let start=$('wStart').value||warrantyStartFromSale(sale)||today();
-  let months=+($('wMonths')?.value||24)||24;
+  let months=+($('wMonths')?.value||warrantyMonthsFromSale(sale)||24)||24;
   let end=new Date(start);end.setMonth(end.getMonth()+months);
   const ci=saleCustomerInfo(sale);
   const reasonOther=($('wReasonOther')?.value||'').trim();
