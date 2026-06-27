@@ -1077,3 +1077,22 @@ td:first-child,th:first-child,td:last-child,th:last-child{border-radius:0!import
 .sale-customer-result-row b{color:#2f22c8;}
 .sale-customer-result-row small{display:block;color:#64748b;margin-top:3px;line-height:1.35;}
 .sale-customer-no-result{padding:10px 12px;color:#64748b;font-size:14px;}
+
+/* Warranty ERP module */
+.warranty-module-head small{color:#667085;font-weight:500;}
+.warranty-tabs{display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #eef1f7;margin-top:12px;padding-top:12px;}
+.warranty-tabs button{border:1px solid #d8ddf2;background:#fff;border-radius:999px;padding:8px 14px;font-weight:700;color:#4b5563;cursor:pointer;}
+.warranty-tabs button.active{background:#7c3aed;color:#fff;border-color:#7c3aed;box-shadow:0 8px 20px rgba(124,58,237,.18);}
+.warranty-tab-panel.hidden{display:none!important;}
+.warranty-form-grid textarea{width:100%;border:1px solid #d8ddf2;border-radius:12px;padding:10px 12px;font-family:inherit;resize:vertical;background:#fff;}
+.warranty-reason-options{display:flex;flex-wrap:wrap;gap:8px;padding:8px;border:1px solid #d8ddf2;border-radius:12px;background:#fbfcff;}
+.warranty-reason-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e0e7ff;border-radius:999px;padding:7px 10px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;}
+.warranty-history-box{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+.warranty-history-card{border:1px solid #e4e8f5;border-radius:16px;background:#fff;padding:14px;box-shadow:0 8px 20px rgba(20,20,60,.06);line-height:1.6;}
+.warranty-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.warranty-report-card{border:1px solid #e4e8f5;border-radius:16px;background:#fff;padding:16px;box-shadow:0 8px 20px rgba(20,20,60,.06);}
+.warranty-report-card.primary{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;}
+.warranty-report-card.primary strong{font-size:38px;}
+.warranty-report-card p{display:flex;justify-content:space-between;gap:12px;margin:8px 0;border-bottom:1px dashed #eef1f7;padding-bottom:6px;}
+.empty-state{padding:16px;border:1px dashed #d8ddf2;border-radius:12px;color:#667085;background:#fbfcff;}
+@media(max-width:760px){.warranty-tabs button{flex:1}.warranty-history-box,.warranty-report-grid{grid-template-columns:1fr}}
