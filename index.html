@@ -115,7 +115,7 @@
                   <div class="sale-section-title">Thông tin chung</div>
                   <div class="sale-field-grid sale-grid-general">
                     <div><label>Mã phiếu</label><input id="saleCode" readonly /></div>
-                    <div><label>Ngày bán</label><input id="saleDate" type="date" /></div>
+                    <div><label>Ngày bán</label><input id="saleDate" type="date" /></div><div><label>Ngày hoàn thành lắp</label><input id="saleInstallCompletedDate" type="date" /></div>
                     <div><label>Loại khách</label><select id="saleCustomerType" onchange="saleCustomerTypeChanged()"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select></div>
                     <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
                   </div>
@@ -200,11 +200,11 @@
         </div>
         <div class="panel">
           <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3></div>
-          <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn</th><th>Doanh thu</th><th>Doanh số tính HH</th><th>Phụ thu</th><th>Chiết khấu</th><th>Hoa hồng Sale</th><th>Hành động</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
+          <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn đã thu đủ</th><th>Doanh thu đã thu đủ</th><th>Doanh số tính HH</th><th>Phụ thu</th><th>Chiết khấu</th><th>Hoa hồng Sale</th><th>Hành động</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
         </div>
         <div class="panel">
           <div class="panel-head"><h3>🛠️ Công kỹ thuật theo nhân viên</h3></div>
-          <table><thead><tr><th>Nhân viên kỹ thuật</th><th>Số đơn lắp</th><th>Doanh thu phụ trách</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng nhận</th></tr></thead><tbody id="commissionByTech"></tbody></table>
+          <table><thead><tr><th>Nhân viên kỹ thuật</th><th>Số đơn đã thu đủ</th><th>Doanh thu phụ trách đã thu đủ</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng nhận</th></tr></thead><tbody id="commissionByTech"></tbody></table>
         </div>
         <div class="panel wide">
           <div class="panel-head"><h3 id="commissionOrderTitle">🧾 Hoa hồng / công kỹ thuật theo từng đơn hàng</h3></div>

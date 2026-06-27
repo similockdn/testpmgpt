@@ -616,7 +616,7 @@ function calcSaleTotals(items,vatMode,paid,surcharge=0,orderDiscountType='none',
 function calcCommissionBase(totals){return Math.max(0,(+totals?.grand||0)-(+totals?.vat||0))}
 function calcCommission(totals,percent){let base=Math.max(0,calcCommissionBase(totals));return Math.round(base*(+percent||0)/100)}
 function saleCommissionBaseValue(s){if(isSaleCanceled(s))return 0;return Math.max(0,+s?.commissionBase||calcCommissionBase(s)||0)}
-function saleCommissionValue(s){if(isSaleCanceled(s))return 0;const pct=+(s?.commissionPercent||0)||0;const calculated=Math.round(saleCommissionBaseValue(s)*pct/100);return pct?calculated:(+s?.saleCommission||0)}
+function saleCommissionValue(s){if(isSaleCanceled(s)||!saleFullyPaidForCommission(s))return 0;const pct=+(s?.commissionPercent||0)||0;const calculated=Math.round(saleCommissionBaseValue(s)*pct/100);return pct?calculated:(+s?.saleCommission||0)}
 function saleProfitValue(s){if(isSaleCanceled(s))return 0;const cost=+s?.cost||((s?.items||[]).reduce((a,it)=>a+costFor(it.code,s.date||today())*(+it.qty||0),0));return saleCommissionBaseValue(s)-cost-saleCommissionValue(s)-(+s?.techCost||0)-(+s?.techFuel||0)}
 function saleItemSummary(s){
   const map={};
@@ -1539,6 +1539,35 @@ function salePaymentInfo(s){
   const paymentStatus=debtLeft<=0?'Đã thu tiền':(paidTotal>0?'Thanh toán một phần':'Chưa thu tiền');
   return {paidTotal,debtLeft,paymentStatus};
 }
+function saleFullyPaidForCommission(s={}){
+  if(isSaleCanceled(s)) return false;
+  const grand=+s.grand||0;
+  if(grand<=0) return false;
+  const pay=salePaymentInfo(s);
+  return (+pay.paidTotal||0)>=grand && (+pay.debtLeft||0)<=0;
+}
+function commissionEligibleSales(){
+  return activeSales().filter(s=>saleFullyPaidForCommission(s));
+}
+function currentStaffMatchIds(){
+  const ids=new Set();
+  const email=normEmail(currentUser?.email||currentPerm?.email||'');
+  const uname=searchKey(currentPerm?.name||'');
+  const staffId=String(currentPerm?.staffId||currentPerm?.employeeId||'').trim();
+  if(staffId) ids.add(staffId);
+  data.staff.forEach(st=>{
+    if(staffId && st.id===staffId) ids.add(st.id);
+    if(email && normEmail(st.email||'')===email) ids.add(st.id);
+    if(uname && searchKey(st.name||'')===uname) ids.add(st.id);
+  });
+  return [...ids];
+}
+function canViewAllCommissions(){
+  return currentPerm.role==='Admin' || ['Quản lý','Kế toán'].includes(currentPerm.role||'') || has('viewCost');
+}
+function warrantyStartFromSale(s={}){
+  return String(s.installCompletedDate||s.installCompleteDate||s.completedInstallDate||s.installedAt||s.installDate||s.date||today()).slice(0,10);
+}
 function saleMoneyStatus(s){
   const pay=salePaymentInfo(s);
   const paid=+pay.paidTotal||0, grand=+s.grand||0, over=Math.max(0,paid-grand);
@@ -1655,7 +1684,7 @@ window.createSupplementStockVoucher=async(id)=>{
   viewSaleDetail(id);
 }
 
-window.resetSaleForm=()=>{editingSale=null;$('saleCode').value=nextCode('BH',data.sales);$('saleDate').value=today();$('saleCustomerSearch').value='';if($('saleCustomerId'))$('saleCustomerId').value='';if($('saleCustomerPhone')){$('saleCustomerPhone').value=''; window.__saleCustomerPhoneManual=false;}if($('saleCustomerAddress')){$('saleCustomerAddress').value=''; window.__saleCustomerAddressManual=false;}if($('saleCustomerType'))$('saleCustomerType').value='Khách lẻ';if($('saleVatMode'))$('saleVatMode').value='included8';$('salePaid').value=0;if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff')?.value);if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech')?.value);if($('saleTechFuel'))$('saleTechFuel').value=0;if($('saleSurcharge'))$('saleSurcharge').value=0;if($('saleOrderDiscountType'))$('saleOrderDiscountType').value='none';if($('saleOrderDiscountValue'))$('saleOrderDiscountValue').value=0;$('saleNote').value='';if($('saleWarehouse'))$('saleWarehouse').value='Kho Văn Phòng';if($('saleExportStock'))$('saleExportStock').checked=false;if($('saleExportStockSticky'))$('saleExportStockSticky').checked=false;ensureProductDatalist();$('saleItems').innerHTML='';addSaleItem();updateSaleTotals()}
+window.resetSaleForm=()=>{editingSale=null;$('saleCode').value=nextCode('BH',data.sales);$('saleDate').value=today();$('saleCustomerSearch').value='';if($('saleCustomerId'))$('saleCustomerId').value='';if($('saleCustomerPhone')){$('saleCustomerPhone').value=''; window.__saleCustomerPhoneManual=false;}if($('saleCustomerAddress')){$('saleCustomerAddress').value=''; window.__saleCustomerAddressManual=false;}if($('saleCustomerType'))$('saleCustomerType').value='Khách lẻ';if($('saleVatMode'))$('saleVatMode').value='included8';$('salePaid').value=0;if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff')?.value);if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech')?.value);if($('saleTechFuel'))$('saleTechFuel').value=0;if($('saleSurcharge'))$('saleSurcharge').value=0;if($('saleOrderDiscountType'))$('saleOrderDiscountType').value='none';if($('saleOrderDiscountValue'))$('saleOrderDiscountValue').value=0;$('saleNote').value='';if($('saleInstallCompletedDate'))$('saleInstallCompletedDate').value='';if($('saleWarehouse'))$('saleWarehouse').value='Kho Văn Phòng';if($('saleExportStock'))$('saleExportStock').checked=false;if($('saleExportStockSticky'))$('saleExportStockSticky').checked=false;ensureProductDatalist();$('saleItems').innerHTML='';addSaleItem();updateSaleTotals()}
 window.addSaleItem=(it={})=>{let tr=document.createElement('tr');tr.innerHTML=`<td><input list="productCodesList" placeholder="Tìm model..." value="${it.code||''}" onchange="saleProductChanged(this)" oninput="saleProductChanged(this)"></td><td><input value="${it.name||''}" readonly></td><td><input type="number" value="${it.qty||1}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td><input type="number" value="${it.price||0}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td><select onchange="updateSaleTotals()"><option value="percent" ${(it.discountType||'percent')==='percent'?'selected':''}>%</option><option value="amount" ${(it.discountType||'percent')==='amount'?'selected':''}>VNĐ</option></select></td><td><input type="number" value="${it.discount||0}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td class="line-total">0</td><td><button class="btn danger" onclick="this.closest('tr').remove();updateSaleTotals()">X</button></td>`;$('saleItems').appendChild(tr);updateSaleTotals();setTimeout(()=>tr.querySelector('input')?.focus(),30);return tr}
 window.saleItemKeyNav=(e,el)=>{if(e.key!=='Enter')return;e.preventDefault();const tr=el.closest('tr');const inputs=[...tr.querySelectorAll('input:not([readonly]),select')];let i=inputs.indexOf(el);if(i<inputs.length-1){inputs[i+1].focus();inputs[i+1].select?.();}else{addSaleItem();}}
 window.addQuickSaleModel=(code)=>{let p=data.products.find(x=>String(x.code).toLowerCase()===String(code).toLowerCase() || String(x.code).toLowerCase().includes(String(code).toLowerCase()));if(!p)return alert('Chưa có model '+code+' trong danh mục sản phẩm'); if(p.active==='inactive')return alert('Model '+p.code+' đang ngừng bán, không thể thêm vào phiếu bán.');let customer=findCustomerBySearch();let bp=activePriceFor(p.code,saleCustomerType(),saleDateValue());let tr=addSaleItem({code:p.code,name:p.name,qty:1,price:bp?.price||p.price||0,discount:customer?.discount||0});saleProductChanged(tr.children[0].querySelector('input'));setTimeout(()=>tr.children[2].querySelector('input')?.focus(),30)}
@@ -1853,7 +1882,7 @@ window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quic
   if(exportStock){for(const it of items){const available=stockOf(it.code,excludeVoucherId,saleWarehouse); if(it.qty>available && !confirm(`Sản phẩm ${it.code} tồn tại kho ${saleWarehouse} hiện có ${available}, vẫn lưu đơn kiêm xuất kho?`)) return;}}
   const saleDateVal=saleDateValue();
   const paidForTotals=editingSale?(oldSalePay?.paidTotal||0):(+($('salePaid')?.value||0)||0);
-  let totals=calcSaleTotals(items,$('saleVatMode').value,paidForTotals,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);let cost=items.reduce((a,it)=>a+costFor(it.code,saleDateVal)*it.qty,0);let commissionPercent=+($('saleCommissionPercent')?.value||0)||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+($('saleTechCost')?.value||0)||0;let techFuel=+($('saleTechFuel')?.value||0)||0;let commissionBase=calcCommissionBase(totals);let snap=customerSnapshotFromCustomer(customer,saleCustomerType()); snap.phone=saleCustomerPhoneValue(customer)||snap.phone; snap.address=saleCustomerAddressValue(customer); let o={code:$('saleCode').value,date:saleDateVal,...customerSnapshotPayload(snap),staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,techFuel,vatMode:$('saleVatMode').value,paid:editingSale?(+(oldSale?.paid||0)||0):paidForTotals,paidSource:editingSale?(oldSale?.paidSource||''):(paidForTotals>0?'sale_form':''),paidEntryKey:editingSale?(oldSale?.paidEntryKey||oldSale?.paidSaleCode||''):(paidForTotals>0?$('saleCode').value:''),directPaidLocked:editingSale?(oldSale?.directPaidLocked===true):(paidForTotals>0),note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost-techFuel,status:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paymentStatus:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:paidForTotals,debtLeft:totals.debt,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
+  let totals=calcSaleTotals(items,$('saleVatMode').value,paidForTotals,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);let installCompletedDate=($('saleInstallCompletedDate')?.value||'').slice(0,10);let cost=items.reduce((a,it)=>a+costFor(it.code,saleDateVal)*it.qty,0);let commissionPercent=+($('saleCommissionPercent')?.value||0)||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+($('saleTechCost')?.value||0)||0;let techFuel=+($('saleTechFuel')?.value||0)||0;let commissionBase=calcCommissionBase(totals);let snap=customerSnapshotFromCustomer(customer,saleCustomerType()); snap.phone=saleCustomerPhoneValue(customer)||snap.phone; snap.address=saleCustomerAddressValue(customer); let o={code:$('saleCode').value,date:saleDateVal,...customerSnapshotPayload(snap),staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,techFuel,vatMode:$('saleVatMode').value,paid:editingSale?(+(oldSale?.paid||0)||0):paidForTotals,paidSource:editingSale?(oldSale?.paidSource||''):(paidForTotals>0?'sale_form':''),paidEntryKey:editingSale?(oldSale?.paidEntryKey||oldSale?.paidSaleCode||''):(paidForTotals>0?$('saleCode').value:''),directPaidLocked:editingSale?(oldSale?.directPaidLocked===true):(paidForTotals>0),note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost-techFuel,status:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paymentStatus:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:paidForTotals,debtLeft:totals.debt,installCompletedDate,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
   let financialEditReason='';
   if(editingSale){
     if(!has('editSales'))return alert('Không có quyền sửa đơn');
@@ -1922,7 +1951,7 @@ window.editSale=id=>{
   if($('saleWarehouse')) $('saleWarehouse').value=s.warehouse||stockVoucherForSale(s)?.warehouse||defaultWarehouse();
   if($('saleVatMode')) $('saleVatMode').value=s.vatMode||'none';
   if($('salePaid')) $('salePaid').value=s.paid||0;
-  if($('saleCommissionPercent')) $('saleCommissionPercent').value=s.commissionPercent??salePercentDefault(s.staffId);
+  if($('saleCommissionPercent')) $('saleCommissionPercent').value=s.commissionPercent??salePercentDefault(s.staffId);if($('saleInstallCompletedDate'))$('saleInstallCompletedDate').value=s.installCompletedDate||s.installCompleteDate||s.completedInstallDate||s.installedAt||s.installDate||'';
   if($('saleTechCost')) $('saleTechCost').value=s.techCost??techFeeDefault(s.techId);
   if($('saleTechFuel')) $('saleTechFuel').value=s.techFuel||0;
   if($('saleSurcharge')) $('saleSurcharge').value=s.surcharge||0;
@@ -2017,10 +2046,16 @@ function readCommissionFilterFromForm(){
     if($('commissionFrom')) $('commissionFrom').value=range.from;
     if($('commissionTo')) $('commissionTo').value=range.to;
   }
+  let staffId=$('commissionStaff')?.value||'';
+  if(!canViewAllCommissions()){
+    const own=currentStaffMatchIds();
+    staffId=own[0]||'__NO_STAFF__';
+    if($('commissionStaff')) $('commissionStaff').value=staffId;
+  }
   return {
     q:($('commissionSearch')?.value||'').toLowerCase().trim(),
     dept:$('commissionDept')?.value||'',
-    staffId:$('commissionStaff')?.value||'',
+    staffId,
     period,
     from:range.from||'',
     to:range.to||''
@@ -2032,6 +2067,15 @@ window.refreshCommissionStaffOptions=()=>{
   const dept=$('commissionDept')?.value||'';
   let list=data.staff.filter(x=>!dept||x.dept===dept);
   if(dept==='Sale') list=data.staff.filter(x=>x.dept==='Sale'||x.dept==='Quản lý');
+  if(!canViewAllCommissions()){
+    const own=currentStaffMatchIds();
+    list=list.filter(x=>own.includes(x.id));
+    el.disabled=true;
+    el.innerHTML=list.length?list.map(x=>`<option value="${x.id}">${x.name} - ${x.dept||''}</option>`).join(''):'<option value="__NO_STAFF__">Chưa liên kết hồ sơ nhân viên</option>';
+    if(list.length) el.value=list[0].id;
+    return;
+  }
+  el.disabled=false;
   el.innerHTML='<option value="">Tất cả nhân viên</option>'+list.map(x=>`<option value="${x.id}">${x.name} - ${x.dept||''}</option>`).join('');
   if([...el.options].some(o=>o.value===old)) el.value=old;
 };
@@ -2048,7 +2092,7 @@ window.resetCommissionFilter=()=>{
   if($('commissionSearch'))$('commissionSearch').value='';
   if($('commissionDept'))$('commissionDept').value='';
   refreshCommissionStaffOptions();
-  if($('commissionStaff'))$('commissionStaff').value='';
+  if($('commissionStaff'))$('commissionStaff').value=canViewAllCommissions()?'':(currentStaffMatchIds()[0]||'__NO_STAFF__');
   if($('commissionPeriod'))$('commissionPeriod').value='all';
   if($('commissionFrom'))$('commissionFrom').value='';
   if($('commissionTo'))$('commissionTo').value='';
@@ -2065,7 +2109,7 @@ window.viewCommissionStaff=(staffId,dept='Sale')=>{
 };
 function commissionFilteredSales(){
   const f=commissionAppliedFilter||{q:'',dept:'',staffId:'',from:'',to:''};
-  return activeSales().filter(s=>{
+  return commissionEligibleSales().filter(s=>{
     let d=String(s.date||'');
     if(f.from && d<f.from) return false;
     if(f.to && d>f.to) return false;
@@ -2120,7 +2164,7 @@ function renderCommissions(){
     byTech[techKey].techFuel+=+s.techFuel||0;
   });
 
-  if($('commissionSummary')) $('commissionSummary').innerHTML=`<div>Tổng doanh thu: <b>${money(totalRevenue)}</b></div><div>Doanh số tính HH: <b>${money(totalCommissionBase)}</b></div><div>Tổng phụ thu: <b>${money(totalSurcharge)}</b></div><div>Tổng chiết khấu: <b>${money(totalDiscount)}</b></div><div>Hoa hồng Sale: <b>${money(totalSaleCommission)}</b></div><div>Công kỹ thuật: <b>${money(totalTechCost)}</b></div><div>Tiền xăng KT: <b>${money(totalTechFuel)}</b></div><div>Tổng chi: <b>${money(totalSaleCommission+totalTechCost+totalTechFuel)}</b></div>`;
+  if($('commissionSummary')) $('commissionSummary').innerHTML=`<div>Tổng doanh thu đã thu đủ: <b>${money(totalRevenue)}</b></div><div>Doanh số tính HH: <b>${money(totalCommissionBase)}</b></div><div>Tổng phụ thu: <b>${money(totalSurcharge)}</b></div><div>Tổng chiết khấu: <b>${money(totalDiscount)}</b></div><div>Hoa hồng Sale: <b>${money(totalSaleCommission)}</b></div><div>Công kỹ thuật: <b>${money(totalTechCost)}</b></div><div>Tiền xăng KT: <b>${money(totalTechFuel)}</b></div><div>Tổng chi: <b>${money(totalSaleCommission+totalTechCost+totalTechFuel)}</b></div><div class="muted-small full">Chỉ tính hoa hồng cho phiếu bán đã thu đủ 100%.</div>`;
 
   $('commissionByStaff').innerHTML=Object.values(bySale)
     .sort((a,b)=>b.commission-a.commission)
@@ -2459,7 +2503,7 @@ function renderStockBook(){
 
 
 
-window.saveWarranty=async()=>{let start=$('wStart').value||today();let end=new Date(start);end.setMonth(end.getMonth()+(+$('wMonths').value||24));let o={saleId:$('wSale').value,customer:$('wCustomer').value,phone:$('wPhone').value,serial:$('wSerial').value,start,end:end.toISOString().slice(0,10),months:+$('wMonths').value||24,status:$('wStatus').value,note:$('wNote').value};if(editingWarranty)await updateDoc(doc(db,'warranties',editingWarranty),o);else await addDoc(col('warranties'),o);editingWarranty=null;['wCustomer','wPhone','wSerial','wNote'].forEach(i=>$(i).value='');await loadAll()};$('wSale').addEventListener('change',()=>{let s=data.sales.find(x=>x.id===$('wSale').value);if(s){const ci=saleCustomerInfo(s);$('wCustomer').value=ci.name;$('wPhone').value=ci.phone||'';$('wSerial').value=(s.items||[]).map(i=>i.code).join(', ');$('wStart').value=s.date||today()}});
+window.saveWarranty=async()=>{let sale=data.sales.find(x=>x.id===$('wSale')?.value)||{};let start=$('wStart').value||warrantyStartFromSale(sale)||today();let end=new Date(start);end.setMonth(end.getMonth()+(+$('wMonths').value||24));let o={saleId:$('wSale').value,customer:$('wCustomer').value,phone:$('wPhone').value,serial:$('wSerial').value,start,end:end.toISOString().slice(0,10),months:+$('wMonths').value||24,status:$('wStatus').value,note:$('wNote').value};if(editingWarranty)await updateDoc(doc(db,'warranties',editingWarranty),o);else await addDoc(col('warranties'),o);editingWarranty=null;['wCustomer','wPhone','wSerial','wNote'].forEach(i=>$(i).value='');await loadAll()};$('wSale').addEventListener('change',()=>{let s=data.sales.find(x=>x.id===$('wSale').value);if(s){const ci=saleCustomerInfo(s);$('wCustomer').value=ci.name;$('wPhone').value=ci.phone||'';$('wSerial').value=(s.items||[]).map(i=>i.code).join(', ');$('wStart').value=warrantyStartFromSale(s)}});
 function renderWarranties(){let q=($('wSearch')?.value||'').toLowerCase();$('warrantyTable').innerHTML=activeWarranties().filter(w=>(w.customer+w.phone+w.serial).toLowerCase().includes(q)).map(w=>`<tr><td>${w.customer}</td><td>${w.phone||''}</td><td>${w.serial||''}</td><td>${w.start}</td><td>${w.end}</td><td><span class="badge green">${w.status}</span></td><td><button class="btn ghost" onclick="editWarranty('${w.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('warranties','${w.id}')">Xóa</button></td></tr>`).join('')}
 window.editWarranty=id=>{let w=data.warranties.find(x=>x.id===id);editingWarranty=id;$('wSale').value=w.saleId||'';$('wCustomer').value=w.customer;$('wPhone').value=w.phone||'';$('wSerial').value=w.serial||'';$('wStart').value=w.start;$('wMonths').value=w.months||24;$('wStatus').value=w.status;$('wNote').value=w.note||''}
 
@@ -2727,7 +2771,7 @@ function exportRows(type){let rows=[];
   if(type==='warranties')rows=activeWarranties().map(w=>({saleId:w.saleId||'',customer:w.customer,phone:w.phone,serial:w.serial,start:w.start,months:w.months,end:w.end,status:w.status,note:w.note}));
   if(type==='stockVouchers')rows=activeStockVouchers().flatMap(v=>(v.items||[]).map(it=>({code:v.code,date:v.date,type:v.type,warehouse:voucherWarehouse(v),productCode:it.code,productName:it.name,qty:it.actualQty??it.inputQty??it.qty,cost:it.cost,note:it.note||v.note||''})));
   if(type==='sales')rows=activeSales().map(s=>({code:s.code,date:s.date,customerCode:s.customerCode||'',customerName:saleCustomerInfo(s).name,customerPhone:saleCustomerInfo(s).phone||'',staffName:s.staffName,techName:s.techName,goodsBeforeDiscount:s.goodsBeforeDiscount||0,lineDiscountTotal:s.lineDiscountTotal||0,orderDiscountType:s.orderDiscountType||'none',orderDiscountValue:s.orderDiscountValue||0,orderDiscountTotal:s.orderDiscountTotal||0,discountTotal:s.discountTotal||0,grand:s.grand,paid:s.paid,debt:s.debt,commissionPercent:s.commissionPercent,saleCommission:saleCommissionValue(s),techCost:s.techCost,techFuel:s.techFuel||0,surcharge:s.surcharge||0,profit:saleProfitValue(s),itemsJson:JSON.stringify(s.items||[]),note:s.note||''}));
-  if(type==='commissions')rows=activeSales().map(s=>{const saleCom=saleCommissionValue(s);const itemSum=saleItemSummary(s);return {date:s.date,code:s.code,customer:saleCustomerInfo(s).name,model:itemSum.models,qty:itemSum.totalQty,qtyDetail:itemSum.qtyText,saleStaff:s.staffName,techStaff:s.techName,grand:s.grand,surcharge:s.surcharge||0,discountTotal:s.discountTotal||0,commissionBase:saleCommissionBaseValue(s),commissionPercent:s.commissionPercent,saleCommission:saleCom,techCost:s.techCost,techFuel:s.techFuel||0,totalCommission:saleCom+(+s.techCost||0)+(+s.techFuel||0)}});
+  if(type==='commissions')rows=commissionEligibleSales().map(s=>{const saleCom=saleCommissionValue(s);const itemSum=saleItemSummary(s);return {date:s.date,code:s.code,customer:saleCustomerInfo(s).name,model:itemSum.models,qty:itemSum.totalQty,qtyDetail:itemSum.qtyText,saleStaff:s.staffName,techStaff:s.techName,grand:s.grand,surcharge:s.surcharge||0,discountTotal:s.discountTotal||0,commissionBase:saleCommissionBaseValue(s),commissionPercent:s.commissionPercent,saleCommission:saleCom,techCost:s.techCost,techFuel:s.techFuel||0,totalCommission:saleCom+(+s.techCost||0)+(+s.techFuel||0)}});
   if(type==='returns'){rows=activeStockVouchers().filter(v=>v.type==='RETURN'&&canAccessVoucher(v)).flatMap(v=>(v.items||[]).map(it=>{const sale=data.sales.find(s=>s.id===v.saleId||s.code===v.saleCode)||{};const priceLine=(sale.items||[]).find(x=>x.code===it.code)||{};return{date:v.date||'',voucherCode:v.code||'',saleCode:v.saleCode||sale.code||'',customer:v.customerName||saleCustomerInfo(sale).name||'',warehouse:voucherWarehouse(v),code:it.code||'',name:it.name||'',qty:+it.qty||0,amount:lineNet({...priceLine,qty:+it.qty||0}),settlement:v.settlement||sale.returnSettlement||'',note:v.note||''}}));}
   if(type==='logs')rows=(data.logs||[]).map(l=>({time:logTime(l.at),email:l.email||'',action:l.action||'',detail:l.detail||''}));
   if(type==='stockbook'){const df=stockBookDateFilter();rows=stockBookRows(df.from,df.to).filter(r=>!df.active||r.periodMovement).map(r=>({tuNgay:df.from||'',denNgay:df.to||'',model:r.code,sanPham:r.name,nhap:r.totalIn,xuat:r.totalOut,chuyenKho:r.totalTransfer,dieuChinh:r.totalAdj,khoChinh:canAccessWarehouse('Kho Chính')?r.khoChinh:'Ẩn',khoVanPhong:canAccessWarehouse('Kho Văn Phòng')?r.khoVanPhong:'Ẩn',tongTonHienTai:r.stock,giaVon:has('viewCost')?r.cost:'Ẩn',giaTriTon:has('viewCost')?r.value:'Ẩn'}));}
