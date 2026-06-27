@@ -1028,7 +1028,7 @@ function setOnlyCheckedProduct(boxId, code){
   box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=x.value===code);
 }
 function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>staffHasFunction(x,'Sale')||staffHasFunction(x,'Quản lý')),x=>`${x.name}${staffHasFunction(x,'Kỹ thuật')?' (Sale + Kỹ thuật)':''}`);fillSelect($('saleTech'),data.staff.filter(x=>staffHasFunction(x,'Kỹ thuật')),x=>`${x.name}${staffHasFunction(x,'Sale')?' (Kỹ thuật + Sale)':''}`);refreshCommissionStaffOptions();ensureProductDatalist();fillReceiptCustomerOptions();renderProductCategoryOptions();renderWarrantyReasonOptions();renderWarrantyStaffSelectors();if($('saleWarehouse'))$('saleWarehouse').innerHTML=warehouseOptions($('saleWarehouse').value||defaultWarehouse());if($('stockWarehouse'))$('stockWarehouse').innerHTML=warehouseOptions($('stockWarehouse').value||defaultWarehouse());if($('stockToWarehouse'))$('stockToWarehouse').innerHTML=warehouseOptions($('stockToWarehouse').value||defaultWarehouse(),WAREHOUSES);if($('customerList')) $('customerList').innerHTML=data.customers.map(c=>`<option value="${customerSearchValue(c)}"></option>`).join('')}
-function renderDashboard(){let month=new Date().toISOString().slice(0,7);let sales=activeSales().filter(s=>String(s.date||'').startsWith(month));let monthlyExpenses=data.expenses.filter(e=>String(e.date||'').startsWith(month)&&!isSalaryCategory(e.category));let monthlySalaries=data.salaries.filter(e=>String(e.date||'').startsWith(month));let rev=sales.reduce((a,s)=>a+(+s.grand||0),0);let orderProfit=sales.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);let expense=monthlyExpenses.reduce((a,e)=>a+(+e.amount||0),0)+monthlySalaries.reduce((a,e)=>a+(+e.total||+e.amount||0),0);let profit=orderProfit-expense;let debt=calcDebts().reduce((a,d)=>a+d.debt,0);let low=data.products.filter(p=>stockOf(p.code)<=(+p.minStock||3));$('kpiRevenue').textContent=money(rev);$('kpiProfit').textContent=money(profit);$('kpiDebt').textContent=money(debt);$('kpiLowStock').textContent=low.length;const best={};activeSales().forEach(s=>(s.items||[]).forEach(it=>best[it.code]=(best[it.code]||0)+(+it.qty||0)));let rows=Object.entries(best).sort((a,b)=>b[1]-a[1]).slice(0,8);let max=Math.max(1,...rows.map(r=>r[1]));$('bestProducts').innerHTML=rows.length?rows.map(([code,qty])=>{let p=data.products.find(x=>x.code===code)||{};return `<div class="bar-row"><b>${code}</b><div><small>${p.name||''}</small><div class="bar"><i style="width:${qty/max*100}%"></i></div></div><b>${qty}</b></div>`}).join(''):'Chưa có dữ liệu';const st={};activeSales().forEach(s=>{let n=data.staff.find(x=>x.id===s.staffId)?.name||'Khác';st[n]=st[n]||{rev:0,count:0};st[n].rev+=+s.grand||0;st[n].count++});$('topStaff').innerHTML=Object.entries(st).sort((a,b)=>b[1].rev-a[1].rev).slice(0,5).map(([n,v])=>`<tr><td>${n}</td><td>${money(v.rev)}</td><td>${v.count}</td></tr>`).join('');$('latestSales').innerHTML=activeSales().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(s=>{const ci=saleCustomerInfo(s);return `<tr><td>${s.code}</td><td>${ci.code}</td><td>${ci.name}</td><td>${money(s.grand)}</td></tr>`}).join('');$('lowStockRows').innerHTML=low.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td><span class="badge red">${stockOf(p.code)}</span></td></tr>`).join('')||'<tr><td colspan="3">Kho ổn định</td></tr>'}
+function renderDashboard(){let month=new Date().toISOString().slice(0,7);let sales=activeSales().filter(s=>String(s.date||'').startsWith(month));let monthlyExpenses=data.expenses.filter(e=>String(e.date||'').startsWith(month)&&!isSalaryCategory(e.category));let monthlySalaries=data.salaries.filter(e=>String(e.date||'').startsWith(month));let rev=sales.reduce((a,s)=>a+(+s.grand||0),0);let orderProfit=sales.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);let expense=monthlyExpenses.reduce((a,e)=>a+(+e.amount||0),0)+monthlySalaries.reduce((a,e)=>a+(+e.total||+e.amount||0),0);let profit=orderProfit-expense;let debtRows=calcDebtRows();let debt=debtRows.filter(d=>+d.debt>0).reduce((a,d)=>a+d.debt,0);let debtOpenCount=debtRows.filter(d=>+d.debt>0).length;let debtSettledCount=debtRows.filter(d=>d.settled).length;let debtOverdue=debtRows.filter(d=>+d.debt>0 && ((new Date(today())-new Date(d.sales?.[0]?.date||today()))/(1000*60*60*24)>30)).reduce((a,d)=>a+d.debt,0);let low=data.products.filter(p=>stockOf(p.code)<=(+p.minStock||3));$('kpiRevenue').textContent=money(rev);$('kpiProfit').textContent=money(profit);$('kpiDebt').textContent=money(debt);if($('kpiDebtOpenCount'))$('kpiDebtOpenCount').textContent=debtOpenCount;if($('kpiDebtSettledCount'))$('kpiDebtSettledCount').textContent=debtSettledCount;if($('kpiDebtOverdue'))$('kpiDebtOverdue').textContent=money(debtOverdue);$('kpiLowStock').textContent=low.length;const best={};activeSales().forEach(s=>(s.items||[]).forEach(it=>best[it.code]=(best[it.code]||0)+(+it.qty||0)));let rows=Object.entries(best).sort((a,b)=>b[1]-a[1]).slice(0,8);let max=Math.max(1,...rows.map(r=>r[1]));$('bestProducts').innerHTML=rows.length?rows.map(([code,qty])=>{let p=data.products.find(x=>x.code===code)||{};return `<div class="bar-row"><b>${code}</b><div><small>${p.name||''}</small><div class="bar"><i style="width:${qty/max*100}%"></i></div></div><b>${qty}</b></div>`}).join(''):'Chưa có dữ liệu';const st={};activeSales().forEach(s=>{let n=data.staff.find(x=>x.id===s.staffId)?.name||'Khác';st[n]=st[n]||{rev:0,count:0};st[n].rev+=+s.grand||0;st[n].count++});$('topStaff').innerHTML=Object.entries(st).sort((a,b)=>b[1].rev-a[1].rev).slice(0,5).map(([n,v])=>`<tr><td>${n}</td><td>${money(v.rev)}</td><td>${v.count}</td></tr>`).join('');$('latestSales').innerHTML=activeSales().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(s=>{const ci=saleCustomerInfo(s);return `<tr><td>${s.code}</td><td>${ci.code}</td><td>${ci.name}</td><td>${money(s.grand)}</td></tr>`}).join('');$('lowStockRows').innerHTML=low.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td><span class="badge red">${stockOf(p.code)}</span></td></tr>`).join('')||'<tr><td colspan="3">Kho ổn định</td></tr>'}
 
 window.saveCustomer=async()=>{let phone=extractPhone(($('cPhone').value||'').trim());let code=($('cCode').value||customerCodeFromPhone(phone)).trim();let name=cleanCustomerName(($('cName').value||'').trim(),phone,code);let o={customerCode:code,name,type:$('cType').value,phone,address:$('cAddress').value,email:$('cEmail')?.value||'',contact:$('cContact')?.value||'',source:$('cSource')?.value||'',birthday:$('cBirthday')?.value||'',note:$('cNote')?.value||'',discount:+$('cDiscount').value||0,openingDebt:+$('cOpeningDebt').value||0};if(!o.name)return alert('Nhập đúng tên khách hàng, không dùng SĐT làm tên');if(!o.phone)return alert('Nhập số điện thoại khách hàng');let id=$('cId').value;if(id){
   // V49: sửa hồ sơ khách chỉ cập nhật danh mục khách hàng.
@@ -2147,9 +2147,23 @@ window.viewCommissionStaff=(staffId,dept='Sale')=>{
   renderCommissions();
   $('commissionByOrder')?.closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});
 };
+
+window.showCommissionTab=(tab='sale')=>{
+  const map={sale:'commissionSaleTab',tech:'commissionTechTab',summary:'commissionSummaryTab'};
+  Object.values(map).forEach(id=>$(id)?.classList.add('hidden'));
+  $(map[tab]||map.sale)?.classList.remove('hidden');
+  document.querySelectorAll('.commission-tabs button').forEach(btn=>btn.classList.remove('active'));
+  const idx=tab==='tech'?1:tab==='summary'?2:0;
+  document.querySelectorAll('.commission-tabs button')[idx]?.classList.add('active');
+};
 function commissionFilteredSales(){
   const f=commissionAppliedFilter||{q:'',dept:'',staffId:'',from:'',to:''};
+  const ownIds=currentStaffMatchIds();
   return commissionEligibleSales().filter(s=>{
+    if(!canViewAllCommissions()){
+      if(!ownIds.length) return false;
+      if(!ownIds.includes(String(s.staffId||'')) && !ownIds.includes(String(s.techId||''))) return false;
+    }
     let d=String(s.date||'');
     if(f.from && d<f.from) return false;
     if(f.to && d>f.to) return false;
@@ -2197,8 +2211,9 @@ function renderCommissions(){
 
     let techKey=s.techId||'none';
     let techName=s.techName||data.staff.find(x=>x.id===s.techId)?.name||'Chưa chọn kỹ thuật';
-    byTech[techKey]=byTech[techKey]||{name:techName,count:0,revenue:0,techCost:0,techFuel:0};
+    byTech[techKey]=byTech[techKey]||{id:techKey,name:techName,count:0,qty:0,revenue:0,techCost:0,techFuel:0};
     byTech[techKey].count++;
+    byTech[techKey].qty+=saleItemSummary(s).totalQty||0;
     byTech[techKey].revenue+=+s.grand||0;
     byTech[techKey].techCost+=+s.techCost||0;
     byTech[techKey].techFuel+=+s.techFuel||0;
@@ -2214,8 +2229,8 @@ function renderCommissions(){
   if($('commissionByTech')){
     $('commissionByTech').innerHTML=Object.values(byTech)
       .sort((a,b)=>b.techCost-a.techCost)
-      .map(v=>`<tr><td>${v.name}</td><td>${v.count}</td><td>${money(v.revenue)}</td><td><b>${money(v.techCost)}</b></td><td><b>${money(v.techFuel)}</b></td><td><b>${money((+v.techCost||0)+(+v.techFuel||0))}</b></td></tr>`)
-      .join('')||'<tr><td colspan="6">Không có dữ liệu công kỹ thuật theo bộ lọc</td></tr>'; 
+      .map(v=>`<tr><td>${v.name}</td><td>${v.count}</td><td>${v.qty||0}</td><td>${money(v.revenue)}</td><td><b>${money(v.techCost)}</b></td><td><b>${money(v.techFuel)}</b></td><td><b>${money((+v.techCost||0)+(+v.techFuel||0))}</b></td><td>${v.id==='none'?'':`<button class="btn ghost" onclick="viewCommissionStaff('${v.id}','Kỹ thuật')">Xem chi tiết</button>`}</td></tr>`)
+      .join('')||'<tr><td colspan="8">Không có dữ liệu công kỹ thuật theo bộ lọc</td></tr>'; 
   }
 
   if($('commissionOrderTitle')){
@@ -2227,6 +2242,22 @@ function renderCommissions(){
     .sort((a,b)=>String(b.date).localeCompare(String(a.date)))
     .map((s,idx)=>{const saleCom=saleCommissionValue(s);const itemSum=saleItemSummary(s);return `<tr><td class="text-center">${idx+1}</td><td>${s.date||''}</td><td>${s.code}</td><td>${saleCustomerInfo(s).name||''}</td><td>${itemSum.models||''}</td><td>${itemSum.qtyText||itemSum.totalQty||''}</td><td>${s.staffName||data.staff.find(x=>x.id===s.staffId)?.name||''}</td><td>${s.techName||data.staff.find(x=>x.id===s.techId)?.name||''}</td><td>${money(s.grand)}</td><td>${money(s.surcharge||0)}</td><td>${money(s.discountTotal||0)}</td><td>${money(saleCommissionBaseValue(s))}</td><td>${s.commissionPercent||0}%</td><td><b>${money(saleCom)}</b></td><td><b>${money(s.techCost||0)}</b></td><td><b>${money(s.techFuel||0)}</b></td><td><b>${money(saleCom+(+s.techCost||0)+(+s.techFuel||0))}</b></td></tr>`})
     .join('')||'<tr><td colspan="17">Không có đơn bán theo bộ lọc</td></tr>'; 
+
+  if($('employeeIncomeTable')){
+    const income={};
+    rows.forEach(s=>{
+      const itemQty=saleItemSummary(s).totalQty||0;
+      if(s.staffId){
+        const k=s.staffId;income[k]=income[k]||{name:s.staffName||data.staff.find(x=>x.id===k)?.name||'',roles:new Set(),orders:new Set(),qty:0,sale:0,tech:0,fuel:0};
+        income[k].roles.add('Sale');income[k].orders.add(s.id);income[k].qty+=itemQty;income[k].sale+=saleCommissionValue(s);
+      }
+      if(s.techId){
+        const k=s.techId;income[k]=income[k]||{name:s.techName||data.staff.find(x=>x.id===k)?.name||'',roles:new Set(),orders:new Set(),qty:0,sale:0,tech:0,fuel:0};
+        income[k].roles.add('Kỹ thuật');income[k].orders.add(s.id);income[k].qty+=itemQty;income[k].tech+=+s.techCost||0;income[k].fuel+=+s.techFuel||0;
+      }
+    });
+    $('employeeIncomeTable').innerHTML=Object.values(income).sort((a,b)=>(b.sale+b.tech+b.fuel)-(a.sale+a.tech+a.fuel)).map(v=>`<tr><td><b>${v.name}</b></td><td>${[...v.roles].join(' + ')}</td><td>${v.orders.size}</td><td>${v.qty}</td><td>${money(v.sale)}</td><td>${money(v.tech)}</td><td>${money(v.fuel)}</td><td><b>${money(v.sale+v.tech+v.fuel)}</b></td></tr>`).join('')||'<tr><td colspan="8">Chưa có thu nhập theo bộ lọc</td></tr>';
+  }
 }
 window.resetExpenseForm=()=>{editingExpense=null;$('exDate').value=today();$('exCategory').value='Tiền điện';$('exAmount').value='';$('exNote').value=''}
 function isSalaryCategory(c){return /lương|luong|salary|payroll/i.test(String(c||''))}
@@ -2872,6 +2903,37 @@ function groupKeyByPeriod(date,period){
   if(period==='week')return weekKey(d);
   return d;
 }
+
+function debtReportRows(){
+  const q=($('reportDebtSearch')?.value||'').toLowerCase().trim();
+  const status=$('reportDebtStatus')?.value||'open';
+  const {from,to}=reportRange();
+  return calcDebtRows().filter(d=>{
+    const s=d.sales?.[0]||{};
+    const date=s.date||d.receipts?.[0]?.date||'';
+    if(date && !inReportRange(date,from,to))return false;
+    if(status==='open' && !(+d.debt>0))return false;
+    if(status==='settled' && !d.settled)return false;
+    const ci=customerInfo(d.customer);
+    const text=[d.saleCode,ci.name,ci.phone,ci.address,ci.code,debtGroupProducts(d)].join(' ').toLowerCase();
+    return !q||text.includes(q);
+  }).sort((a,b)=>String(b.sales?.[0]?.date||'').localeCompare(String(a.sales?.[0]?.date||''))||String(a.saleCode||'').localeCompare(String(b.saleCode||'')));
+}
+function debtSettledDate(d){
+  const rs=(d.receipts||[]).filter(r=>!isReceiptCanceled(r)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  return rs[0]?.date||'';
+}
+function renderReportDebt(){
+  const tbody=$('reportDebtTable'); if(!tbody)return;
+  const rows=debtReportRows();
+  const all=calcDebtRows();
+  const open=all.filter(d=>+d.debt>0);
+  const settled=all.filter(d=>d.settled);
+  const overdue=open.filter(d=>{const date=d.sales?.[0]?.date||today(); return (new Date(today())-new Date(date))/(1000*60*60*24)>30});
+  if($('reportDebtSummary'))$('reportDebtSummary').innerHTML=`<div class="report-card">Tổng công nợ<b>${money(open.reduce((a,d)=>a+(+d.debt||0),0))}</b></div><div class="report-card">Đã tất toán<b>${settled.length} phiếu</b><small>${money(settled.reduce((a,d)=>a+(+d.total||0),0))}</small></div><div class="report-card">Quá hạn 30 ngày<b>${overdue.length} phiếu</b><small>${money(overdue.reduce((a,d)=>a+(+d.debt||0),0))}</small></div>`;
+  tbody.innerHTML=rows.map((d,i)=>{const ci=customerInfo(d.customer);const sale=d.sales?.[0]||{};return `<tr><td>${i+1}</td><td><b>${d.saleCode||''}</b></td><td>${ci.name||''}</td><td>${ci.phone||''}</td><td><small>${ci.address||''}</small></td><td>${debtGroupProducts(d)||''}</td><td>${sale.date||''}</td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td>${money(d.debt)}</td><td>${d.settled?debtSettledDate(d):''}</td><td>${d.settled?'<span class="badge green">Đã tất toán</span>':(+d.debt>0?'<span class="badge orange">Đang nợ</span>':'<span class="badge">Không phát sinh</span>')}</td></tr>`}).join('')||'<tr><td colspan="12">Không có dữ liệu công nợ phù hợp</td></tr>';
+}
+window.exportDebtReportExcel=()=>{try{assertExcel();const rows=debtReportRows().map((d,i)=>{const ci=customerInfo(d.customer);const sale=d.sales?.[0]||{};return {STT:i+1,'Phiếu':d.saleCode||'','Khách hàng':ci.name||'','SĐT':ci.phone||'','Địa chỉ':ci.address||'','Model':debtGroupProducts(d)||'','Ngày bán':sale.date||'','Tổng tiền':+d.total||0,'Đã thu':+d.paid||0,'Còn nợ':+d.debt||0,'Ngày tất toán':d.settled?debtSettledDate(d):'','Trạng thái':d.settled?'Đã tất toán':(+d.debt>0?'Đang nợ':'Không phát sinh')}});const wb=makeWorkbook({'Bao_cao_cong_no':rows});XLSX.writeFile(wb,`Bao_cao_cong_no_${today()}.xlsx`);}catch(err){alert(err.message)}};
 function renderReports(){
   if(!$('reportBox'))return;
   if($('reportFrom')&&!$('reportFrom').value)setReportQuickRange();
@@ -2958,6 +3020,7 @@ function renderReports(){
   }));
   if($('reportReturnSummary'))$('reportReturnSummary').innerHTML=`<div class="report-card">Số phiếu trả hàng<b>${returnVouchers.length}</b></div><div class="report-card">Số lượng trả<b>${returnRows.reduce((a,r)=>a+r.qty,0)} SP</b></div><div class="report-card">Giá trị hàng trả<b>${money(returnRows.reduce((a,r)=>a+r.amount,0))}</b></div>`;
   if($('reportReturnTable'))$('reportReturnTable').innerHTML=returnRows.sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(r=>`<tr><td>${r.date||''}</td><td>${r.code||''}</td><td>${r.saleCode||''}</td><td>${r.customer||''}</td><td>${r.warehouse||''}</td><td><b>${r.product}</b><br><small>${r.name}</small></td><td>${r.qty}</td><td>${money(r.amount)}</td><td>${r.settlement||''}</td><td>${r.note||''}</td></tr>`).join('')||'<tr><td colspan="10">Chưa có hàng bán bị trả lại trong kỳ</td></tr>';
+  renderReportDebt();
   applyPermissions();
 }
 window.renderReports=renderReports;
