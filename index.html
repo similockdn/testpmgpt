@@ -82,38 +82,38 @@
         <div class="user"><span id="currentUser"></span><button id="changePasswordBtn" class="btn ghost">Đổi mật khẩu</button><button id="logoutBtn" class="btn ghost">Đăng xuất</button></div>
       </header>
 
-      <section id="dashboard" class="page active dashboard-v7">
-        <div class="dash-hero">
-          <div>
-            <span class="dash-eyebrow">SIMILOCK ERP</span>
-            <h2>Dashboard điều hành</h2>
-            <p>Mở lên là nắm nhanh doanh thu, lợi nhuận, kho, công nợ, bảo hành và hiệu suất nhân viên.</p>
+      <section id="dashboard" class="page active dashboard-v8">
+        <div class="dash-v8-hero">
+          <div class="dash-v8-title">
+            <span class="dash-v8-pill">SIMILOCK ERP</span>
+            <h2>Trung tâm điều hành</h2>
+            <p>Theo dõi nhanh doanh thu, lợi nhuận, kho, công nợ, bảo hành và hiệu suất nhân viên trên một màn hình.</p>
           </div>
-          <div class="dash-filter">
+          <div class="dash-v8-filter dash-filter">
             <button class="active" data-range="month" onclick="setDashboardRange('month')">Tháng này</button>
             <button data-range="7days" onclick="setDashboardRange('7days')">7 ngày</button>
             <button data-range="year" onclick="setDashboardRange('year')">Năm nay</button>
           </div>
         </div>
 
-        <div class="dash-kpi-grid">
-          <div class="dash-kpi-card revenue"><span>Doanh thu kỳ này</span><b id="kpiRevenue">0</b><small id="dashRevenueNote">Đơn bán đã ghi nhận</small></div>
-          <div class="dash-kpi-card profit view-cost" id="kpiProfitCard"><span>Lợi nhuận</span><b id="kpiProfit">0</b><small>Doanh thu - giá vốn - chi phí</small></div>
-          <div class="dash-kpi-card debt"><span>Công nợ phải thu</span><b id="kpiDebt">0</b><small><i id="kpiDebtCount">0</i> phiếu đang nợ</small></div>
-          <div class="dash-kpi-card overdue"><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý thu hồi</small></div>
-          <div class="dash-kpi-card orders"><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div>
-          <div class="dash-kpi-card stock"><span>Giá trị tồn kho</span><b id="dashStockValue">0</b><small><i id="kpiLowStock">0</i> model sắp hết</small></div>
-          <div class="dash-kpi-card paid"><span>Đã tất toán</span><b id="kpiSettledCount">0</b><small>Phiếu thu đủ</small></div>
-          <div class="dash-kpi-card service"><span>Bảo hành</span><b id="dashWarrantyCount">0</b><small>Phiếu phát sinh trong kỳ</small></div>
+        <div class="dash-v8-kpis dash-kpi-grid">
+          <div class="dash-v8-kpi revenue"><div class="kpi-icon">💰</div><div><span>Doanh thu</span><b id="kpiRevenue">0</b><small id="dashRevenueNote">Trong kỳ</small></div></div>
+          <div class="dash-v8-kpi profit view-cost" id="kpiProfitCard"><div class="kpi-icon">📈</div><div><span>Lợi nhuận</span><b id="kpiProfit">0</b><small>Sau giá vốn & chi phí</small></div></div>
+          <div class="dash-v8-kpi debt"><div class="kpi-icon">💳</div><div><span>Công nợ</span><b id="kpiDebt">0</b><small><i id="kpiDebtCount">0</i> phiếu đang nợ</small></div></div>
+          <div class="dash-v8-kpi overdue"><div class="kpi-icon">⚠️</div><div><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý</small></div></div>
+          <div class="dash-v8-kpi orders"><div class="kpi-icon">🧾</div><div><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div></div>
+          <div class="dash-v8-kpi stock"><div class="kpi-icon">📦</div><div><span>Giá trị tồn</span><b id="dashStockValue">0</b><small><i id="kpiLowStock">0</i> model sắp hết</small></div></div>
+          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Đã tất toán</span><b id="kpiSettledCount">0</b><small>Phiếu thu đủ</small></div></div>
+          <div class="dash-v8-kpi service"><div class="kpi-icon">🛠️</div><div><span>Bảo hành</span><b id="dashWarrantyCount">0</b><small>Phát sinh trong kỳ</small></div></div>
         </div>
 
-        <div id="dashboardCharts" class="dash-chart-grid"></div>
+        <div id="dashboardCharts" class="dash-v8-charts dash-chart-grid"></div>
 
-        <div class="dash-table-grid">
-          <div class="panel dash-panel"><div class="panel-head"><h3>🧾 Đơn hàng gần nhất</h3><span>5 phiếu mới</span></div><table><thead><tr><th>Mã</th><th>Khách</th><th>Model</th><th>Tổng</th></tr></thead><tbody id="latestSales"></tbody></table></div>
-          <div class="panel dash-panel"><div class="panel-head"><h3>⚠️ Công nợ cần xử lý</h3><span>Ưu tiên quá hạn</span></div><table><thead><tr><th>Phiếu</th><th>Khách</th><th>Còn nợ</th><th>Quá hạn</th></tr></thead><tbody id="dashboardDebtRows"></tbody></table></div>
-          <div class="panel dash-panel"><div class="panel-head"><h3>📦 Hàng sắp hết</h3><span>Dưới mức tối thiểu</span></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th></tr></thead><tbody id="lowStockRows"></tbody></table></div>
-          <div class="panel dash-panel"><div class="panel-head"><h3>🏆 Hiệu suất nhân viên</h3><span>Top doanh thu</span></div><table><thead><tr><th>Nhân viên</th><th>Doanh thu</th><th>Đơn</th></tr></thead><tbody id="topStaff"></tbody></table></div>
+        <div class="dash-v8-tables dash-table-grid">
+          <div class="panel dash-v8-panel"><div class="panel-head"><h3>🧾 Đơn hàng gần nhất</h3><span>Phiếu mới nhất</span></div><table><thead><tr><th>Mã</th><th>Khách</th><th>Model</th><th>Tổng</th></tr></thead><tbody id="latestSales"></tbody></table></div>
+          <div class="panel dash-v8-panel"><div class="panel-head"><h3>⚠️ Công nợ cần xử lý</h3><span>Ưu tiên quá hạn</span></div><table><thead><tr><th>Phiếu</th><th>Khách</th><th>Còn nợ</th><th>Quá hạn</th></tr></thead><tbody id="dashboardDebtRows"></tbody></table></div>
+          <div class="panel dash-v8-panel"><div class="panel-head"><h3>📦 Hàng sắp hết</h3><span>Dưới mức tối thiểu</span></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th></tr></thead><tbody id="lowStockRows"></tbody></table></div>
+          <div class="panel dash-v8-panel"><div class="panel-head"><h3>🏆 Hiệu suất nhân viên</h3><span>Top doanh thu</span></div><table><thead><tr><th>Nhân viên</th><th>Doanh thu</th><th>Đơn</th></tr></thead><tbody id="topStaff"></tbody></table></div>
         </div>
       </section>
 
