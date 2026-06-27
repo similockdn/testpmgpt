@@ -1,1 +1,1 @@
-V81 Dashboard Date Filter
+V82 - Dashboard compact filter
