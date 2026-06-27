@@ -89,10 +89,17 @@
             <h2>Trung tâm điều hành</h2>
             <p>Theo dõi nhanh doanh thu, lợi nhuận, kho, công nợ, bảo hành và hiệu suất nhân viên trên một màn hình.</p>
           </div>
-          <div class="dash-v8-filter dash-filter">
-            <button class="active" data-range="month" onclick="setDashboardRange('month')">Tháng này</button>
-            <button data-range="7days" onclick="setDashboardRange('7days')">7 ngày</button>
-            <button data-range="year" onclick="setDashboardRange('year')">Năm nay</button>
+          <div class="dash-v8-filter-wrap">
+            <div class="dash-v8-filter dash-filter">
+              <button class="active" data-range="month" onclick="setDashboardRange('month')">Tháng này</button>
+              <button data-range="7days" onclick="setDashboardRange('7days')">7 ngày</button>
+              <button data-range="year" onclick="setDashboardRange('year')">Năm nay</button>
+            </div>
+            <div class="dash-date-search">
+              <label>Từ ngày<input id="dashFromDate" type="date" onchange="setDashboardCustomRange()"></label>
+              <label>Đến ngày<input id="dashToDate" type="date" onchange="setDashboardCustomRange()"></label>
+              <button class="btn primary small" onclick="setDashboardCustomRange()">Lọc</button>
+            </div>
           </div>
         </div>
 

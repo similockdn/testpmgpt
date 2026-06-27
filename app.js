@@ -1029,15 +1029,46 @@ function setOnlyCheckedProduct(boxId, code){
 }
 function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>staffHasFunction(x,'Sale')||staffHasFunction(x,'Quản lý')),x=>`${x.name}${staffHasFunction(x,'Kỹ thuật')?' (Sale + Kỹ thuật)':''}`);fillSelect($('saleTech'),data.staff.filter(x=>staffHasFunction(x,'Kỹ thuật')),x=>`${x.name}${staffHasFunction(x,'Sale')?' (Kỹ thuật + Sale)':''}`);refreshCommissionStaffOptions();ensureProductDatalist();fillReceiptCustomerOptions();renderProductCategoryOptions();renderWarrantyReasonOptions();renderWarrantyStaffSelectors();if($('saleWarehouse'))$('saleWarehouse').innerHTML=warehouseOptions($('saleWarehouse').value||defaultWarehouse());if($('stockWarehouse'))$('stockWarehouse').innerHTML=warehouseOptions($('stockWarehouse').value||defaultWarehouse());if($('stockToWarehouse'))$('stockToWarehouse').innerHTML=warehouseOptions($('stockToWarehouse').value||defaultWarehouse(),WAREHOUSES);if($('customerList')) $('customerList').innerHTML=data.customers.map(c=>`<option value="${customerSearchValue(c)}"></option>`).join('')}
 let dashboardRange='month';
-window.setDashboardRange=(range)=>{dashboardRange=range||'month';document.querySelectorAll('.dash-filter button').forEach(b=>b.classList.toggle('active',b.dataset.range===dashboardRange));renderDashboard();};
+let dashboardCustomFrom='';
+let dashboardCustomTo='';
+function dashboardSetDateInputs(from='',to=''){
+  if($('dashFromDate'))$('dashFromDate').value=from||'';
+  if($('dashToDate'))$('dashToDate').value=to||'';
+}
+window.setDashboardRange=(range)=>{
+  dashboardRange=range||'month';
+  dashboardCustomFrom='';
+  dashboardCustomTo='';
+  dashboardSetDateInputs('','');
+  document.querySelectorAll('.dash-filter button').forEach(b=>b.classList.toggle('active',b.dataset.range===dashboardRange));
+  renderDashboard();
+};
+window.setDashboardCustomRange=()=>{
+  dashboardCustomFrom=$('dashFromDate')?.value||'';
+  dashboardCustomTo=$('dashToDate')?.value||'';
+  if(!dashboardCustomFrom&&!dashboardCustomTo){setDashboardRange('month');return;}
+  dashboardRange='custom';
+  document.querySelectorAll('.dash-filter button').forEach(b=>b.classList.remove('active'));
+  renderDashboard();
+};
 function dashboardRangeDates(){
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
   const fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const todayStr=fmt(now);
+  if(dashboardRange==='custom'){
+    const from=dashboardCustomFrom||'1900-01-01';
+    const to=dashboardCustomTo||todayStr;
+    let label='Tùy chọn';
+    if(dashboardCustomFrom&&dashboardCustomTo)label=`${dashboardCustomFrom.split('-').reverse().join('/')} - ${dashboardCustomTo.split('-').reverse().join('/')}`;
+    else if(dashboardCustomFrom)label=`Từ ${dashboardCustomFrom.split('-').reverse().join('/')}`;
+    else if(dashboardCustomTo)label=`Đến ${dashboardCustomTo.split('-').reverse().join('/')}`;
+    return {from,to,label};
+  }
   let from=new Date(now.getFullYear(),now.getMonth(),1), label='Tháng này';
   if(dashboardRange==='7days'){from=new Date(now);from.setDate(now.getDate()-6);label='7 ngày gần nhất'}
   if(dashboardRange==='year'){from=new Date(now.getFullYear(),0,1);label='Năm nay'}
-  return {from:fmt(from),to:fmt(now),label};
+  return {from:fmt(from),to:todayStr,label};
 }
 function monthKey(d){return String(d||'').slice(0,7)}
 function sumStockValue(){return data.products.reduce((a,p)=>a+(stockOf(p.code)*(costFor(p.code,today())||+p.cost||0)),0)}
