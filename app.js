@@ -1028,35 +1028,72 @@ function setOnlyCheckedProduct(boxId, code){
   box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=x.value===code);
 }
 function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>staffHasFunction(x,'Sale')||staffHasFunction(x,'Quản lý')),x=>`${x.name}${staffHasFunction(x,'Kỹ thuật')?' (Sale + Kỹ thuật)':''}`);fillSelect($('saleTech'),data.staff.filter(x=>staffHasFunction(x,'Kỹ thuật')),x=>`${x.name}${staffHasFunction(x,'Sale')?' (Kỹ thuật + Sale)':''}`);refreshCommissionStaffOptions();ensureProductDatalist();fillReceiptCustomerOptions();renderProductCategoryOptions();renderWarrantyReasonOptions();renderWarrantyStaffSelectors();if($('saleWarehouse'))$('saleWarehouse').innerHTML=warehouseOptions($('saleWarehouse').value||defaultWarehouse());if($('stockWarehouse'))$('stockWarehouse').innerHTML=warehouseOptions($('stockWarehouse').value||defaultWarehouse());if($('stockToWarehouse'))$('stockToWarehouse').innerHTML=warehouseOptions($('stockToWarehouse').value||defaultWarehouse(),WAREHOUSES);if($('customerList')) $('customerList').innerHTML=data.customers.map(c=>`<option value="${customerSearchValue(c)}"></option>`).join('')}
+let dashboardRange='month';
+window.setDashboardRange=(range)=>{dashboardRange=range||'month';document.querySelectorAll('.dash-filter button').forEach(b=>b.classList.toggle('active',b.dataset.range===dashboardRange));renderDashboard();};
+function dashboardRangeDates(){
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  let from=new Date(now.getFullYear(),now.getMonth(),1), label='Tháng này';
+  if(dashboardRange==='7days'){from=new Date(now);from.setDate(now.getDate()-6);label='7 ngày gần nhất'}
+  if(dashboardRange==='year'){from=new Date(now.getFullYear(),0,1);label='Năm nay'}
+  return {from:fmt(from),to:fmt(now),label};
+}
+function monthKey(d){return String(d||'').slice(0,7)}
+function sumStockValue(){return data.products.reduce((a,p)=>a+(stockOf(p.code)*(costFor(p.code,today())||+p.cost||0)),0)}
 function renderDashboard(){
-  let month=new Date().toISOString().slice(0,7);
-  let sales=activeSales().filter(s=>String(s.date||'').startsWith(month));
-  let monthlyExpenses=data.expenses.filter(e=>String(e.date||'').startsWith(month)&&!isSalaryCategory(e.category));
-  let monthlySalaries=data.salaries.filter(e=>String(e.date||'').startsWith(month));
-  let rev=sales.reduce((a,s)=>a+(+s.grand||0),0);
-  let orderProfit=sales.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
-  let expense=monthlyExpenses.reduce((a,e)=>a+(+e.amount||0),0)+monthlySalaries.reduce((a,e)=>a+(+e.total||+e.amount||0),0);
-  let profit=orderProfit-expense;
+  const range=dashboardRangeDates();
+  const salesInRange=activeSales().filter(s=>String(s.date||'')>=range.from&&String(s.date||'')<=range.to);
   const activeDebtRows=calcDebts();
   const settledDebtRows=calcSettledDebts();
-  let debt=activeDebtRows.reduce((a,d)=>a+d.debt,0);
-  let overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0);
-  let low=data.products.filter(p=>stockOf(p.code)<=(+p.minStock||3));
-  $('kpiRevenue').textContent=money(rev);
-  $('kpiProfit').textContent=money(profit);
-  $('kpiDebt').textContent=money(debt);
+  const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
+  const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
+  const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
+  const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));
+  const monthlySalaries=data.salaries.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to);
+  const expense=monthlyExpenses.reduce((a,e)=>a+(+e.amount||0),0)+monthlySalaries.reduce((a,e)=>a+(+e.total||+e.amount||0),0);
+  const profit=orderProfit-expense;
+  const debt=activeDebtRows.reduce((a,d)=>a+d.debt,0);
+  const low=data.products.filter(p=>stockOf(p.code)<=(+p.minStock||3)).sort((a,b)=>stockOf(a.code)-stockOf(b.code));
+  const warranties=activeWarranties().filter(w=>String(w.date||w.createdDate||w.createdAt||'')>=range.from&&String(w.date||w.createdDate||w.createdAt||'')<=range.to);
+  if($('kpiRevenue'))$('kpiRevenue').textContent=money(rev);
+  if($('kpiProfit'))$('kpiProfit').textContent=money(profit);
+  if($('kpiDebt'))$('kpiDebt').textContent=money(debt);
   if($('kpiDebtCount'))$('kpiDebtCount').textContent=activeDebtRows.length;
   if($('kpiSettledCount'))$('kpiSettledCount').textContent=settledDebtRows.length;
   if($('kpiOverdueCount'))$('kpiOverdueCount').textContent=overdueRows.length;
-  $('kpiLowStock').textContent=low.length;
-  const best={};activeSales().forEach(s=>(s.items||[]).forEach(it=>best[it.code]=(best[it.code]||0)+(+it.qty||0)));
-  let rows=Object.entries(best).sort((a,b)=>b[1]-a[1]).slice(0,8);let max=Math.max(1,...rows.map(r=>r[1]));
-  $('bestProducts').innerHTML=rows.length?rows.map(([code,qty])=>{let p=data.products.find(x=>x.code===code)||{};return `<div class="bar-row"><b>${code}</b><div><small>${p.name||''}</small><div class="bar"><i style="width:${qty/max*100}%"></i></div></div><b>${qty}</b></div>`}).join(''):'Chưa có dữ liệu';
-  const st={};activeSales().forEach(s=>{let n=data.staff.find(x=>x.id===s.staffId)?.name||'Khác';st[n]=st[n]||{rev:0,count:0};st[n].rev+=+s.grand||0;st[n].count++});
-  $('topStaff').innerHTML=Object.entries(st).sort((a,b)=>b[1].rev-a[1].rev).slice(0,5).map(([n,v])=>`<tr><td>${n}</td><td>${money(v.rev)}</td><td>${v.count}</td></tr>`).join('');
-  $('latestSales').innerHTML=activeSales().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(s=>{const ci=saleCustomerInfo(s);return `<tr><td>${s.code}</td><td>${ci.code}</td><td>${ci.name}</td><td>${money(s.grand)}</td></tr>`}).join('');
-  $('lowStockRows').innerHTML=low.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td><span class="badge red">${stockOf(p.code)}</span></td></tr>`).join('')||'<tr><td colspan="3">Kho ổn định</td></tr>'
+  if($('kpiLowStock'))$('kpiLowStock').textContent=low.length;
+  if($('dashOrderCount'))$('dashOrderCount').textContent=salesInRange.length;
+  if($('dashStockValue'))$('dashStockValue').textContent=compactMoney(sumStockValue());
+  if($('dashWarrantyCount'))$('dashWarrantyCount').textContent=warranties.length;
+  if($('dashRevenueNote'))$('dashRevenueNote').textContent=range.label;
+  if($('dashOrderNote'))$('dashOrderNote').textContent=range.label;
+
+  const last12=[];const now=new Date();
+  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;last12.push({key,label:`T${d.getMonth()+1}/${String(d.getFullYear()).slice(2)}`,value:0,profit:0});}
+  activeSales().forEach(s=>{const row=last12.find(x=>x.key===monthKey(s.date));if(row){row.value+=+s.grand||0;row.profit+=+s.profit||saleProfitValue(s)||0;}});
+  const productMap={};salesInRange.forEach(s=>(s.items||[]).forEach(it=>{const p=data.products.find(x=>x.code===it.code)||{};productMap[it.code]=productMap[it.code]||{code:it.code,name:p.name||'',qty:0,revenue:0};productMap[it.code].qty+=+it.qty||0;productMap[it.code].revenue+=lineNet(it)||((+it.price||0)*(+it.qty||0));}));
+  const productRows=Object.values(productMap).sort((a,b)=>b.qty-a.qty);
+  const stockRows=data.products.map(p=>({label:p.code,value:stockOf(p.code),stockValue:stockOf(p.code)*(costFor(p.code,today())||+p.cost||0)})).filter(x=>x.value>0).sort((a,b)=>b.value-a.value);
+  const debtPie=[{label:'Đang nợ',value:activeDebtRows.length},{label:'Đã tất toán',value:settledDebtRows.length},{label:'Quá hạn',value:overdueRows.length}];
+  const incomeSale=salesInRange.reduce((a,s)=>a+saleCommissionValue(s),0);
+  const incomeTech=salesInRange.reduce((a,s)=>a+(+s.techCost||0)+(+s.techFuel||0),0);
+  renderChartHtml('dashboardCharts',
+    modernLineChart('Doanh thu 12 tháng',last12.map(x=>({label:x.label,value:x.value})),{sub:'Xu hướng doanh thu toàn hệ thống',money:true,badge:compactMoney(last12.reduce((a,x)=>a+x.value,0))})+
+    modernDonutChart('Cơ cấu công nợ',debtPie,{sub:'Tình trạng thu tiền theo phiếu'})+
+    modernBarChart('Top model bán chạy',productRows.map(x=>({label:x.code,value:x.qty})),{sub:'Số lượng bán trong '+range.label,limit:8})+
+    modernBarChart('Tồn kho theo model',stockRows.map(x=>({label:x.label,value:x.value})),{sub:'Top model còn tồn nhiều nhất',limit:8})+
+    modernLineChart('Lợi nhuận 12 tháng',last12.map(x=>({label:x.label,value:x.profit})),{sub:'Lợi nhuận theo đơn hàng',money:true,badge:compactMoney(last12.reduce((a,x)=>a+x.profit,0))})+
+    modernDonutChart('Thu nhập Sale / Kỹ thuật',[{label:'Hoa hồng Sale',value:incomeSale},{label:'Công + xăng Kỹ thuật',value:incomeTech}],{sub:'Tổng trong '+range.label,money:true})
+  );
+
+  const st={};salesInRange.forEach(s=>{let n=data.staff.find(x=>x.id===s.staffId)?.name||s.staffName||'Khác';st[n]=st[n]||{rev:0,count:0};st[n].rev+=+s.grand||0;st[n].count++});
+  if($('topStaff'))$('topStaff').innerHTML=Object.entries(st).sort((a,b)=>b[1].rev-a[1].rev).slice(0,6).map(([n,v])=>`<tr><td>${htmlesc(n)}</td><td>${money(v.rev)}</td><td>${v.count}</td></tr>`).join('')||'<tr><td colspan="3">Chưa có dữ liệu</td></tr>';
+  if($('latestSales'))$('latestSales').innerHTML=activeSales().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(s=>{const ci=saleCustomerInfo(s);const models=(s.items||[]).map(it=>it.code).filter(Boolean).slice(0,2).join(', ');return `<tr><td><b>${htmlesc(s.code||'')}</b></td><td>${htmlesc(ci.name||'')}</td><td>${htmlesc(models||'')}</td><td>${money(s.grand)}</td></tr>`}).join('')||'<tr><td colspan="4">Chưa có đơn hàng</td></tr>';
+  if($('dashboardDebtRows'))$('dashboardDebtRows').innerHTML=overdueRows.concat(activeDebtRows.filter(d=>debtOverdueDays(d)<=0)).slice(0,6).map(d=>{const ci=customerInfo(d.customer);const od=debtOverdueDays(d);return `<tr><td><b>${htmlesc(d.saleCode||'')}</b></td><td>${htmlesc(ci.name||'')}</td><td>${money(d.debt)}</td><td>${od>0?`<span class="badge red">${od} ngày</span>`:'<span class="badge green">Trong hạn</span>'}</td></tr>`}).join('')||'<tr><td colspan="4">Không có công nợ</td></tr>';
+  if($('lowStockRows'))$('lowStockRows').innerHTML=low.slice(0,6).map(p=>`<tr><td><b>${htmlesc(p.code||'')}</b></td><td>${htmlesc(p.name||'')}</td><td><span class="badge red">${stockOf(p.code)}</span></td></tr>`).join('')||'<tr><td colspan="3">Kho ổn định</td></tr>';
 }
+
 
 
 window.saveCustomer=async()=>{let phone=extractPhone(($('cPhone').value||'').trim());let code=($('cCode').value||customerCodeFromPhone(phone)).trim();let name=cleanCustomerName(($('cName').value||'').trim(),phone,code);let o={customerCode:code,name,type:$('cType').value,phone,address:$('cAddress').value,email:$('cEmail')?.value||'',contact:$('cContact')?.value||'',source:$('cSource')?.value||'',birthday:$('cBirthday')?.value||'',note:$('cNote')?.value||'',discount:+$('cDiscount').value||0,openingDebt:+$('cOpeningDebt').value||0};if(!o.name)return alert('Nhập đúng tên khách hàng, không dùng SĐT làm tên');if(!o.phone)return alert('Nhập số điện thoại khách hàng');let id=$('cId').value;if(id){

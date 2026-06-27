@@ -82,21 +82,38 @@
         <div class="user"><span id="currentUser"></span><button id="changePasswordBtn" class="btn ghost">Đổi mật khẩu</button><button id="logoutBtn" class="btn ghost">Đăng xuất</button></div>
       </header>
 
-      <section id="dashboard" class="page active">
-        <div class="kpi-grid">
-          <div class="kpi blue"><span>Doanh thu tháng</span><b id="kpiRevenue">0</b><small>Đã trừ chiết khấu, gồm VAT nếu có</small></div>
-          <div class="kpi green view-cost" id="kpiProfitCard"><span>Lợi nhuận tháng</span><b id="kpiProfit">0</b><small>Chỉ Admin được xem</small></div>
-          <div class="kpi orange"><span>Công nợ phải thu</span><b id="kpiDebt">0</b><small>Còn nợ từ đơn bán</small></div>
-          <div class="kpi purple"><span>Đang nợ</span><b id="kpiDebtCount">0</b><small>Số phiếu còn nợ</small></div>
-          <div class="kpi green"><span>Đã tất toán</span><b id="kpiSettledCount">0</b><small>Số phiếu đã thu đủ</small></div>
-          <div class="kpi red"><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Phiếu nợ quá 30 ngày</small></div>
-          <div class="kpi red"><span>Tồn kho thấp</span><b id="kpiLowStock">0</b><small>Cảnh báo dưới 3 bộ</small></div>
+      <section id="dashboard" class="page active dashboard-v7">
+        <div class="dash-hero">
+          <div>
+            <span class="dash-eyebrow">SIMILOCK ERP</span>
+            <h2>Dashboard điều hành</h2>
+            <p>Mở lên là nắm nhanh doanh thu, lợi nhuận, kho, công nợ, bảo hành và hiệu suất nhân viên.</p>
+          </div>
+          <div class="dash-filter">
+            <button class="active" data-range="month" onclick="setDashboardRange('month')">Tháng này</button>
+            <button data-range="7days" onclick="setDashboardRange('7days')">7 ngày</button>
+            <button data-range="year" onclick="setDashboardRange('year')">Năm nay</button>
+          </div>
         </div>
-        <div class="dashboard-grid">
-          <div class="panel wide"><div class="panel-head"><h3>📊 Sản phẩm bán chạy</h3><span>Top theo số lượng</span></div><div id="bestProducts" class="bar-list"></div></div>
-          <div class="panel"><div class="panel-head"><h3>🏆 Top nhân viên</h3></div><table><thead><tr><th>NV</th><th>Doanh thu</th><th>Đơn</th></tr></thead><tbody id="topStaff"></tbody></table></div>
-          <div class="panel"><div class="panel-head"><h3>🧾 Đơn gần nhất</h3></div><table><thead><tr><th>Mã</th><th>Mã KH</th><th>Khách</th><th>Tổng</th></tr></thead><tbody id="latestSales"></tbody></table></div>
-          <div class="panel wide"><div class="panel-head"><h3>⚠️ Cảnh báo kho</h3></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th></tr></thead><tbody id="lowStockRows"></tbody></table></div>
+
+        <div class="dash-kpi-grid">
+          <div class="dash-kpi-card revenue"><span>Doanh thu kỳ này</span><b id="kpiRevenue">0</b><small id="dashRevenueNote">Đơn bán đã ghi nhận</small></div>
+          <div class="dash-kpi-card profit view-cost" id="kpiProfitCard"><span>Lợi nhuận</span><b id="kpiProfit">0</b><small>Doanh thu - giá vốn - chi phí</small></div>
+          <div class="dash-kpi-card debt"><span>Công nợ phải thu</span><b id="kpiDebt">0</b><small><i id="kpiDebtCount">0</i> phiếu đang nợ</small></div>
+          <div class="dash-kpi-card overdue"><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý thu hồi</small></div>
+          <div class="dash-kpi-card orders"><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div>
+          <div class="dash-kpi-card stock"><span>Giá trị tồn kho</span><b id="dashStockValue">0</b><small><i id="kpiLowStock">0</i> model sắp hết</small></div>
+          <div class="dash-kpi-card paid"><span>Đã tất toán</span><b id="kpiSettledCount">0</b><small>Phiếu thu đủ</small></div>
+          <div class="dash-kpi-card service"><span>Bảo hành</span><b id="dashWarrantyCount">0</b><small>Phiếu phát sinh trong kỳ</small></div>
+        </div>
+
+        <div id="dashboardCharts" class="dash-chart-grid"></div>
+
+        <div class="dash-table-grid">
+          <div class="panel dash-panel"><div class="panel-head"><h3>🧾 Đơn hàng gần nhất</h3><span>5 phiếu mới</span></div><table><thead><tr><th>Mã</th><th>Khách</th><th>Model</th><th>Tổng</th></tr></thead><tbody id="latestSales"></tbody></table></div>
+          <div class="panel dash-panel"><div class="panel-head"><h3>⚠️ Công nợ cần xử lý</h3><span>Ưu tiên quá hạn</span></div><table><thead><tr><th>Phiếu</th><th>Khách</th><th>Còn nợ</th><th>Quá hạn</th></tr></thead><tbody id="dashboardDebtRows"></tbody></table></div>
+          <div class="panel dash-panel"><div class="panel-head"><h3>📦 Hàng sắp hết</h3><span>Dưới mức tối thiểu</span></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th></tr></thead><tbody id="lowStockRows"></tbody></table></div>
+          <div class="panel dash-panel"><div class="panel-head"><h3>🏆 Hiệu suất nhân viên</h3><span>Top doanh thu</span></div><table><thead><tr><th>Nhân viên</th><th>Doanh thu</th><th>Đơn</th></tr></thead><tbody id="topStaff"></tbody></table></div>
         </div>
       </section>
 
