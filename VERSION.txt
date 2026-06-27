@@ -1,0 +1,1 @@
+v55 - Redesigned price module like sales slip; 2 tabs sale price/cost price; table-based product picker and summary.

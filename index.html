@@ -44,7 +44,7 @@
         <div class="menu-group open">
           <button type="button" class="menu-toggle">💰 Tài chính</button>
           <div class="submenu">
-            <button data-page="commissions">Hoa hồng</button>
+            <button data-page="commissions">Thu nhập nhân viên</button>
             <button data-page="expenses">Chi phí</button>
             <button data-page="salaries">Lương nhân viên</button>
           </div>
@@ -87,9 +87,9 @@
           <div class="kpi blue"><span>Doanh thu tháng</span><b id="kpiRevenue">0</b><small>Đã trừ chiết khấu, gồm VAT nếu có</small></div>
           <div class="kpi green view-cost" id="kpiProfitCard"><span>Lợi nhuận tháng</span><b id="kpiProfit">0</b><small>Chỉ Admin được xem</small></div>
           <div class="kpi orange"><span>Công nợ phải thu</span><b id="kpiDebt">0</b><small>Còn nợ từ đơn bán</small></div>
-          <div class="kpi blue"><span>Đơn đang nợ</span><b id="kpiDebtOpenCount">0</b><small>Theo từng phiếu bán</small></div>
-          <div class="kpi green"><span>Đơn đã tất toán</span><b id="kpiDebtSettledCount">0</b><small>Đã thu đủ 100%</small></div>
-          <div class="kpi red"><span>Công nợ quá hạn</span><b id="kpiDebtOverdue">0</b><small>Quá 30 ngày</small></div>
+          <div class="kpi purple"><span>Đang nợ</span><b id="kpiDebtCount">0</b><small>Số phiếu còn nợ</small></div>
+          <div class="kpi green"><span>Đã tất toán</span><b id="kpiSettledCount">0</b><small>Số phiếu đã thu đủ</small></div>
+          <div class="kpi red"><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Phiếu nợ quá 30 ngày</small></div>
           <div class="kpi red"><span>Tồn kho thấp</span><b id="kpiLowStock">0</b><small>Cảnh báo dưới 3 bộ</small></div>
         </div>
         <div class="dashboard-grid">
@@ -196,7 +196,7 @@
       
 <section id="commissions" class="page">
         <div class="panel wide">
-          <div class="panel-head"><h3>🔎 Lọc báo cáo hoa hồng</h3><div><button class="btn primary" onclick="applyCommissionFilter()">Xem</button> <button class="btn ghost" onclick="resetCommissionFilter()">Làm mới</button> <button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel tổng</button> <button class="btn primary" onclick="exportCommissionByStaff()">Xuất Excel nhân viên đang chọn</button></div></div>
+          <div class="panel-head"><h3>🔎 Lọc thu nhập nhân viên</h3><div><button class="btn primary" onclick="applyCommissionFilter()">Xem</button> <button class="btn ghost" onclick="resetCommissionFilter()">Làm mới</button> <button class="btn ghost" onclick="exportExcel('commissions')">Xuất Excel tổng</button> <button class="btn ghost" onclick="exportExcel('techPerformance')">Xuất hiệu suất KT</button> <button class="btn ghost" onclick="exportExcel('employeeIncome')">Xuất tổng thu nhập</button> <button class="btn primary" onclick="exportCommissionByStaff()">Xuất Excel nhân viên đang chọn</button></div></div>
           <div class="grid form-grid">
             <div><label>Tìm kiếm</label><input id="commissionSearch" placeholder="Tên nhân viên / mã đơn / khách hàng" onkeydown="if(event.key==='Enter')applyCommissionFilter()" /></div>
             <div><label>Phòng ban</label><select id="commissionDept" onchange="refreshCommissionStaffOptions()"><option value="">Tất cả</option><option value="Sale">Sale</option><option value="Kỹ thuật">Kỹ thuật</option></select></div>
@@ -206,23 +206,23 @@
             <div><label>Đến ngày</label><input type="date" id="commissionTo" onchange="document.getElementById('commissionPeriod').value='custom'" /></div>
           </div>
           <div class="total-box" id="commissionSummary"><div>Tổng doanh thu: <b>0đ</b></div><div>Hoa hồng Sale: <b>0đ</b></div><div>Công kỹ thuật: <b>0đ</b></div><div>Tổng chi: <b>0đ</b></div></div>
-          <div class="warranty-tabs commission-tabs">
-            <button type="button" class="active" onclick="showCommissionTab('sale')">Hoa hồng Sale</button>
-            <button type="button" onclick="showCommissionTab('tech')">Công Kỹ thuật</button>
-            <button type="button" onclick="showCommissionTab('summary')">Báo cáo tổng / Thu nhập</button>
-          </div>
+          <div class="toolbar"><button class="btn ghost" onclick="showIncomeTab('sale')">Hoa hồng Sale</button><button class="btn ghost" onclick="showIncomeTab('tech')">Công kỹ thuật</button><button class="btn ghost" onclick="showIncomeTab('income')">Tổng thu nhập</button><button class="btn ghost" onclick="showIncomeTab('performance')">Hiệu suất kỹ thuật</button></div>
         </div>
-        <div class="panel commission-tab-panel" id="commissionSaleTab">
-          <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3><span>Chỉ tính đơn đã thu đủ 100%</span></div>
+        <div class="panel income-tab income-sale">
+          <div class="panel-head"><h3>💰 Hoa hồng Sale theo nhân viên</h3></div>
           <table><thead><tr><th>Nhân viên Sale</th><th>Số đơn đã thu đủ</th><th>Doanh thu đã thu đủ</th><th>Doanh số tính HH</th><th>Phụ thu</th><th>Chiết khấu</th><th>Hoa hồng Sale</th><th>Hành động</th></tr></thead><tbody id="commissionByStaff"></tbody></table>
         </div>
-        <div class="panel commission-tab-panel hidden" id="commissionTechTab">
-          <div class="panel-head"><h3>🛠️ Công kỹ thuật theo nhân viên</h3><span>Công lắp + tiền xăng, chỉ tính đơn đã thu đủ 100%</span></div>
-          <table><thead><tr><th>Nhân viên kỹ thuật</th><th>Số đơn đã thu đủ</th><th>Số bộ</th><th>Doanh thu phụ trách đã thu đủ</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng nhận</th><th>Hành động</th></tr></thead><tbody id="commissionByTech"></tbody></table>
+        <div class="panel income-tab income-tech">
+          <div class="panel-head"><h3>🛠️ Công kỹ thuật theo nhân viên</h3></div>
+          <table><thead><tr><th>Nhân viên kỹ thuật</th><th>Số đơn đã thu đủ</th><th>Doanh thu phụ trách đã thu đủ</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng nhận</th></tr></thead><tbody id="commissionByTech"></tbody></table>
         </div>
-        <div class="panel wide commission-tab-panel hidden" id="commissionSummaryTab">
-          <div class="panel-head"><h3>👤 Thu nhập nhân viên</h3><span>Hoa hồng Sale + Công kỹ thuật + Tiền xăng theo bộ lọc</span></div>
-          <table><thead><tr><th>Nhân viên</th><th>Vai trò</th><th>Số phiếu</th><th>Số bộ</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng thu nhập</th></tr></thead><tbody id="employeeIncomeTable"></tbody></table>
+        <div class="panel income-tab income-income">
+          <div class="panel-head"><h3>👤 Tổng thu nhập nhân viên</h3><span>Hoa hồng Sale + công kỹ thuật + tiền xăng + thưởng - phạt/lương nhập thêm</span></div>
+          <table><thead><tr><th>Nhân viên</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Thưởng</th><th>Phạt</th><th>Tổng thu nhập</th></tr></thead><tbody id="employeeIncomeTable"></tbody></table>
+        </div>
+        <div class="panel income-tab income-performance">
+          <div class="panel-head"><h3>📈 Báo cáo hiệu suất kỹ thuật</h3><span>Theo số phiếu, số bộ, công, tiền xăng và bảo hành phát sinh</span></div>
+          <table><thead><tr><th>Kỹ thuật</th><th>Số phiếu</th><th>Số bộ</th><th>Công</th><th>Tiền xăng</th><th>Bảo hành phát sinh</th></tr></thead><tbody id="techPerformanceTable"></tbody></table>
         </div>
         <div class="panel wide">
           <div class="panel-head"><h3 id="commissionOrderTitle">🧾 Hoa hồng / công kỹ thuật theo từng đơn hàng</h3></div>
@@ -270,10 +270,12 @@
           <div class="debt-card active"><span>Khách còn nợ</span><b id="debtActiveCount">0</b><small>Cần ưu tiên thu</small></div>
           <div class="debt-card money"><span>Tổng phải thu</span><b id="debtActiveTotal">0</b><small>Số tiền còn nợ</small></div>
           <div class="debt-card paid"><span>Đã tất toán</span><b id="debtSettledCount">0</b><small>Lưu lịch sử phía dưới</small></div>
+          <div class="debt-card danger"><span>Quá hạn</span><b id="debtOverdueTotal">0</b><small>Nợ quá 30 ngày</small></div>
         </div>
-        <div class="panel debt-panel debt-active-panel"><div class="panel-head"><div><h3>💳 Công nợ phải thu</h3><span>Chỉ hiển thị khách còn nợ. Bấm Thu tiền để tự điền đúng số còn nợ.</span></div><button class="btn primary debt-big-btn" onclick="openReceiptForm()">+ Tạo phiếu thu</button></div><div class="toolbar"><input class="search" id="debtSearch" placeholder="Tìm công nợ theo tên khách / SĐT / mã KH" oninput="renderDebts()" /><button class="btn ghost" onclick="clearDebtSearch()">Xóa tìm</button><span id="debtSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã phiếu</th><th>Mã KH</th><th>Khách hàng</th><th>Địa chỉ</th><th>Sản phẩm</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th><th>Thao tác nhanh</th></tr></thead><tbody id="debtTable"></tbody></table></div>
+        <div class="panel debt-filter-panel"><div class="toolbar debt-filter-toolbar"><b>Lọc công nợ:</b><label><input type="radio" name="debtStatusFilter" value="active" checked onchange="renderDebts()"> Đang nợ</label><label><input type="radio" name="debtStatusFilter" value="settled" onchange="renderDebts()"> Đã tất toán</label><label><input type="radio" name="debtStatusFilter" value="all" onchange="renderDebts()"> Tất cả</label><button class="btn ghost" onclick="exportExcel('debtsSettled')">Xuất công nợ đã tất toán</button></div><div class="total-box debt-stats-box" id="debtStatsBox"></div></div>
+        <div class="panel debt-panel debt-active-panel"><div class="panel-head"><div><h3>💳 Công nợ phải thu</h3><span>Giao diện gọn: gom thông tin khách và sản phẩm vào một dòng để dễ thu tiền.</span></div><button class="btn primary debt-big-btn" onclick="openReceiptForm()">+ Tạo phiếu thu</button></div><div class="toolbar"><input class="search" id="debtSearch" placeholder="Tìm mã phiếu / tên khách / SĐT / mã KH / model" oninput="renderDebts()" /><button class="btn ghost" onclick="clearDebtSearch()">Xóa tìm</button><span id="debtSearchCount" class="muted-small"></span></div><div class="table-scroll"><table class="debt-table compact-table"><thead><tr><th>Phiếu</th><th>Khách hàng</th><th>Sản phẩm</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th><th>Ngày bán</th><th>Quá hạn</th><th>Thao tác</th></tr></thead><tbody id="debtTable"></tbody></table></div></div>
         <div class="panel receipt-panel"><div class="panel-head"><div><h3>🧾 Phiếu thu</h3><span>Tạo, sửa, in phiếu thu. Sau khi thu đủ, công nợ tự chuyển xuống mục đã tất toán bên dưới.</span></div><div><button class="btn ghost" onclick="resetReceiptForm()">Nhập lại</button><button class="btn primary" onclick="saveReceipt()">Lưu phiếu thu</button></div></div><div class="grid form-grid receipt-form"><div><label>Khách hàng</label><select id="receiptCustomer"></select></div><div><label>Số tiền thu</label><input id="receiptAmount" type="number" /></div><div><label>Ngày thu</label><input id="receiptDate" type="date" /></div><div><label>Ghi chú</label><input id="receiptNote" placeholder="VD: Thu đủ đơn BH..." /></div></div><div class="toolbar"><input class="search" id="receiptSearch" placeholder="Tìm phiếu thu theo mã PT / tên khách / SĐT / mã KH / ghi chú" oninput="renderReceipts()" /><button class="btn ghost" onclick="clearReceiptSearch()">Xóa tìm</button><span id="receiptSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã PT</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Số tiền</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="receiptTable"></tbody></table></div>
-        <div class="panel settled-panel"><div class="panel-head"><div><h3>✅ Công nợ đã tất toán</h3><span>Đưa xuống dưới phiếu thu để không lẫn với danh sách cần thu tiền.</span></div></div><table><thead><tr><th>Mã phiếu</th><th>Mã KH</th><th>Khách hàng</th><th>Địa chỉ</th><th>Sản phẩm</th><th>Tổng mua</th><th>Đã thu</th><th>Trạng thái</th></tr></thead><tbody id="settledDebtTable"></tbody></table></div>
+        <div class="panel settled-panel"><div class="panel-head"><div><h3>✅ Công nợ đã tất toán</h3><span>Đưa xuống dưới phiếu thu để không lẫn với danh sách cần thu tiền.</span></div></div><table><thead><tr><th>STT</th><th>Phiếu</th><th>Khách hàng</th><th>SĐT</th><th>Model</th><th>Tổng tiền</th><th>Đã thu</th><th>Ngày tất toán</th></tr></thead><tbody id="settledDebtTable"></tbody></table></div>
       </section>
 
       <section id="inventory" class="page warehouse-page">
@@ -435,147 +437,55 @@
 
       <section id="products" class="page"><div class="panel"><div class="panel-head"><h3>🔐 Danh mục sản phẩm</h3><div><input type="file" id="importProducts" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'products')"><button class="btn ghost" onclick="downloadTemplateExcel('products')">Mẫu Excel</button><button class="btn ghost" onclick="importProducts.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('products')">Xuất Excel</button><button class="btn primary" onclick="saveProduct()">Lưu</button></div></div><div class="grid form-grid"><input id="pId" hidden><div><label>Model</label><input id="pCode"></div><div><label>Tên sản phẩm</label><input id="pName"></div><div><label>Danh mục</label><select id="pCategory"></select></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number"></div><div><label>Giá bán</label><input id="pPrice" type="number"></div><div><label>Tồn tối thiểu</label><input id="pMinStock" type="number" value="3"></div><div><label>Trạng thái</label><select id="pActive"><option value="active">Đang kinh doanh</option><option value="inactive">Ngừng bán</option></select></div></div><div class="toolbar product-category-toolbar"><input class="search" id="productSearch" placeholder="Tìm Model / tên sản phẩm / danh mục" oninput="renderProducts()" /><button class="btn ghost" onclick="clearProductSearch()">Xóa tìm</button><select id="productCategoryFilter" onchange="renderProducts()"><option value="">Tất cả danh mục</option></select><input id="newProductCategory" placeholder="Tên danh mục mới" /><button class="btn ghost" onclick="saveProductCategory()">+ Danh mục</button><button class="btn danger" onclick="deleteSelectedProductCategory()">Xóa danh mục</button></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="productTable"></tbody></table></div></section>
 
-      <section id="prices" class="page">
-        <div class="price-module-tabs">
-          <button type="button" id="priceSaleTab" class="price-tab active" onclick="switchPricePane('sale')">
-            <b>💵 Bảng giá bán hàng</b><span>Giá áp dụng khi lập phiếu bán</span>
-          </button>
-          <button type="button" id="priceCostTab" class="price-tab danger view-cost" onclick="switchPricePane('cost')">
-            <b>🔒 Bảng giá vốn</b><span>Chỉ Admin, dùng tính lợi nhuận</span>
-          </button>
+      <section id="prices" class="page price-page-v55">
+        <div class="price-modern-header">
+          <div>
+            <h3>🏷️ Quản lý bảng giá</h3>
+            <p>Thiết kế lại theo kiểu <b>phiếu bán hàng</b>: nhập thông tin bảng giá, chọn sản phẩm, nhập giá trên cùng một màn hình.</p>
+          </div>
+          <div class="price-modern-actions">
+            <button class="btn ghost" onclick="renderPrices();renderCostPrices();renderPriceProductPicker();renderCostProductPicker();">Làm mới</button>
+            <button class="btn ghost" onclick="downloadTemplateExcel('prices')">Mẫu Excel bán</button>
+            <button class="btn ghost view-cost" onclick="downloadTemplateExcel('costPrices')">Mẫu Excel vốn</button>
+          </div>
+        </div>
+
+        <div class="price-modern-tabs">
+          <button type="button" id="priceSaleTab" class="active" onclick="switchPricePane('sale')"><span>💵</span><b>Bảng giá bán hàng</b><small>Giá dùng cho phiếu bán / báo giá</small></button>
+          <button type="button" id="priceCostTab" class="view-cost" onclick="switchPricePane('cost')"><span>🔒</span><b>Bảng giá vốn</b><small>Chỉ Admin / kế toán được xem</small></button>
         </div>
 
         <div id="priceSalePane" class="price-pane active">
-          <div class="panel price-panel sale-price-panel">
-            <div class="panel-head kiot-head sale-head">
-              <div>
-                <h3>💵 Bảng giá bán hàng</h3>
-                <span>Kiểu KiotViet: chọn bảng giá bên trái, cấu hình và nhập giá sản phẩm bên phải.</span>
-              </div>
-              <div>
-                <input type="file" id="importPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'prices')">
-                <button class="btn ghost" onclick="downloadTemplateExcel('prices')">Mẫu Excel</button>
-                <button class="btn ghost" onclick="importPrices.click()">Nhập Excel</button>
-                <button class="btn ghost" onclick="exportExcel('prices')">Xuất Excel</button>
-                <button class="btn primary" onclick="newPriceList()">+ Bảng giá bán mới</button>
-              </div>
+          <div class="price-slip-v55">
+            <div class="price-slip-topbar">
+              <div><h3>Phiếu thiết lập bảng giá bán hàng</h3><small>Nhập thông tin → chọn model → đưa vào bảng → lưu bảng giá.</small></div>
+              <div class="price-slip-actions"><input type="file" id="importPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'prices')"><button class="btn ghost" onclick="importPrices.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('prices')">Xuất Excel</button><button class="btn ghost" onclick="newPriceList()">Phiếu mới</button><button class="btn primary" onclick="savePrice()">Lưu bảng giá bán</button></div>
             </div>
-
-            <div class="kiot-price-layout">
-              <aside class="kiot-price-list">
-                <div class="kiot-box-title"><b>Danh sách bảng giá bán</b><small>Bấm Mở/Sửa để chỉnh bảng giá</small></div>
-                <input class="search" id="priceSearch" placeholder="Tìm tên bảng giá, nhóm khách, model..." oninput="renderPrices()">
-                <div class="kiot-table-scroll">
-                  <table class="compact-table"><thead><tr><th>Bảng giá</th><th>Nhóm</th><th>Model</th><th></th></tr></thead><tbody id="priceTable"></tbody></table>
-                </div>
-              </aside>
-
-              <section class="kiot-price-editor sale-editor">
-                <input id="priceId" hidden>
-                <input id="priceGroupKey" hidden>
-                <input id="priceProduct" hidden>
-
-                <div class="kiot-editor-title">
-                  <div><b>Thiết lập bảng giá bán</b><small>Áp dụng cho Khách lẻ / CTV / Đại lý</small></div>
-                  <span class="price-mode-badge sale">GIÁ BÁN</span>
-                </div>
-
-                <div class="grid form-grid price-form-grid kiot-info-grid">
-                  <div class="span2"><label>Tên bảng giá</label><input id="priceListName" placeholder="VD: Giá đại lý tháng 6 / Giá CTV / Giá lẻ 2026"></div>
-                  <div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select></div>
-                  <div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
-                  <div><label>Hiệu lực từ</label><input id="priceFrom" type="date"></div>
-                  <div><label>Hiệu lực đến</label><input id="priceTo" type="date"></div>
-                  <div class="span2"><label>Ghi chú</label><input id="priceNote" placeholder="VD: giá chương trình, giá theo khu vực..."></div>
-                </div>
-
-                <div class="kiot-product-zone">
-                  <div class="kiot-product-pick">
-                    <div class="kiot-box-title"><b>Chọn sản phẩm</b><small>Tìm model/tên sản phẩm rồi tick chọn</small></div>
-                    <div class="price-search-row"><input id="priceProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderPriceProductPicker()"></div>
-                    <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllPriceProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearPriceProducts()">Bỏ chọn</button><button type="button" class="btn primary" onclick="createPriceDraftRows()">Đưa vào bảng giá</button></div>
-                    <div id="priceSelectedHint" class="price-selected-pill">Chưa chọn model nào</div>
-                    <div id="priceProductPicker" class="multi-model-box price-model-box"></div>
-                  </div>
-
-                  <div class="kiot-draft-table">
-                    <div class="kiot-box-title"><b>Nhập giá bán theo model</b><small>Kiểm tra kỹ trước khi lưu</small></div>
-                    <div class="price-draft-box">
-                      <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá bán áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="priceDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá</td></tr></tbody></table>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="price-save-bar kiot-save-bar sale-save"><span>Đây là <b>BẢNG GIÁ BÁN</b> dùng để lên đơn cho khách. Không nhập giá vốn tại đây.</span><button class="btn primary" onclick="savePrice()">Lưu bảng giá bán</button></div>
-              </section>
+            <div class="price-slip-grid">
+              <aside class="price-sidebar-card"><div class="price-card-title"><b>Danh sách bảng giá bán</b><small>Click Mở để chỉnh sửa</small></div><input class="search" id="priceSearch" placeholder="Tìm bảng giá, nhóm khách, model..." oninput="renderPrices()"><div class="price-saved-table"><table><thead><tr><th>Bảng giá</th><th>SL</th><th></th></tr></thead><tbody id="priceTable"></tbody></table></div></aside>
+              <main class="price-editor-card"><input id="priceId" hidden><input id="priceGroupKey" hidden><input id="priceProduct" hidden>
+                <div class="price-section-title"><span>1</span><b>Thông tin bảng giá</b></div>
+                <div class="grid form-grid price-info-grid-v55"><div class="span2"><label>Tên bảng giá <span class="req">*</span></label><input id="priceListName" placeholder="VD: Giá lẻ 2026 / Giá đại lý tháng 6 / Giá CTV"></div><div><label>Nhóm khách</label><select id="priceType"><option>Khách lẻ</option><option>CTV</option><option>Đại lý</option></select></div><div><label>Trạng thái</label><select id="priceActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div><div><label>Hiệu lực từ</label><input id="priceFrom" type="date"></div><div><label>Hiệu lực đến</label><input id="priceTo" type="date"></div><div class="span2"><label>Ghi chú</label><input id="priceNote" placeholder="VD: giá chương trình, giá theo khu vực..."></div></div>
+                <div class="price-section-title"><span>2</span><b>Chọn sản phẩm</b></div>
+                <div class="price-add-card"><div class="price-add-tools"><input id="priceProductSearch" placeholder="Tìm nhanh model / tên sản phẩm / danh mục" oninput="renderPriceProductPicker()"><button type="button" class="btn ghost" onclick="selectAllPriceProducts()">Chọn tất cả đang lọc</button><button type="button" class="btn ghost" onclick="clearPriceProducts()">Bỏ chọn</button><button type="button" class="btn primary" onclick="createPriceDraftRows()">Đưa vào bảng giá</button></div><div id="priceSelectedHint" class="price-selected-pill">Chưa chọn model nào</div><div id="priceProductPicker" class="price-picker-table"></div></div>
+                <div class="price-section-title"><span>3</span><b>Sản phẩm trong bảng giá bán</b></div>
+                <div class="price-draft-table-wrap"><table class="price-edit-table"><thead><tr><th>STT</th><th>Model</th><th>Tên sản phẩm</th><th>ĐVT</th><th>Giá chưa VAT</th><th>VAT</th><th>Giá đã gồm VAT</th><th></th></tr></thead><tbody id="priceDraftRows"><tr><td colspan="8" class="empty-row">Chưa có sản phẩm trong bảng giá</td></tr></tbody></table></div>
+                <div class="price-summary-bar"><div><small>Số sản phẩm</small><b id="priceDraftCount">0</b></div><div><small>Tổng chưa VAT</small><b id="priceDraftBaseTotal">0</b></div><div><small>Tổng VAT</small><b id="priceDraftVatTotal">0</b></div><div class="total"><small>Tổng giá đã VAT</small><b id="priceDraftGrossTotal">0</b></div><button class="btn primary" onclick="savePrice()">Lưu bảng giá bán</button></div>
+              </main>
             </div>
           </div>
         </div>
 
         <div id="priceCostPane" class="price-pane">
-          <div class="panel price-panel cost-price-panel view-cost">
-            <div class="panel-head kiot-head cost-head">
-              <div>
-                <h3>🔒 Bảng giá vốn theo thời gian</h3>
-                <span>Chỉ Admin được xem/sửa. Dùng tính lợi nhuận, không dùng để bán hàng.</span>
-              </div>
-              <div>
-                <input type="file" id="importCostPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'costPrices')">
-                <button class="btn ghost" onclick="downloadTemplateExcel('costPrices')">Mẫu Excel</button>
-                <button class="btn ghost" onclick="importCostPrices.click()">Nhập Excel</button>
-                <button class="btn ghost" onclick="exportExcel('costPrices')">Xuất Excel</button>
-                <button class="btn danger" onclick="newCostPriceList()">+ Bảng giá vốn mới</button>
-              </div>
-            </div>
-
-            <div class="cost-warning-line">⚠️ Đây là khu vực <b>GIÁ VỐN</b>. Giá nhập tại đây dùng để tính lợi nhuận, không hiển thị cho nhân viên không có quyền.</div>
-
-            <div class="kiot-price-layout">
-              <aside class="kiot-price-list cost-list">
-                <div class="kiot-box-title"><b>Danh sách bảng giá vốn</b><small>Bấm Mở/Sửa để chỉnh giá vốn</small></div>
-                <input class="search" id="costPriceSearch" placeholder="Tìm tên bảng giá vốn, model..." oninput="renderCostPrices()">
-                <div class="kiot-table-scroll">
-                  <table class="compact-table"><thead><tr><th>Bảng giá vốn</th><th>Model</th><th>Hiệu lực</th><th></th></tr></thead><tbody id="costPriceTable"></tbody></table>
-                </div>
-              </aside>
-
-              <section class="kiot-price-editor cost-editor">
-                <input id="costId" hidden>
-                <input id="costGroupKey" hidden>
-                <input id="costProduct" hidden>
-
-                <div class="kiot-editor-title">
-                  <div><b>Thiết lập bảng giá vốn</b><small>Phục vụ tính giá vốn và lợi nhuận</small></div>
-                  <span class="price-mode-badge cost">GIÁ VỐN</span>
-                </div>
-
-                <div class="grid form-grid price-form-grid kiot-info-grid">
-                  <div class="span2"><label>Tên bảng giá vốn</label><input id="costListName" placeholder="VD: Giá vốn lô hàng tháng 6"></div>
-                  <div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div>
-                  <div><label>Hiệu lực đến</label><input id="costTo" type="date"></div>
-                  <div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div>
-                  <div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div>
-                </div>
-
-                <div class="kiot-product-zone">
-                  <div class="kiot-product-pick cost-pick">
-                    <div class="kiot-box-title"><b>Chọn sản phẩm tính giá vốn</b><small>Tìm model/tên sản phẩm rồi tick chọn</small></div>
-                    <div class="price-search-row"><input id="costProductSearch" placeholder="Gõ F07, F08, S01 hoặc tên sản phẩm" oninput="renderCostProductPicker()"></div>
-                    <div class="price-action-row"><button type="button" class="btn ghost" onclick="selectAllCostProducts()">Chọn tất cả kết quả</button><button type="button" class="btn ghost" onclick="clearCostProducts()">Bỏ chọn</button><button type="button" class="btn danger" onclick="createCostDraftRows()">Đưa vào bảng giá vốn</button></div>
-                    <div id="costSelectedHint" class="price-selected-pill cost-pill">Chưa chọn model nào</div>
-                    <div id="costProductPicker" class="multi-model-box price-model-box"></div>
-                  </div>
-
-                  <div class="kiot-draft-table cost-draft">
-                    <div class="kiot-box-title"><b>Nhập giá vốn theo model</b><small>Chỉ Admin/Kế toán được thao tác</small></div>
-                    <div class="price-draft-box">
-                      <table><thead><tr><th style="width:120px">Model</th><th>Tên sản phẩm</th><th style="width:180px">Giá vốn áp dụng</th><th style="width:80px">Xóa</th></tr></thead><tbody id="costDraftRows"><tr><td colspan="4">Chưa có sản phẩm trong bảng giá vốn</td></tr></tbody></table>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="price-save-bar kiot-save-bar cost-save"><span>Đây là <b>BẢNG GIÁ VỐN</b>. Không nhập giá bán tại khu vực này.</span><button class="btn danger" onclick="saveCostPrice()">Lưu bảng giá vốn</button></div>
-              </section>
+          <div class="price-slip-v55 cost-mode view-cost">
+            <div class="price-slip-topbar cost-toolbar"><div><h3>Phiếu thiết lập bảng giá vốn</h3><small>Giá vốn chỉ phục vụ tính lợi nhuận, không hiển thị cho nhân viên không có quyền.</small></div><div class="price-slip-actions"><input type="file" id="importCostPrices" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'costPrices')"><button class="btn ghost" onclick="importCostPrices.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('costPrices')">Xuất Excel</button><button class="btn ghost" onclick="newCostPriceList()">Phiếu mới</button><button class="btn danger" onclick="saveCostPrice()">Lưu bảng giá vốn</button></div></div>
+            <div class="cost-warning-line">⚠️ Khu vực <b>BẢNG GIÁ VỐN</b> chỉ dành cho Admin/Kế toán.</div>
+            <div class="price-slip-grid"><aside class="price-sidebar-card cost-list"><div class="price-card-title"><b>Danh sách bảng giá vốn</b><small>Click Mở để chỉnh sửa</small></div><input class="search" id="costPriceSearch" placeholder="Tìm bảng giá vốn, model..." oninput="renderCostPrices()"><div class="price-saved-table"><table><thead><tr><th>Bảng giá vốn</th><th>SL</th><th></th></tr></thead><tbody id="costPriceTable"></tbody></table></div></aside>
+              <main class="price-editor-card"><input id="costId" hidden><input id="costGroupKey" hidden><input id="costProduct" hidden>
+                <div class="price-section-title cost-title"><span>1</span><b>Thông tin bảng giá vốn</b></div><div class="grid form-grid price-info-grid-v55"><div class="span2"><label>Tên bảng giá vốn <span class="req">*</span></label><input id="costListName" placeholder="VD: Giá vốn lô hàng tháng 6"></div><div><label>Hiệu lực từ</label><input id="costFrom" type="date"></div><div><label>Hiệu lực đến</label><input id="costTo" type="date"></div><div><label>Trạng thái</label><select id="costActive"><option value="true">Đang áp dụng</option><option value="false">Ngưng áp dụng</option></select></div><div class="span2"><label>Ghi chú</label><input id="costNote" placeholder="VD: Giá vốn tháng 6, lô hàng mới..."></div></div>
+                <div class="price-section-title cost-title"><span>2</span><b>Chọn sản phẩm</b></div><div class="price-add-card cost-add"><div class="price-add-tools"><input id="costProductSearch" placeholder="Tìm nhanh model / tên sản phẩm / danh mục" oninput="renderCostProductPicker()"><button type="button" class="btn ghost" onclick="selectAllCostProducts()">Chọn tất cả đang lọc</button><button type="button" class="btn ghost" onclick="clearCostProducts()">Bỏ chọn</button><button type="button" class="btn danger" onclick="createCostDraftRows()">Đưa vào bảng giá vốn</button></div><div id="costSelectedHint" class="price-selected-pill cost-pill">Chưa chọn model nào</div><div id="costProductPicker" class="price-picker-table"></div></div>
+                <div class="price-section-title cost-title"><span>3</span><b>Sản phẩm trong bảng giá vốn</b></div><div class="price-draft-table-wrap"><table class="price-edit-table"><thead><tr><th>STT</th><th>Model</th><th>Tên sản phẩm</th><th>ĐVT</th><th>Giá vốn áp dụng</th><th></th></tr></thead><tbody id="costDraftRows"><tr><td colspan="6" class="empty-row">Chưa có sản phẩm trong bảng giá vốn</td></tr></tbody></table></div><div class="price-summary-bar cost-summary"><div><small>Ghi chú</small><b>Giá vốn dùng để tính lợi nhuận</b></div><button class="btn danger" onclick="saveCostPrice()">Lưu bảng giá vốn</button></div>
+              </main>
             </div>
           </div>
         </div>
@@ -592,48 +502,39 @@
             <div><label>Đến ngày</label><input id="reportTo" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
             <div><label>Tìm model/sản phẩm</label><input id="reportProductSearch" placeholder="VD: F07, S01, 569..." oninput="renderReports()"></div>
           </div>
-          <div id="reportBox" class="report-grid"></div>
+          <div class="toolbar report-tabs"><b>📊 Báo cáo:</b><button class="btn ghost active" id="reportTabRevenue" onclick="setReportTab('revenue')">Doanh thu</button><button class="btn ghost" id="reportTabProfit" onclick="setReportTab('profit')">Lợi nhuận</button><button class="btn ghost" onclick="showPage('inventory')">Tồn kho</button><button class="btn ghost" onclick="showPage('debts')">Công nợ</button><button class="btn ghost" onclick="showPage('commissions')">Hoa hồng</button><button class="btn ghost" onclick="showPage('warranty')">Bảo hành</button></div><div id="reportBox" class="report-grid report-section report-section-revenue report-section-profit"></div>
         </div>
-        <div class="panel wide">
-          <div class="panel-head"><div><h3>💳 Báo cáo công nợ</h3><span>Lọc đang nợ / đã tất toán / tất cả theo từng phiếu bán, không gộp theo tên khách.</span></div><button class="btn ghost" onclick="exportDebtReportExcel()">Xuất Excel công nợ</button></div>
-          <div class="grid form-grid">
-            <div><label>Trạng thái công nợ</label><select id="reportDebtStatus" onchange="renderReports()"><option value="open">Đang nợ</option><option value="settled">Đã tất toán</option><option value="all">Tất cả</option></select></div>
-            <div class="span2"><label>Tìm công nợ</label><input id="reportDebtSearch" placeholder="Mã phiếu / khách hàng / SĐT / địa chỉ / model" oninput="renderReports()"></div>
-          </div>
-          <div id="reportDebtSummary" class="report-grid"></div>
-          <table><thead><tr><th>STT</th><th>Phiếu</th><th>Khách hàng</th><th>SĐT</th><th>Địa chỉ</th><th>Model</th><th>Ngày bán</th><th>Tổng tiền</th><th>Đã thu</th><th>Còn nợ</th><th>Ngày tất toán</th><th>Trạng thái</th></tr></thead><tbody id="reportDebtTable"></tbody></table>
-        </div>
-        <div class="card view-cost">
+        <div class="card view-cost report-section report-section-profit">
           <div class="section-title"><h3>Phân tích lợi nhuận chi tiết</h3><small>Hiển thị rõ: doanh thu - giá vốn - hoa hồng - kỹ thuật - chi phí</small></div>
           <table><thead><tr><th>Chỉ tiêu</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="reportProfitBreakdownTable"></tbody></table>
         </div>
 
-        <div class="panel wide">
+        <div class="panel wide report-section report-section-revenue">
           <div class="panel-head"><h3>🔐 Tổng sản phẩm bán ra</h3><span>Tìm theo model hoặc tên sản phẩm</span></div>
           <table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>Số lượng</th><th>Doanh thu</th><th class="view-cost">Giá vốn</th><th class="view-cost">Lãi gộp SP</th></tr></thead><tbody id="reportProductTable"></tbody></table>
         </div>
 
-        <div class="panel wide">
+        <div class="panel wide report-section report-section-revenue">
           <div class="panel-head"><h3>📊 Doanh thu theo thời gian</h3><span>Ngày / tuần / tháng / năm</span></div>
           <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh thu</th><th>Phụ thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công + xăng KT</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
         </div>
 
 
-        <div class="panel wide">
+        <div class="panel wide report-section report-section-revenue">
           <div class="panel-head"><h3>↩️ Danh sách hàng bán bị trả lại</h3><span>Theo dõi phiếu TH, số lượng trả, nhập lại kho và hướng xử lý tiền dư.</span></div>
           <div id="reportReturnSummary" class="report-grid"></div>
           <table><thead><tr><th>Ngày</th><th>Phiếu TH</th><th>Đơn bán</th><th>Khách hàng</th><th>Kho nhập lại</th><th>Model</th><th>SL trả</th><th>Giá trị</th><th>Xử lý tiền</th><th>Ghi chú</th></tr></thead><tbody id="reportReturnTable"></tbody></table>
         </div>
-        <div class="panel wide view-cost">
+        <div class="panel wide view-cost report-section report-section-profit">
           <div class="panel-head"><h3>📒 Báo cáo chi phí theo danh mục</h3><span>Điện, nước, internet, thuê nhà, vận chuyển, lương cố định, khác</span></div>
           <table><thead><tr><th>Loại chi phí</th><th>Số phiếu</th><th>Tổng tiền</th></tr></thead><tbody id="reportExpenseCategoryTable"></tbody></table>
         </div>
 
-        <div class="panel wide view-cost">
+        <div class="panel wide view-cost report-section report-section-profit">
           <div class="panel-head"><h3>🧾 Chi tiết chi phí vận hành trong kỳ</h3></div>
           <table><thead><tr><th>Ngày</th><th>Loại chi phí</th><th>Số tiền</th><th>Ghi chú</th></tr></thead><tbody id="reportExpenseDetailTable"></tbody></table>
         </div>
-        <div class="panel wide salary-only">
+        <div class="panel wide salary-only report-section report-section-profit">
           <div class="panel-head"><h3>👤 Chi tiết lương trong kỳ</h3></div>
           <table><thead><tr><th>Ngày</th><th>Nhân viên</th><th>Lương CB</th><th>Phụ cấp</th><th>Thưởng</th><th>Khấu trừ</th><th>Tổng lương</th><th>Ghi chú</th></tr></thead><tbody id="reportSalaryDetailTable"></tbody></table>
         </div>
