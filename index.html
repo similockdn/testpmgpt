@@ -502,7 +502,9 @@
             <div><label>Đến ngày</label><input id="reportTo" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
             <div><label>Tìm model/sản phẩm</label><input id="reportProductSearch" placeholder="VD: F07, S01, 569..." oninput="renderReports()"></div>
           </div>
-          <div class="toolbar report-tabs report-tabs-v57 report-tabs-all"><b>📊 Danh mục báo cáo:</b><button class="btn ghost active" id="reportTabRevenue" onclick="setReportTab('revenue')">Bán hàng</button><button class="btn ghost" id="reportTabProfit" onclick="setReportTab('profit')">Lợi nhuận</button><button class="btn ghost" id="reportTabStock" onclick="setReportTab('stock')">Kho</button><button class="btn ghost" id="reportTabDebts" onclick="setReportTab('debts')">Công nợ</button><button class="btn ghost" id="reportTabCommissions" onclick="setReportTab('commissions')">Thu nhập / Hoa hồng</button><button class="btn ghost" id="reportTabWarranty" onclick="setReportTab('warranty')">Bảo hành</button></div><div id="reportBox" class="report-grid report-section report-section-revenue report-section-profit report-section-stock report-section-debts report-section-commissions report-section-warranty"></div>
+          <div class="toolbar report-tabs report-tabs-v57 report-tabs-all"><b>📊 Danh mục báo cáo:</b><button class="btn ghost active" id="reportTabRevenue" onclick="setReportTab('revenue')">Bán hàng</button><button class="btn ghost" id="reportTabProfit" onclick="setReportTab('profit')">Lợi nhuận</button><button class="btn ghost" id="reportTabStock" onclick="setReportTab('stock')">Kho</button><button class="btn ghost" id="reportTabDebts" onclick="setReportTab('debts')">Công nợ</button><button class="btn ghost" id="reportTabCommissions" onclick="setReportTab('commissions')">Thu nhập / Hoa hồng</button><button class="btn ghost" id="reportTabWarranty" onclick="setReportTab('warranty')">Bảo hành</button></div><div id="reportContentTop" class="report-content-anchor"></div><div id="reportBox" class="report-grid report-section report-section-revenue report-section-profit"></div>
+          <div id="reportRevenueCharts" class="report-chart-grid report-section report-section-revenue"></div>
+          <div id="reportProfitCharts" class="report-chart-grid report-section report-section-profit"></div>
         </div>
         <div class="card view-cost report-section report-section-profit">
           <div class="section-title"><h3>Phân tích lợi nhuận chi tiết</h3><small>Hiển thị rõ: doanh thu - giá vốn - hoa hồng - kỹ thuật - chi phí</small></div>
@@ -529,6 +531,7 @@
             <div><label>&nbsp;</label><button class="btn ghost" onclick="clearReportStockFilter()">Xóa lọc kho</button></div>
           </div>
           <div id="reportStockSummary" class="report-grid stock-report-cards"></div>
+          <div id="reportStockCharts" class="report-chart-grid"></div>
         </div>
 
         <div class="panel wide report-section report-section-stock">
@@ -587,6 +590,7 @@
         <div class="panel wide report-section report-section-debts">
           <div class="panel-head"><div><h3>💳 Báo cáo công nợ tổng hợp</h3><span>Đang nợ, đã tất toán, quá hạn và chi tiết theo từng phiếu bán</span></div><div><button class="btn ghost" onclick="exportExcel('debts')">Xuất công nợ</button><button class="btn ghost" onclick="showPage('debts')">Mở phân hệ công nợ</button></div></div>
           <div id="reportDebtSummary" class="report-grid"></div>
+          <div id="reportDebtCharts" class="report-chart-grid"></div>
           <table><thead><tr><th>Trạng thái</th><th>Số phiếu</th><th>Tổng tiền</th><th>Đã thu</th><th>Còn nợ</th><th>Quá hạn</th></tr></thead><tbody id="reportDebtStatusTable"></tbody></table>
         </div>
         <div class="panel wide report-section report-section-debts">
@@ -597,6 +601,7 @@
         <div class="panel wide report-section report-section-commissions">
           <div class="panel-head"><div><h3>👤 Báo cáo thu nhập / hoa hồng</h3><span>Hoa hồng sale, công kỹ thuật, tiền xăng, thưởng/phạt và tổng thu nhập</span></div><div><button class="btn ghost" onclick="exportExcel('commissions')">Xuất hoa hồng</button><button class="btn ghost" onclick="showPage('commissions')">Mở phân hệ thu nhập</button></div></div>
           <div id="reportIncomeSummary" class="report-grid"></div>
+          <div id="reportIncomeCharts" class="report-chart-grid"></div>
           <table><thead><tr><th>Nhân viên</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Thưởng</th><th>Phạt/khấu trừ</th><th>Tổng thu nhập</th></tr></thead><tbody id="reportIncomeTable"></tbody></table>
         </div>
         <div class="panel wide report-section report-section-commissions">
@@ -607,6 +612,7 @@
         <div class="panel wide report-section report-section-warranty">
           <div class="panel-head"><div><h3>🛡️ Báo cáo bảo hành</h3><span>Tổng phiếu, trạng thái, lý do bảo hành và model phát sinh</span></div><div><button class="btn ghost" onclick="showPage('warranty')">Mở phân hệ bảo hành</button></div></div>
           <div id="reportWarrantySummary" class="report-grid"></div>
+          <div id="reportWarrantyCharts" class="report-chart-grid"></div>
           <div class="report-two-cols">
             <div><h4>Theo trạng thái</h4><table><thead><tr><th>Trạng thái</th><th>Số phiếu</th></tr></thead><tbody id="reportWarrantyStatusTable"></tbody></table></div>
             <div><h4>Theo lý do</h4><table><thead><tr><th>Lý do</th><th>Số phiếu</th></tr></thead><tbody id="reportWarrantyReasonTable"></tbody></table></div>

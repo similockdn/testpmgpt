@@ -2982,11 +2982,23 @@ window.setReportTab=(tab='revenue')=>{
   document.querySelectorAll('.report-tabs button[id^="reportTab"]').forEach(b=>b.classList.remove('active'));
   const map={revenue:'Revenue',profit:'Profit',stock:'Stock',debts:'Debts',commissions:'Commissions',warranty:'Warranty'};
   const btn=$(`reportTab${map[tab]||'Revenue'}`); if(btn)btn.classList.add('active');
+
+  // Chỉ hiển thị đúng nhóm báo cáo đang chọn.
+  // Những phần báo cáo khác được ẩn hoàn toàn để người dùng không phải kéo xuống dưới mới thấy nội dung tab.
   document.querySelectorAll('#reports .report-section').forEach(el=>{
     const show=el.classList.contains(`report-section-${tab}`);
+    el.hidden=!show;
     el.style.display=show?'':'none';
   });
+
   renderReports();
+
+  // Sau khi đổi tab, tự đưa màn hình về ngay đầu nội dung báo cáo đang chọn.
+  // Giữ lại bộ lọc ngày + thanh tab ở phía trên, không cuộn xuống các báo cáo cũ.
+  setTimeout(()=>{
+    const anchor=$('reportContentTop') || document.querySelector('#reports .report-tabs');
+    if(anchor) anchor.scrollIntoView({behavior:'smooth',block:'start'});
+  },30);
 };
 
 window.clearReportStockFilter=()=>{
@@ -3047,6 +3059,11 @@ function renderStockReports(from,to){
     <div class="report-card">Nhập trong kỳ<b>${inQty}</b></div>
     <div class="report-card">Xuất trong kỳ<b>${outQty}</b></div>
     <div class="report-card">Sắp hết / Hết hàng<b>${lowRows.length} / ${outOfStock}</b></div>`;
+  renderChartHtml('reportStockCharts',
+    modernBarChart('Top tồn kho theo model',rows.slice().sort((a,b)=>b.visibleStock-a.visibleStock).map(r=>({label:r.code,value:r.visibleStock})),{sub:'Số lượng tồn hiện tại',limit:8})+
+    modernDonutChart('Nhập / xuất trong kỳ',[{label:'Nhập kho',value:inQty},{label:'Xuất kho',value:outQty}],{sub:'So sánh luân chuyển kho'})+
+    modernBarChart('Giá trị tồn kho cao nhất',rows.slice().sort((a,b)=>b.visibleValue-a.visibleValue).map(r=>({label:r.code,value:r.visibleValue})),{sub:'Tính theo giá vốn',money:true,limit:8})
+  );
   const showMain=allowed.includes('Kho Chính') && (wh==='ALL'||wh==='Kho Chính');
   const showOffice=allowed.includes('Kho Văn Phòng') && (wh==='ALL'||wh==='Kho Văn Phòng');
   if($('reportStockHead'))$('reportStockHead').innerHTML=`<tr><th>Model</th><th>Sản phẩm</th>${showMain?'<th>Kho Chính</th>':''}${showOffice?'<th>Kho Văn Phòng</th>':''}<th>Tổng tồn</th><th>Trạng thái</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th></tr>`;
@@ -3065,6 +3082,34 @@ function renderStockReports(from,to){
   const slow=rows.filter(r=>r.visibleStock>0).map(r=>{const d=lastOut.get(r.code);const days=d?Math.floor((now-new Date(d))/86400000):999;return{...r,days}}).filter(r=>r.days>=60).sort((a,b)=>b.days-a.days);
   if($('reportSlowStockTable'))$('reportSlowStockTable').innerHTML=slow.slice(0,80).map(r=>`<tr><td><b>${r.code}</b></td><td>${r.name||''}</td><td>${r.visibleStock}</td><td>${r.days===999?'Chưa từng xuất':r.days+' ngày'}</td></tr>`).join('')||'<tr><td colspan="4">Không có sản phẩm tồn lâu trên 60 ngày</td></tr>';
 }
+
+
+function compactMoney(v){v=+v||0;const a=Math.abs(v);if(a>=1000000000)return (v/1000000000).toFixed(a>=10000000000?0:1)+' tỷ';if(a>=1000000)return (v/1000000).toFixed(a>=10000000?0:1)+' tr';if(a>=1000)return (v/1000).toFixed(a>=10000?0:1)+'k';return String(Math.round(v));}
+function chartNoData(title,sub='Chưa có dữ liệu để vẽ biểu đồ'){return `<div class="modern-chart-card"><div class="chart-head"><div><h4>${htmlesc(title)}</h4><small>${htmlesc(sub)}</small></div></div><div class="chart-empty">Chưa có dữ liệu</div></div>`}
+function modernBarChart(title,rows,opt={}){
+  rows=(rows||[]).filter(r=>Number.isFinite(+r.value)).slice(0,opt.limit||8);
+  if(!rows.length)return chartNoData(title,opt.sub||'');
+  const max=Math.max(...rows.map(r=>Math.abs(+r.value||0)),1);
+  return `<div class="modern-chart-card"><div class="chart-head"><div><h4>${htmlesc(title)}</h4><small>${htmlesc(opt.sub||'')}</small></div>${opt.badge?`<span class="chart-badge">${htmlesc(opt.badge)}</span>`:''}</div><div class="modern-bars">${rows.map(r=>{const pct=Math.max(3,Math.min(100,Math.abs((+r.value||0)/max*100)));return `<div class="bar-row"><div class="bar-label" title="${htmlesc(r.label||'')}">${htmlesc(r.label||'')}</div><div class="bar-track"><span style="width:${pct}%"></span></div><b>${opt.money?compactMoney(r.value):(r.value||0)}</b></div>`}).join('')}</div></div>`;
+}
+function modernLineChart(title,rows,opt={}){
+  rows=(rows||[]).filter(r=>Number.isFinite(+r.value));
+  if(rows.length<2)return modernBarChart(title,rows,{...opt,limit:6});
+  rows=rows.slice(-10);
+  const vals=rows.map(r=>+r.value||0), max=Math.max(...vals,1), min=Math.min(...vals,0), span=Math.max(max-min,1);
+  const pts=rows.map((r,i)=>{const x=8+(i*(284/(rows.length-1)));const y=92-((+r.value-min)/span*74);return `${x.toFixed(1)},${y.toFixed(1)}`}).join(' ');
+  return `<div class="modern-chart-card"><div class="chart-head"><div><h4>${htmlesc(title)}</h4><small>${htmlesc(opt.sub||'')}</small></div>${opt.badge?`<span class="chart-badge">${htmlesc(opt.badge)}</span>`:''}</div><div class="line-chart-wrap"><svg viewBox="0 0 300 110" preserveAspectRatio="none"><defs><linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-opacity=".26"/><stop offset="1" stop-opacity="0"/></linearGradient></defs><polyline class="line-grid" points="0,92 300,92"></polyline><polyline class="line-area" points="8,92 ${pts} 292,92"></polyline><polyline class="line-stroke" points="${pts}"></polyline></svg></div><div class="chart-axis-mini"><span>${htmlesc(rows[0].label||'')}</span><b>${opt.money?compactMoney(vals[vals.length-1]):vals[vals.length-1]}</b><span>${htmlesc(rows[rows.length-1].label||'')}</span></div></div>`;
+}
+function modernDonutChart(title,rows,opt={}){
+  rows=(rows||[]).filter(r=>(+r.value||0)>0).slice(0,5);
+  if(!rows.length)return chartNoData(title,opt.sub||'');
+  const total=rows.reduce((a,r)=>a+(+r.value||0),0)||1;
+  const segments=['#2563eb','#16a34a','#f97316','#dc2626','#7c3aed'];
+  let start=0;
+  const grad=rows.map((r,i)=>{const pct=(+r.value||0)/total*100;const seg=`${segments[i%segments.length]} ${start}% ${start+pct}%`;start+=pct;return seg}).join(',');
+  return `<div class="modern-chart-card"><div class="chart-head"><div><h4>${htmlesc(title)}</h4><small>${htmlesc(opt.sub||'')}</small></div><span class="chart-badge">${opt.money?compactMoney(total):total}</span></div><div class="donut-layout"><div class="donut" style="background:conic-gradient(${grad})"><span>${opt.money?compactMoney(total):total}</span></div><div class="donut-legend">${rows.map((r,i)=>`<p><i style="background:${segments[i%segments.length]}"></i><span>${htmlesc(r.label||'')}</span><b>${opt.money?compactMoney(r.value):r.value}</b></p>`).join('')}</div></div></div>`;
+}
+function renderChartHtml(id,html){const el=$(id);if(el)el.innerHTML=html;}
 
 function reportSearchQ(){return ($('reportProductSearch')?.value||'').trim().toLowerCase();}
 function renderDebtReports(from,to){
@@ -3103,6 +3148,10 @@ function renderCommissionReports(from,to){
   const rows=reportEmployeeIncomeRows(from,to);
   const totalSale=rows.reduce((a,r)=>a+(+r.saleCommission||0),0), totalTech=rows.reduce((a,r)=>a+(+r.techCost||0),0), totalFuel=rows.reduce((a,r)=>a+(+r.techFuel||0),0), totalBonus=rows.reduce((a,r)=>a+(+r.bonus||0),0), totalDeduct=rows.reduce((a,r)=>a+(+r.deduct||0),0), total=rows.reduce((a,r)=>a+(+r.total||0),0);
   $('reportIncomeSummary').innerHTML=`<div class="report-card">Nhân viên phát sinh<b>${rows.length}</b></div><div class="report-card">Hoa hồng Sale<b>${money(totalSale)}</b></div><div class="report-card">Công kỹ thuật<b>${money(totalTech)}</b></div><div class="report-card">Tiền xăng<b>${money(totalFuel)}</b></div><div class="report-card">Thưởng / Phạt<b>${money(totalBonus)} / ${money(totalDeduct)}</b></div><div class="report-card">Tổng thu nhập<b>${money(total)}</b></div>`;
+  renderChartHtml('reportIncomeCharts',
+    modernBarChart('Top thu nhập nhân viên',rows.slice().sort((a,b)=>b.total-a.total).map(r=>({label:r.name,value:r.total})),{sub:'Tổng thu nhập trong kỳ',money:true,limit:8})+
+    modernDonutChart('Cơ cấu thu nhập',[{label:'Hoa hồng Sale',value:totalSale},{label:'Công kỹ thuật',value:totalTech},{label:'Tiền xăng',value:totalFuel},{label:'Thưởng',value:totalBonus}],{sub:'Tỷ trọng các khoản thu nhập',money:true})
+  );
   if($('reportIncomeTable'))$('reportIncomeTable').innerHTML=rows.map(r=>`<tr><td><b>${r.name}</b></td><td>${money(r.saleCommission)}</td><td>${money(r.techCost)}</td><td>${money(r.techFuel)}</td><td>${money(r.bonus)}</td><td>${money(r.deduct)}</td><td><b>${money(r.total)}</b></td></tr>`).join('')||'<tr><td colspan="7">Không có dữ liệu thu nhập trong kỳ</td></tr>';
   const techRows=reportTechPerformanceRows(from,to);
   if($('reportTechPerformanceTable'))$('reportTechPerformanceTable').innerHTML=techRows.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.count}</td><td>${r.qty}</td><td>${money(r.techCost)}</td><td>${money(r.techFuel)}</td><td>${r.warranty||0}</td></tr>`).join('')||'<tr><td colspan="6">Không có dữ liệu hiệu suất kỹ thuật trong kỳ</td></tr>';
@@ -3116,6 +3165,10 @@ function renderWarrantyReports(from,to){
   rows.forEach(w=>{byStatus[w.status||'Khác']=(byStatus[w.status||'Khác']||0)+1;(Array.isArray(w.reasons)&&w.reasons.length?w.reasons:[w.reasonOther||'Khác']).forEach(r=>byReason[r]=(byReason[r]||0)+1);});
   const pending=rows.filter(w=>!['Hoàn thành','Đã trả khách'].includes(w.status||'')).length;
   $('reportWarrantySummary').innerHTML=`<div class="report-card">Tổng phiếu bảo hành<b>${rows.length}</b></div><div class="report-card">Đang xử lý<b>${pending}</b></div><div class="report-card">Hoàn thành<b>${rows.length-pending}</b></div><div class="report-card">Khách phát sinh<b>${new Set(rows.map(w=>w.phone||w.customer).filter(Boolean)).size}</b></div>`;
+  renderChartHtml('reportWarrantyCharts',
+    modernDonutChart('Trạng thái bảo hành',Object.entries(byStatus).map(([label,value])=>({label,value})),{sub:'Tỷ lệ xử lý theo trạng thái'})+
+    modernBarChart('Lý do bảo hành nhiều nhất',Object.entries(byReason).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value})),{sub:'Top lý do phát sinh',limit:8})
+  );
   const makeRows=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${htmlesc(k)}</td><td><b>${v}</b></td></tr>`).join('');
   if($('reportWarrantyStatusTable'))$('reportWarrantyStatusTable').innerHTML=makeRows(byStatus)||'<tr><td colspan="2">Chưa có dữ liệu</td></tr>';
   if($('reportWarrantyReasonTable'))$('reportWarrantyReasonTable').innerHTML=makeRows(byReason)||'<tr><td colspan="2">Chưa có dữ liệu</td></tr>';
@@ -3196,6 +3249,17 @@ function renderReports(){
     const pay=salePaymentInfo(s);byTime[k].orders++;byTime[k].qty+=(s.items||[]).reduce((a,it)=>a+(+it.qty||0),0);byTime[k].revenue+=+s.grand||0;byTime[k].surcharge+=+s.surcharge||0;byTime[k].paid+=+pay.paidTotal||0;byTime[k].debt+=+pay.debtLeft||0;byTime[k].comm+=saleCommissionValue(s);byTime[k].tech+=(+s.techCost||0)+(+s.techFuel||0);byTime[k].profit+=saleProfitValue(s);
   });
   if($('reportRevenueTable'))$('reportRevenueTable').innerHTML=Object.values(byTime).sort((a,b)=>String(b.key).localeCompare(String(a.key))).map(x=>`<tr><td><b>${x.key}</b></td><td>${x.orders}</td><td>${x.qty}</td><td>${money(x.revenue)}</td><td>${money(x.surcharge)}</td><td>${money(x.paid)}</td><td>${money(x.debt)}</td><td class="view-cost">${money(x.comm)}</td><td class="view-cost">${money(x.tech)}</td><td class="view-cost">${money(x.profit)}</td></tr>`).join('')||'<tr><td colspan="10">Chưa có doanh thu trong kỳ</td></tr>';
+  const timeAsc=Object.values(byTime).sort((a,b)=>String(a.key).localeCompare(String(b.key)));
+  renderChartHtml('reportRevenueCharts',
+    modernLineChart('Xu hướng doanh thu',timeAsc.map(x=>({label:x.key,value:x.revenue})),{sub:'Doanh thu theo mốc thời gian',money:true,badge:money(rev)})+
+    modernBarChart('Top model bán chạy',productRows.map(x=>({label:x.code,value:x.qty})),{sub:'Số lượng bán ra theo model',limit:8})+
+    modernBarChart('Doanh thu theo model',productRows.map(x=>({label:x.code,value:x.revenue})),{sub:'Top model tạo doanh thu',money:true,limit:8})
+  );
+  renderChartHtml('reportProfitCharts',
+    modernBarChart('Cơ cấu lợi nhuận',[{label:'Doanh thu trước VAT',value:revenueBeforeVat},{label:'Giá vốn',value:totalCost},{label:'Lãi gộp',value:grossMargin},{label:'Hoa hồng Sale',value:comm},{label:'Công + xăng KT',value:tech},{label:'Chi phí CTY',value:totalCompanyCost},{label:'Lợi nhuận ròng',value:profit}],{sub:'Các chỉ tiêu chính trong kỳ',money:true,limit:8})+
+    modernLineChart('Lợi nhuận đơn hàng theo thời gian',timeAsc.map(x=>({label:x.key,value:x.profit})),{sub:'Lợi nhuận trước chi phí vận hành',money:true,badge:money(grossProfit)})+
+    modernDonutChart('Chi phí vận hành',[{label:'Chi phí khác',value:op},{label:'Lương nhân viên',value:sal},{label:'Hoa hồng Sale',value:comm},{label:'Kỹ thuật + xăng',value:tech}],{sub:'Các khoản chi phí chính',money:true})
+  );
 
   const byCat={};
   expenses.forEach(e=>{const k=e.category||'Khác';byCat[k]=byCat[k]||{category:k,count:0,amount:0};byCat[k].count++;byCat[k].amount+=+e.amount||0});
