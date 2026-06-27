@@ -2980,17 +2980,156 @@ let currentReportTab='revenue';
 window.setReportTab=(tab='revenue')=>{
   currentReportTab=tab;
   document.querySelectorAll('.report-tabs button[id^="reportTab"]').forEach(b=>b.classList.remove('active'));
-  const btn=$(`reportTab${tab==='profit'?'Profit':'Revenue'}`); if(btn)btn.classList.add('active');
+  const map={revenue:'Revenue',profit:'Profit',stock:'Stock',debts:'Debts',commissions:'Commissions',warranty:'Warranty'};
+  const btn=$(`reportTab${map[tab]||'Revenue'}`); if(btn)btn.classList.add('active');
   document.querySelectorAll('#reports .report-section').forEach(el=>{
     const show=el.classList.contains(`report-section-${tab}`);
     el.style.display=show?'':'none';
   });
   renderReports();
 };
+
+window.clearReportStockFilter=()=>{
+  if($('reportStockWarehouse'))$('reportStockWarehouse').value='ALL';
+  if($('reportStockStatus'))$('reportStockStatus').value='ALL';
+  if($('reportStockSearch'))$('reportStockSearch').value='';
+  renderReports();
+}
+function stockReportVoucherRows(from,to,typeFilter=''){
+  const rows=[];
+  activeStockVouchers().filter(canAccessVoucher).forEach(v=>{
+    const d=reportDateValue(v.date);
+    if(d<from||d>to)return;
+    if(typeFilter && v.type!==typeFilter)return;
+    (v.items||[]).forEach(it=>{
+      rows.push({
+        date:d, code:v.code||'', type:v.type||'', typeName:stockTypeName(v.type),
+        warehouse:voucherWarehouse(v), fromWarehouse:v.fromWarehouse||v.warehouse||'', toWarehouse:v.toWarehouse||'',
+        customer:v.customerName||'', saleCode:v.saleCode||'', product:it.code||'', name:it.name||'',
+        qty:+(it.actualQty??it.inputQty??it.qty??0)||0, cost:+(it.cost||0)||0,
+        amount:(+(it.actualQty??it.inputQty??it.qty??0)||0)*(+(it.cost||0)||0), note:it.note||v.note||''
+      });
+    });
+  });
+  return rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.code).localeCompare(String(a.code)));
+}
+function renderStockReports(from,to){
+  if(!$('reportStockSummary'))return;
+  const allowed=userWarehouses();
+  const whSel=$('reportStockWarehouse');
+  if(whSel && whSel.value!=='ALL' && !allowed.includes(whSel.value))whSel.value='ALL';
+  const wh=whSel?.value||'ALL';
+  const status=$('reportStockStatus')?.value||'ALL';
+  const q=($('reportStockSearch')?.value||$('reportProductSearch')?.value||'').trim().toLowerCase();
+  const rows=stockBookRows('', '').map(r=>{
+    const visibleStock=wh==='Kho Chính'?r.khoChinh:(wh==='Kho Văn Phòng'?r.khoVanPhong:r.stock);
+    return {...r,visibleStock,visibleValue:visibleStock*r.cost};
+  }).filter(r=>{
+    if(q && !(String(r.code+' '+r.name).toLowerCase().includes(q)))return false;
+    if(status==='IN_STOCK' && !(r.visibleStock>0))return false;
+    if(status==='LOW' && !(r.visibleStock>0 && r.visibleStock<=r.minStock))return false;
+    if(status==='OUT' && r.visibleStock!==0)return false;
+    return true;
+  });
+  const inRows=stockReportVoucherRows(from,to,'IN').filter(r=>wh==='ALL'||r.warehouse===wh).filter(r=>!q||String(r.product+' '+r.name).toLowerCase().includes(q));
+  const outRows=stockReportVoucherRows(from,to,'OUT').filter(r=>wh==='ALL'||r.warehouse===wh).filter(r=>!q||String(r.product+' '+r.name).toLowerCase().includes(q));
+  const moveRows=stockReportVoucherRows(from,to).filter(r=>['TRANSFER','ADJUST','CHECK'].includes(r.type)).filter(r=>wh==='ALL'||r.warehouse===wh||r.fromWarehouse===wh||r.toWarehouse===wh).filter(r=>!q||String(r.product+' '+r.name).toLowerCase().includes(q));
+  const ledger=stockLedgerRows().filter(r=>stockDateInRange(r.date,from,to)).filter(r=>wh==='ALL'||r.warehouse===wh).filter(r=>!q||String(r.product+' '+r.name).toLowerCase().includes(q));
+  const totalStock=rows.reduce((a,r)=>a+r.visibleStock,0);
+  const totalValue=rows.reduce((a,r)=>a+r.visibleValue,0);
+  const lowRows=rows.filter(r=>r.visibleStock>0 && r.visibleStock<=r.minStock).sort((a,b)=>a.visibleStock-b.visibleStock);
+  const outOfStock=rows.filter(r=>r.visibleStock===0).length;
+  const inQty=inRows.reduce((a,r)=>a+r.qty,0), outQty=outRows.reduce((a,r)=>a+r.qty,0);
+  $('reportStockSummary').innerHTML=`
+    <div class="report-card">Tổng model đang xem<b>${rows.length}</b></div>
+    <div class="report-card">Tổng tồn<b>${totalStock}</b></div>
+    <div class="report-card view-cost">Giá trị tồn<b>${money(totalValue)}</b></div>
+    <div class="report-card">Nhập trong kỳ<b>${inQty}</b></div>
+    <div class="report-card">Xuất trong kỳ<b>${outQty}</b></div>
+    <div class="report-card">Sắp hết / Hết hàng<b>${lowRows.length} / ${outOfStock}</b></div>`;
+  const showMain=allowed.includes('Kho Chính') && (wh==='ALL'||wh==='Kho Chính');
+  const showOffice=allowed.includes('Kho Văn Phòng') && (wh==='ALL'||wh==='Kho Văn Phòng');
+  if($('reportStockHead'))$('reportStockHead').innerHTML=`<tr><th>Model</th><th>Sản phẩm</th>${showMain?'<th>Kho Chính</th>':''}${showOffice?'<th>Kho Văn Phòng</th>':''}<th>Tổng tồn</th><th>Trạng thái</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th></tr>`;
+  if($('reportStockTable'))$('reportStockTable').innerHTML=rows.map(r=>`<tr><td><b>${r.code}</b></td><td>${r.name||''}</td>${showMain?`<td>${r.khoChinh}</td>`:''}${showOffice?`<td>${r.khoVanPhong}</td>`:''}<td><b>${r.visibleStock}</b></td><td>${stockStatusBadge(r.visibleStock,r.minStock)}</td><td class="view-cost">${money(r.cost)}</td><td class="view-cost"><b>${money(r.visibleValue)}</b></td></tr>`).join('')||'<tr><td colspan="8">Không tìm thấy tồn kho phù hợp</td></tr>';
+  const renderVoucher=(arr,kind)=>arr.slice(0,400).map(r=> kind==='out'
+    ? `<tr><td>${r.date}</td><td>${r.code}</td><td>${r.warehouse}</td><td>${r.customer||r.saleCode||''}</td><td><b>${r.product}</b></td><td>${r.name}</td><td>${r.qty}</td><td class="view-cost">${money(r.amount)}</td><td>${r.note}</td></tr>`
+    : `<tr><td>${r.date}</td><td>${r.code}</td><td>${r.warehouse}</td><td><b>${r.product}</b></td><td>${r.name}</td><td>${r.qty}</td><td class="view-cost">${money(r.amount)}</td><td>${r.note}</td></tr>`).join('');
+  if($('reportStockInTable'))$('reportStockInTable').innerHTML=renderVoucher(inRows,'in')||'<tr><td colspan="8">Chưa có nhập kho trong kỳ</td></tr>';
+  if($('reportStockOutTable'))$('reportStockOutTable').innerHTML=renderVoucher(outRows,'out')||'<tr><td colspan="9">Chưa có xuất kho trong kỳ</td></tr>';
+  if($('reportStockMoveTable'))$('reportStockMoveTable').innerHTML=moveRows.slice(0,400).map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${r.typeName}</td><td>${r.fromWarehouse||''}</td><td>${r.toWarehouse||r.warehouse||''}</td><td><b>${r.product}</b></td><td>${r.qty}</td><td>${r.note}</td></tr>`).join('')||'<tr><td colspan="8">Chưa có điều chuyển / điều chỉnh trong kỳ</td></tr>';
+  if($('reportStockLedgerTable'))$('reportStockLedgerTable').innerHTML=ledger.slice(0,500).map(r=>`<tr><td>${r.date||''}</td><td>${r.code||''}</td><td>${r.type||''}</td><td>${r.warehouse||''}</td><td><b>${r.product||''}</b></td><td>${r.name||''}</td><td><b>${r.qty>0?'+':''}${r.qty}</b></td><td>${r.note||''}</td></tr>`).join('')||'<tr><td colspan="8">Chưa có nhật ký kho trong kỳ</td></tr>';
+  if($('reportLowStockTable'))$('reportLowStockTable').innerHTML=lowRows.slice(0,80).map(r=>`<tr><td><b>${r.code}</b></td><td>${r.name||''}</td><td>${r.visibleStock}</td><td>${r.minStock}</td></tr>`).join('')||'<tr><td colspan="4">Không có sản phẩm sắp hết</td></tr>';
+  const lastOut=new Map();
+  stockReportVoucherRows('1900-01-01',today(),'OUT').forEach(r=>{if(!lastOut.has(r.product)||r.date>lastOut.get(r.product))lastOut.set(r.product,r.date)});
+  const now=new Date(today());
+  const slow=rows.filter(r=>r.visibleStock>0).map(r=>{const d=lastOut.get(r.code);const days=d?Math.floor((now-new Date(d))/86400000):999;return{...r,days}}).filter(r=>r.days>=60).sort((a,b)=>b.days-a.days);
+  if($('reportSlowStockTable'))$('reportSlowStockTable').innerHTML=slow.slice(0,80).map(r=>`<tr><td><b>${r.code}</b></td><td>${r.name||''}</td><td>${r.visibleStock}</td><td>${r.days===999?'Chưa từng xuất':r.days+' ngày'}</td></tr>`).join('')||'<tr><td colspan="4">Không có sản phẩm tồn lâu trên 60 ngày</td></tr>';
+}
+
+function reportSearchQ(){return ($('reportProductSearch')?.value||'').trim().toLowerCase();}
+function renderDebtReports(from,to){
+  if(!$('reportDebtSummary'))return;
+  const q=reportSearchQ();
+  const all=calcDebtRows().filter(d=>{
+    const sd=debtSaleDate(d)||debtSettledDate(d)||'';
+    if(sd && (sd<from||sd>to)) return false;
+    return !q || debtRowText(d).includes(q) || String(d.saleCode||'').toLowerCase().includes(q);
+  });
+  const active=all.filter(d=>d.debt>0);
+  const settled=all.filter(d=>d.settled);
+  const overdue=active.filter(d=>debtOverdueDays(d)>0);
+  const total=all.reduce((a,d)=>a+(+d.total||0),0), paid=all.reduce((a,d)=>a+(+d.paid||0),0), debt=active.reduce((a,d)=>a+(+d.debt||0),0), overdueAmt=overdue.reduce((a,d)=>a+(+d.debt||0),0);
+  $('reportDebtSummary').innerHTML=`<div class="report-card">Tổng phiếu công nợ<b>${all.length}</b></div><div class="report-card">Đang nợ<b>${active.length} phiếu</b><small>${money(debt)}</small></div><div class="report-card">Đã tất toán<b>${settled.length} phiếu</b><small>${money(settled.reduce((a,d)=>a+(+d.total||0),0))}</small></div><div class="report-card">Quá hạn<b>${overdue.length} phiếu</b><small>${money(overdueAmt)}</small></div><div class="report-card">Tổng tiền<b>${money(total)}</b></div><div class="report-card">Đã thu<b>${money(paid)}</b></div>`;
+  const row=(name,arr)=>`<tr><td><b>${name}</b></td><td>${arr.length}</td><td>${money(arr.reduce((a,d)=>a+(+d.total||0),0))}</td><td>${money(arr.reduce((a,d)=>a+(+d.paid||0),0))}</td><td>${money(arr.reduce((a,d)=>a+(+d.debt||0),0))}</td><td>${arr.filter(d=>debtOverdueDays(d)>0).length}</td></tr>`;
+  if($('reportDebtStatusTable'))$('reportDebtStatusTable').innerHTML=row('Đang nợ',active)+row('Đã tất toán',settled)+row('Tất cả',all);
+  if($('reportDebtDetailTable'))$('reportDebtDetailTable').innerHTML=all.sort((a,b)=>(b.debt-a.debt)||String(b.saleCode).localeCompare(String(a.saleCode))).slice(0,500).map(d=>{const ci=customerInfo(d.customer);return `<tr><td><b>${d.saleCode||''}</b></td><td>${ci.name||''}</td><td>${ci.phone||''}</td><td><small>${debtGroupProducts(d)||''}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td><b class="${d.debt>0?'text-danger':''}">${money(d.debt)}</b></td><td>${debtSaleDate(d)||''}</td><td>${d.debt>0?(debtOverdueDays(d)>0?`<span class="badge red">Quá hạn ${debtOverdueDays(d)} ngày</span>`:'<span class="badge orange">Đang nợ</span>'):'<span class="badge green">Đã tất toán</span>'}</td></tr>`}).join('')||'<tr><td colspan="9">Không có công nợ trong kỳ</td></tr>';
+}
+function reportEmployeeIncomeRows(from,to){
+  const old=commissionAppliedFilter;
+  commissionAppliedFilter={q:reportSearchQ(),dept:'',staffId:'',from,to};
+  const rows=employeeIncomeRows();
+  commissionAppliedFilter=old;
+  return rows;
+}
+function reportTechPerformanceRows(from,to){
+  const old=commissionAppliedFilter;
+  commissionAppliedFilter={q:reportSearchQ(),dept:'Kỹ thuật',staffId:'',from,to};
+  const rows=techPerformanceRows();
+  commissionAppliedFilter=old;
+  return rows;
+}
+function renderCommissionReports(from,to){
+  if(!$('reportIncomeSummary'))return;
+  const rows=reportEmployeeIncomeRows(from,to);
+  const totalSale=rows.reduce((a,r)=>a+(+r.saleCommission||0),0), totalTech=rows.reduce((a,r)=>a+(+r.techCost||0),0), totalFuel=rows.reduce((a,r)=>a+(+r.techFuel||0),0), totalBonus=rows.reduce((a,r)=>a+(+r.bonus||0),0), totalDeduct=rows.reduce((a,r)=>a+(+r.deduct||0),0), total=rows.reduce((a,r)=>a+(+r.total||0),0);
+  $('reportIncomeSummary').innerHTML=`<div class="report-card">Nhân viên phát sinh<b>${rows.length}</b></div><div class="report-card">Hoa hồng Sale<b>${money(totalSale)}</b></div><div class="report-card">Công kỹ thuật<b>${money(totalTech)}</b></div><div class="report-card">Tiền xăng<b>${money(totalFuel)}</b></div><div class="report-card">Thưởng / Phạt<b>${money(totalBonus)} / ${money(totalDeduct)}</b></div><div class="report-card">Tổng thu nhập<b>${money(total)}</b></div>`;
+  if($('reportIncomeTable'))$('reportIncomeTable').innerHTML=rows.map(r=>`<tr><td><b>${r.name}</b></td><td>${money(r.saleCommission)}</td><td>${money(r.techCost)}</td><td>${money(r.techFuel)}</td><td>${money(r.bonus)}</td><td>${money(r.deduct)}</td><td><b>${money(r.total)}</b></td></tr>`).join('')||'<tr><td colspan="7">Không có dữ liệu thu nhập trong kỳ</td></tr>';
+  const techRows=reportTechPerformanceRows(from,to);
+  if($('reportTechPerformanceTable'))$('reportTechPerformanceTable').innerHTML=techRows.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.count}</td><td>${r.qty}</td><td>${money(r.techCost)}</td><td>${money(r.techFuel)}</td><td>${r.warranty||0}</td></tr>`).join('')||'<tr><td colspan="6">Không có dữ liệu hiệu suất kỹ thuật trong kỳ</td></tr>';
+}
+function warrantyReportDate(w){return reportDateValue(w.receiveDate||w.start||w.createdAt||'')}
+function renderWarrantyReports(from,to){
+  if(!$('reportWarrantySummary'))return;
+  const q=reportSearchQ();
+  const rows=activeWarranties().filter(w=>{const d=warrantyReportDate(w); if(d && (d<from||d>to))return false; const txt=searchKey([w.code,w.warrantyCode,w.saleCode,w.customer,w.phone,w.address,w.serial,warrantyReasonsText(w),w.problem,w.result,w.status,w.techName].join(' ')); return !q||txt.includes(searchKey(q));});
+  const byStatus={}, byReason={};
+  rows.forEach(w=>{byStatus[w.status||'Khác']=(byStatus[w.status||'Khác']||0)+1;(Array.isArray(w.reasons)&&w.reasons.length?w.reasons:[w.reasonOther||'Khác']).forEach(r=>byReason[r]=(byReason[r]||0)+1);});
+  const pending=rows.filter(w=>!['Hoàn thành','Đã trả khách'].includes(w.status||'')).length;
+  $('reportWarrantySummary').innerHTML=`<div class="report-card">Tổng phiếu bảo hành<b>${rows.length}</b></div><div class="report-card">Đang xử lý<b>${pending}</b></div><div class="report-card">Hoàn thành<b>${rows.length-pending}</b></div><div class="report-card">Khách phát sinh<b>${new Set(rows.map(w=>w.phone||w.customer).filter(Boolean)).size}</b></div>`;
+  const makeRows=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${htmlesc(k)}</td><td><b>${v}</b></td></tr>`).join('');
+  if($('reportWarrantyStatusTable'))$('reportWarrantyStatusTable').innerHTML=makeRows(byStatus)||'<tr><td colspan="2">Chưa có dữ liệu</td></tr>';
+  if($('reportWarrantyReasonTable'))$('reportWarrantyReasonTable').innerHTML=makeRows(byReason)||'<tr><td colspan="2">Chưa có dữ liệu</td></tr>';
+  if($('reportWarrantyDetailTable'))$('reportWarrantyDetailTable').innerHTML=rows.sort((a,b)=>String(warrantyReportDate(b)).localeCompare(String(warrantyReportDate(a)))).slice(0,400).map(w=>`<tr><td>${warrantyReportDate(w)||''}</td><td><b>${warrantyCode(w)}</b></td><td>${w.saleCode||''}</td><td>${htmlesc(w.customer||'')}</td><td>${htmlesc(w.phone||'')}</td><td>${htmlesc(w.serial||'')}</td><td><small>${warrantyReasonsText(w)||''}</small></td><td>${w.status||''}</td><td>${w.techName||warrantyStaffName(w.techId)||''}</td></tr>`).join('')||'<tr><td colspan="9">Không có bảo hành trong kỳ</td></tr>';
+}
+
 function renderReports(){
   if(!$('reportBox'))return;
   if($('reportFrom')&&!$('reportFrom').value)setReportQuickRange();
   const {from,to,period}=reportRange();
+  if(currentReportTab==='stock')renderStockReports(from,to);
+  if(currentReportTab==='debts')renderDebtReports(from,to);
+  if(currentReportTab==='commissions')renderCommissionReports(from,to);
+  if(currentReportTab==='warranty')renderWarrantyReports(from,to);
   const productQ=($('reportProductSearch')?.value||'').trim().toLowerCase();
   const sales=activeSales().filter(s=>inReportRange(s.date,from,to));
   const expenses=data.expenses.filter(e=>inReportRange(e.date,from,to)&&!isSalaryCategory(e.category));

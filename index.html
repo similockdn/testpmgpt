@@ -502,7 +502,7 @@
             <div><label>Đến ngày</label><input id="reportTo" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
             <div><label>Tìm model/sản phẩm</label><input id="reportProductSearch" placeholder="VD: F07, S01, 569..." oninput="renderReports()"></div>
           </div>
-          <div class="toolbar report-tabs"><b>📊 Báo cáo:</b><button class="btn ghost active" id="reportTabRevenue" onclick="setReportTab('revenue')">Doanh thu</button><button class="btn ghost" id="reportTabProfit" onclick="setReportTab('profit')">Lợi nhuận</button><button class="btn ghost" onclick="showPage('inventory')">Tồn kho</button><button class="btn ghost" onclick="showPage('debts')">Công nợ</button><button class="btn ghost" onclick="showPage('commissions')">Hoa hồng</button><button class="btn ghost" onclick="showPage('warranty')">Bảo hành</button></div><div id="reportBox" class="report-grid report-section report-section-revenue report-section-profit"></div>
+          <div class="toolbar report-tabs report-tabs-v57 report-tabs-all"><b>📊 Danh mục báo cáo:</b><button class="btn ghost active" id="reportTabRevenue" onclick="setReportTab('revenue')">Bán hàng</button><button class="btn ghost" id="reportTabProfit" onclick="setReportTab('profit')">Lợi nhuận</button><button class="btn ghost" id="reportTabStock" onclick="setReportTab('stock')">Kho</button><button class="btn ghost" id="reportTabDebts" onclick="setReportTab('debts')">Công nợ</button><button class="btn ghost" id="reportTabCommissions" onclick="setReportTab('commissions')">Thu nhập / Hoa hồng</button><button class="btn ghost" id="reportTabWarranty" onclick="setReportTab('warranty')">Bảo hành</button></div><div id="reportBox" class="report-grid report-section report-section-revenue report-section-profit report-section-stock report-section-debts report-section-commissions report-section-warranty"></div>
         </div>
         <div class="card view-cost report-section report-section-profit">
           <div class="section-title"><h3>Phân tích lợi nhuận chi tiết</h3><small>Hiển thị rõ: doanh thu - giá vốn - hoa hồng - kỹ thuật - chi phí</small></div>
@@ -517,6 +517,51 @@
         <div class="panel wide report-section report-section-revenue">
           <div class="panel-head"><h3>📊 Doanh thu theo thời gian</h3><span>Ngày / tuần / tháng / năm</span></div>
           <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh thu</th><th>Phụ thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công + xăng KT</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
+        </div>
+
+
+        <div class="panel wide report-section report-section-stock report-stock-dashboard">
+          <div class="panel-head"><div><h3>📦 Báo cáo kho tổng hợp</h3><span>Tồn kho, nhập/xuất, chuyển kho, điều chỉnh, nhật ký kho, hàng sắp hết và hàng tồn lâu.</span></div><div><button class="btn ghost" onclick="exportExcel('stockbook')">Xuất tồn kho</button><button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất chứng từ kho</button></div></div>
+          <div class="grid form-grid stock-report-filter">
+            <div><label>Kho</label><select id="reportStockWarehouse" onchange="renderReports()"><option value="ALL">Tất cả kho được phân quyền</option><option>Kho Chính</option><option>Kho Văn Phòng</option></select></div>
+            <div><label>Tình trạng tồn</label><select id="reportStockStatus" onchange="renderReports()"><option value="ALL">Tất cả</option><option value="LOW">Sắp hết</option><option value="OUT">Hết hàng</option><option value="IN_STOCK">Còn hàng</option></select></div>
+            <div><label>Tìm model / sản phẩm</label><input id="reportStockSearch" placeholder="VD: F07, S01..." oninput="renderReports()"></div>
+            <div><label>&nbsp;</label><button class="btn ghost" onclick="clearReportStockFilter()">Xóa lọc kho</button></div>
+          </div>
+          <div id="reportStockSummary" class="report-grid stock-report-cards"></div>
+        </div>
+
+        <div class="panel wide report-section report-section-stock">
+          <div class="panel-head"><h3>📍 Tồn kho hiện tại</h3><span>Theo từng model và từng kho</span></div>
+          <table><thead id="reportStockHead"><tr><th>Model</th><th>Sản phẩm</th><th>Kho Chính</th><th>Kho Văn Phòng</th><th>Tổng tồn</th><th>Trạng thái</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th></tr></thead><tbody id="reportStockTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-stock">
+          <div class="panel-head"><h3>⬇️ Báo cáo nhập kho</h3><span>Danh sách phiếu nhập trong kỳ</span></div>
+          <table><thead><tr><th>Ngày</th><th>Phiếu nhập</th><th>Kho</th><th>Model</th><th>Sản phẩm</th><th>SL</th><th class="view-cost">Giá trị</th><th>Ghi chú</th></tr></thead><tbody id="reportStockInTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-stock">
+          <div class="panel-head"><h3>⬆️ Báo cáo xuất kho</h3><span>Xuất bán hàng và xuất thủ công trong kỳ</span></div>
+          <table><thead><tr><th>Ngày</th><th>Phiếu xuất</th><th>Kho</th><th>Khách hàng</th><th>Model</th><th>Sản phẩm</th><th>SL</th><th class="view-cost">Giá trị vốn</th><th>Ghi chú</th></tr></thead><tbody id="reportStockOutTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-stock">
+          <div class="panel-head"><h3>🔁 Điều chuyển & điều chỉnh kho</h3><span>Kiểm soát hàng chuyển giữa kho và các phát sinh điều chỉnh</span></div>
+          <table><thead><tr><th>Ngày</th><th>Mã phiếu</th><th>Loại</th><th>Từ kho</th><th>Đến kho/Kho</th><th>Model</th><th>SL</th><th>Ghi chú</th></tr></thead><tbody id="reportStockMoveTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-stock">
+          <div class="panel-head"><h3>📒 Nhật ký kho</h3><span>Truy vết mọi phát sinh nhập, xuất, chuyển, trả hàng và điều chỉnh</span></div>
+          <table><thead><tr><th>Ngày</th><th>Mã phiếu</th><th>Loại</th><th>Kho</th><th>Model</th><th>Sản phẩm</th><th>+/-</th><th>Ghi chú</th></tr></thead><tbody id="reportStockLedgerTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-stock">
+          <div class="panel-head"><h3>⚠️ Cảnh báo kho</h3><span>Sản phẩm sắp hết và sản phẩm tồn lâu</span></div>
+          <div class="report-two-cols">
+            <div><h4>Sản phẩm sắp hết</h4><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th><th>Tối thiểu</th></tr></thead><tbody id="reportLowStockTable"></tbody></table></div>
+            <div><h4>Sản phẩm tồn lâu</h4><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th><th>Số ngày chưa xuất</th></tr></thead><tbody id="reportSlowStockTable"></tbody></table></div>
+          </div>
         </div>
 
 
@@ -538,6 +583,40 @@
           <div class="panel-head"><h3>👤 Chi tiết lương trong kỳ</h3></div>
           <table><thead><tr><th>Ngày</th><th>Nhân viên</th><th>Lương CB</th><th>Phụ cấp</th><th>Thưởng</th><th>Khấu trừ</th><th>Tổng lương</th><th>Ghi chú</th></tr></thead><tbody id="reportSalaryDetailTable"></tbody></table>
         </div>
+
+        <div class="panel wide report-section report-section-debts">
+          <div class="panel-head"><div><h3>💳 Báo cáo công nợ tổng hợp</h3><span>Đang nợ, đã tất toán, quá hạn và chi tiết theo từng phiếu bán</span></div><div><button class="btn ghost" onclick="exportExcel('debts')">Xuất công nợ</button><button class="btn ghost" onclick="showPage('debts')">Mở phân hệ công nợ</button></div></div>
+          <div id="reportDebtSummary" class="report-grid"></div>
+          <table><thead><tr><th>Trạng thái</th><th>Số phiếu</th><th>Tổng tiền</th><th>Đã thu</th><th>Còn nợ</th><th>Quá hạn</th></tr></thead><tbody id="reportDebtStatusTable"></tbody></table>
+        </div>
+        <div class="panel wide report-section report-section-debts">
+          <div class="panel-head"><h3>🧾 Chi tiết công nợ theo phiếu</h3><span>Tìm bằng ô model/sản phẩm phía trên: mã phiếu, tên khách, SĐT, model</span></div>
+          <table><thead><tr><th>Phiếu</th><th>Khách hàng</th><th>SĐT</th><th>Model</th><th>Tổng tiền</th><th>Đã thu</th><th>Còn nợ</th><th>Ngày bán</th><th>Trạng thái</th></tr></thead><tbody id="reportDebtDetailTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-commissions">
+          <div class="panel-head"><div><h3>👤 Báo cáo thu nhập / hoa hồng</h3><span>Hoa hồng sale, công kỹ thuật, tiền xăng, thưởng/phạt và tổng thu nhập</span></div><div><button class="btn ghost" onclick="exportExcel('commissions')">Xuất hoa hồng</button><button class="btn ghost" onclick="showPage('commissions')">Mở phân hệ thu nhập</button></div></div>
+          <div id="reportIncomeSummary" class="report-grid"></div>
+          <table><thead><tr><th>Nhân viên</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Thưởng</th><th>Phạt/khấu trừ</th><th>Tổng thu nhập</th></tr></thead><tbody id="reportIncomeTable"></tbody></table>
+        </div>
+        <div class="panel wide report-section report-section-commissions">
+          <div class="panel-head"><h3>🛠️ Hiệu suất kỹ thuật</h3><span>Số phiếu, số bộ, công, tiền xăng và bảo hành phát sinh</span></div>
+          <table><thead><tr><th>Kỹ thuật</th><th>Số phiếu</th><th>Số bộ</th><th>Công</th><th>Tiền xăng</th><th>Bảo hành phát sinh</th></tr></thead><tbody id="reportTechPerformanceTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-warranty">
+          <div class="panel-head"><div><h3>🛡️ Báo cáo bảo hành</h3><span>Tổng phiếu, trạng thái, lý do bảo hành và model phát sinh</span></div><div><button class="btn ghost" onclick="showPage('warranty')">Mở phân hệ bảo hành</button></div></div>
+          <div id="reportWarrantySummary" class="report-grid"></div>
+          <div class="report-two-cols">
+            <div><h4>Theo trạng thái</h4><table><thead><tr><th>Trạng thái</th><th>Số phiếu</th></tr></thead><tbody id="reportWarrantyStatusTable"></tbody></table></div>
+            <div><h4>Theo lý do</h4><table><thead><tr><th>Lý do</th><th>Số phiếu</th></tr></thead><tbody id="reportWarrantyReasonTable"></tbody></table></div>
+          </div>
+        </div>
+        <div class="panel wide report-section report-section-warranty">
+          <div class="panel-head"><h3>📋 Chi tiết bảo hành trong kỳ</h3><span>Lọc theo ngày tiếp nhận / ngày lắp đặt</span></div>
+          <table><thead><tr><th>Ngày</th><th>Mã BH</th><th>Phiếu bán</th><th>Khách hàng</th><th>SĐT</th><th>Model/Serial</th><th>Lý do</th><th>Trạng thái</th><th>Kỹ thuật</th></tr></thead><tbody id="reportWarrantyDetailTable"></tbody></table>
+        </div>
+
       </section>
 
 

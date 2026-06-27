@@ -1,1 +1,1 @@
-v56 - compact horizontal price list and smaller price header/tabs
+v58 - gom tat ca bao cao vao Danh muc Bao cao
