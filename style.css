@@ -1522,3 +1522,34 @@ td:first-child,th:first-child,td:last-child,th:last-child{border-radius:0!import
 .dashboard-v8 .dash-date-search .btn.small{height:32px!important;border-radius:10px!important;padding:0 12px!important;font-size:12px!important;font-weight:950!important}
 @media(max-width:1160px){.dashboard-v8 .dash-v8-hero{align-items:flex-start!important;flex-direction:column!important}.dashboard-v8 .dash-v8-filter-wrap{width:100%!important;justify-content:flex-start!important;overflow:auto!important;padding-bottom:2px!important}}
 @media(max-width:680px){.dashboard-v8 .dash-v8-filter-wrap{flex-wrap:wrap!important;overflow:visible!important}.dashboard-v8 .dash-date-search{width:100%!important;overflow:auto!important}.dashboard-v8 .dash-date-search label{min-width:max-content!important}.dashboard-v8 .dash-date-search input{min-width:118px!important;width:118px!important}}
+
+/* V86 - gọn danh sách phiếu bán & công nợ: thêm SL, rút gọn model */
+.sale-products-cell small,
+.debt-products small{
+  display:block;
+  max-width:260px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:700;
+  color:#64748b;
+}
+.sale-list-summary{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(130px,1fr));
+  gap:10px;
+  padding:12px;
+  border-top:1px solid #e2e8f0;
+  background:#f8fafc;
+}
+.sale-list-summary div{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:10px 12px;
+}
+.sale-list-summary span{display:block;color:#64748b;font-size:12px;font-weight:700;margin-bottom:4px}
+.sale-list-summary b{font-size:16px;color:#0f172a}
+.compact-table .text-center,
+table .text-center{text-align:center}
+@media(max-width:900px){.sale-list-summary{grid-template-columns:1fr 1fr}.sale-products-cell small,.debt-products small{max-width:180px}}
