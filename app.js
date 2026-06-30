@@ -223,7 +223,7 @@ function stockStatusBadge(stock,minStock=3){
 function stockVoucherLocked(v){return !!(v.saleId||v.saleCode||v.locked)}
 
 const PAYMENT_METHODS=['Tiền mặt','Chuyển khoản','Quẹt thẻ','Ví điện tử','Cọc trước','Khác'];
-function paymentMethodText(v){return String(v||'').trim()||'Chưa xác định'}
+function paymentMethodText(v){return String(v||'').trim()||'Chưa khai báo'}
 function paymentMethodBadge(v){const m=paymentMethodText(v);const cls=m.includes('Chuyển')?'blue':(m.includes('Tiền mặt')?'green':(m.includes('Cọc')?'orange':'gray'));return `<span class="badge ${cls}">${m}</span>`}
 function saleLocked(s){const pay=salePaymentInfo(s);return pay.paidTotal>0||!!stockVoucherForSale(s)}
 
@@ -1084,13 +1084,12 @@ function renderDashboard(){
   const settledDebtRows=calcSettledDebts();
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
-  // V92-FINANCE-QA: Tách rõ 2 khái niệm để tránh sai số liệu.
+  // V93-FINANCE-QA: Tách đúng nguồn dữ liệu tài chính.
   // Doanh số = tổng giá trị phiếu bán trong kỳ.
-  // Thực thu trên Dashboard = số tiền ĐÃ THU của chính các phiếu bán trong kỳ,
-  // được chặn tối đa bằng giá trị từng phiếu nên không thể vượt Doanh số trong kỳ.
-  // Sổ quỹ/Báo cáo thanh toán mới dùng dòng tiền thu/chi thực tế phát sinh theo ngày chứng từ.
-  const collected=salesInRange.reduce((a,s)=>{const pay=salePaymentInfo(s);return a+Math.min(+pay.paidTotal||0,+s.grand||0);},0);
+  // Thực thu/Tiền thu = dòng tiền vào thực tế trong kỳ từ Sổ quỹ (Phiếu thu + thu trực tiếp hợp lệ).
+  // Khoản này có thể lớn hơn Doanh số nếu trong kỳ khách thanh toán công nợ cũ.
   const cashRowsInRange=cashbookRows(range.from,range.to);
+  const collected=cashRowsInRange.reduce((a,r)=>a+(+r.income||0),0);
   const cashOut=cashRowsInRange.reduce((a,r)=>a+(+r.expense||0),0);
   const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
   const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));
@@ -2675,7 +2674,7 @@ function saleForReceipt(r={}){
 }
 function normalizePaymentMethod(v){
   const m=String(v||'').trim();
-  if(!m || m==='Chưa chọn' || m==='undefined' || m==='null')return '';
+  if(!m || m==='Chưa chọn' || m==='Chưa xác định' || m==='Chưa khai báo' || m==='undefined' || m==='null')return '';
   return m;
 }
 function receiptEffectivePaymentMethod(r={}){
@@ -2684,7 +2683,7 @@ function receiptEffectivePaymentMethod(r={}){
   const s=saleForReceipt(r);
   const fromSale=normalizePaymentMethod(s?.paymentMethod||s?.payMethod||s?.method);
   if(fromSale)return fromSale;
-  return 'Chưa xác định';
+  return 'Chưa khai báo';
 }
 function financeDocDate(obj={}){
   return reportDateValue(obj.date||obj.paymentDate||obj.createdDate||obj.createdAt||'');
@@ -2717,18 +2716,25 @@ function cashbookRows(from='',to=''){
   });
 
   // 2) Thu trực tiếp trên Phiếu bán: chỉ lấy số tiền nhập ở ô Đã thu khi tạo phiếu bán.
-  // Không trừ các phiếu thu phát sinh sau đó, vì phiếu thu là dòng tiền riêng theo ngày thu.
-  // saleDirectPaid() đã có khóa paidEntryKey/paidSaleCode để không tự nhận nhầm dữ liệu legacy.
+  // V93-FINANCE-QA: chống cộng đôi. Nếu đã tồn tại phiếu thu cùng phiếu bán, cùng ngày và cùng số tiền
+  // thì ưu tiên Phiếu thu là chứng từ quỹ, không tạo thêm dòng thu trực tiếp.
   activeSales().forEach(s=>{
     if(isSaleCanceled(s))return;
     const date=financeDocDate(s); if(!date)return;
     const direct=Math.min(+saleDirectPaid(s)||0,+s.grand||0);
     if(direct<=0)return;
+    const linkedReceipts=receiptsForSalePayment(s);
+    const duplicatedByReceipt=linkedReceipts.some(r=>{
+      const rd=financeDocDate(r);
+      const ra=+r.amount||0;
+      return rd===date && Math.abs(ra-direct)<1;
+    });
+    if(duplicatedByReceipt)return;
     const ci=saleCustomerInfo(s);
     pushRow({
       id:s.id||'',date,code:s.code||'',type:'Thu',
       content:`Thu trực tiếp phiếu bán ${s.code||''}${ci.name?(' - '+ci.name):''}`.trim(),
-      paymentMethod:normalizePaymentMethod(s.paymentMethod||s.payMethod)||'Chưa xác định',income:direct,expense:0,source:'sale_direct'
+      paymentMethod:normalizePaymentMethod(s.paymentMethod||s.payMethod)||'Chưa khai báo',income:direct,expense:0,source:'sale_direct'
     });
   });
 
@@ -2761,7 +2767,7 @@ function renderCashbook(){
   const {from,to}=cashbookRange(); const method=$('cashbookMethod')?.value||'ALL'; const q=($('cashbookSearch')?.value||'').toLowerCase().trim();
   let rows=cashbookRows(from,to).filter(r=>(method==='ALL'||r.paymentMethod===method)&&matchSearchText(q,r.date,r.code,r.type,r.content,r.paymentMethod,r.income,r.expense,money(r.income),money(r.expense)));
   const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0), net=income-expense;
-  $('cashbookSummary').innerHTML=`<div class="report-card">Tiền vào trong kỳ<b>${money(income)}</b><small>Phiếu thu + thu trực tiếp</small></div><div class="report-card">Tiền ra trong kỳ<b>${money(expense)}</b><small>Phiếu chi + lương</small></div><div class="report-card">Chênh lệch kỳ<b>${money(net)}</b><small>Tiền vào - tiền ra, không phải số dư quỹ cuối</small></div><div class="report-card">Giao dịch<b>${rows.length}</b></div>`;
+  $('cashbookSummary').innerHTML=`<div class="report-card">Tổng thu trong kỳ<b>${money(income)}</b><small>Tiền thực nhận: phiếu thu + thu trực tiếp hợp lệ</small></div><div class="report-card">Tổng chi trong kỳ<b>${money(expense)}</b><small>Phiếu chi + lương</small></div><div class="report-card">Thu - chi trong kỳ<b>${money(net)}</b><small>Không phải số dư quỹ cuối nếu chưa nhập số dư đầu kỳ</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
   let run=0;
   $('cashbookTable').innerHTML=rows.map(r=>{run+=r.income-r.expense;return `<tr><td>${r.date}</td><td><b>${r.code}</b></td><td><span class="badge ${r.type==='Thu'?'green':'orange'}">${r.type}</span></td><td>${htmlesc(r.content)}</td><td>${paymentMethodBadge(r.paymentMethod)}</td><td><b>${r.income?money(r.income):''}</b></td><td><b>${r.expense?money(r.expense):''}</b></td><td><b>${money(run)}</b></td></tr>`}).join('')||'<tr><td colspan="8">Không có phát sinh sổ quỹ trong kỳ</td></tr>';
 }
@@ -2769,7 +2775,7 @@ window.renderCashbook=renderCashbook;
 window.clearCashbookFilter=()=>{if($('cashbookFrom'))$('cashbookFrom').value=monthStart();if($('cashbookTo'))$('cashbookTo').value=monthEnd();if($('cashbookMethod'))$('cashbookMethod').value='ALL';if($('cashbookSearch'))$('cashbookSearch').value='';renderCashbook();}
 window.printCashbook=()=>{
   const {from,to}=cashbookRange(); const rows=cashbookRows(from,to); const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0);
-  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Tiền vào trong kỳ:</b> ${money(income)}<br><b>Tiền ra trong kỳ:</b> ${money(expense)}<br><b>Chênh lệch kỳ:</b> ${money(income-expense)}<br><small>Chênh lệch kỳ = tiền vào - tiền ra, không phải số dư quỹ cuối nếu chưa nhập số dư đầu kỳ.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
+  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Tổng thu trong kỳ:</b> ${money(income)}<br><b>Tổng chi trong kỳ:</b> ${money(expense)}<br><b>Thu - chi trong kỳ:</b> ${money(income-expense)}<br><small>Thu - chi trong kỳ không phải số dư quỹ cuối nếu chưa nhập số dư đầu kỳ.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
   doPrint(html);
 }
 

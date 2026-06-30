@@ -1,1 +1,1 @@
-SIMILOCK ERP V92 - Fix Thực thu / Sổ quỹ / Báo cáo thanh toán
+V93 - Finance QA: fix thực thu, sổ quỹ, chống cộng đôi thu trực tiếp/phiếu thu
