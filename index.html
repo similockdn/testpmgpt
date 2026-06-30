@@ -111,7 +111,7 @@
           <div class="dash-v8-kpi overdue"><div class="kpi-icon">⚠️</div><div><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý</small></div></div>
           <div class="dash-v8-kpi orders"><div class="kpi-icon">🧾</div><div><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div></div>
           <div class="dash-v8-kpi stock"><div class="kpi-icon">📦</div><div><span>Giá trị tồn</span><b id="dashStockValue">0</b><small><i id="kpiLowStock">0</i> model sắp hết</small></div></div>
-          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Thực thu</span><b id="kpiCollected">0</b><small>Tiền thu thực tế trong kỳ</small></div></div>
+          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Thực thu</span><b id="kpiCollected">0</b><small>Đã thu của phiếu bán trong kỳ</small></div></div>
           <div class="dash-v8-kpi service"><div class="kpi-icon">🛠️</div><div><span>Bảo hành</span><b id="dashWarrantyCount">0</b><small>Phát sinh trong kỳ</small></div></div>
         </div>
 
@@ -377,7 +377,7 @@
             <button class="btn ghost" onclick="clearCashbookFilter()">Xóa lọc</button>
           </div>
           <div id="cashbookSummary" class="report-grid"></div>
-          <table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Tồn tạm tính</th></tr></thead><tbody id="cashbookTable"></tbody></table>
+          <table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Chênh lệch lũy kế</th></tr></thead><tbody id="cashbookTable"></tbody></table>
         </div>
       </section>
 

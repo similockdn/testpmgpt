@@ -1,1 +1,1 @@
-Similock ERP v91 QA Finance
+SIMILOCK ERP V92 - Fix Thực thu / Sổ quỹ / Báo cáo thanh toán
