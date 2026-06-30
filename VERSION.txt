@@ -1,1 +1,1 @@
-v95-receipt-payment-method-transfer
+V96_STRICT_SO_QUY_THUC_THU
