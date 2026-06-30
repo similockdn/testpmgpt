@@ -46,6 +46,7 @@
           <div class="submenu">
             <button data-page="commissions">Thu nhập nhân viên</button>
             <button data-page="expenses">Chi phí</button>
+            <button data-page="cashbook">Sổ quỹ</button>
             <button data-page="salaries">Lương nhân viên</button>
           </div>
         </div>
@@ -361,6 +362,24 @@
         <div class="panel warehouse-list-panel"><div class="panel-head"><div><h3>📋 Danh sách chứng từ kho</h3><span>Theo dõi toàn bộ phiếu nhập, xuất, trả hàng, chuyển kho và điều chỉnh.</span></div></div><div class="toolbar"><input class="search" id="stockVoucherSearch" placeholder="Tìm chứng từ kho theo mã / loại / kho / model / tên sản phẩm / ghi chú" oninput="renderStock()" /><button class="btn ghost" onclick="clearStockVoucherSearch()">Xóa tìm</button><span id="stockVoucherSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Loại</th><th>Kho</th><th>Số dòng</th><th>Giá trị</th><th>Hành động</th></tr></thead><tbody id="stockVoucherTable"></tbody></table></div>
       </section>
 
+      <section id="cashbook" class="page">
+        <div class="panel wide">
+          <div class="panel-head">
+            <div><h3>💵 Sổ quỹ</h3><span>Theo dõi tiền mặt, chuyển khoản, quẹt thẻ, ví điện tử, cọc trước và các khoản chi.</span></div>
+            <div><button class="btn ghost" onclick="exportExcel('cashbook')">Xuất Excel</button><button class="btn ghost" onclick="printCashbook()">In sổ quỹ</button></div>
+          </div>
+          <div class="toolbar compact-filter">
+            <label>Từ ngày <input id="cashbookFrom" type="date" onchange="renderCashbook()"></label>
+            <label>Đến ngày <input id="cashbookTo" type="date" onchange="renderCashbook()"></label>
+            <label>Phương thức <select id="cashbookMethod" onchange="renderCashbook()"><option value="ALL">Tất cả</option><option>Tiền mặt</option><option>Chuyển khoản</option><option>Quẹt thẻ</option><option>Ví điện tử</option><option>Cọc trước</option><option>Khác</option></select></label>
+            <input class="search" id="cashbookSearch" placeholder="Tìm chứng từ / khách hàng / nội dung" oninput="renderCashbook()">
+            <button class="btn ghost" onclick="clearCashbookFilter()">Xóa lọc</button>
+          </div>
+          <div id="cashbookSummary" class="report-grid"></div>
+          <table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Tồn tạm tính</th></tr></thead><tbody id="cashbookTable"></tbody></table>
+        </div>
+      </section>
+
       <section id="stockbook" class="page">
         <div class="panel">
           <div class="panel-head">
@@ -527,7 +546,7 @@
             <div><label>Đến ngày</label><input id="reportTo" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
             <div><label>Tìm model/sản phẩm</label><input id="reportProductSearch" placeholder="VD: F07, S01, 569..." oninput="renderReports()"></div>
           </div>
-          <div class="toolbar report-tabs report-tabs-v57 report-tabs-all"><b>📊 Danh mục báo cáo:</b><button class="btn ghost active" id="reportTabRevenue" onclick="setReportTab('revenue')">Bán hàng</button><button class="btn ghost" id="reportTabProfit" onclick="setReportTab('profit')">Lợi nhuận</button><button class="btn ghost" id="reportTabStock" onclick="setReportTab('stock')">Kho</button><button class="btn ghost" id="reportTabDebts" onclick="setReportTab('debts')">Công nợ</button><button class="btn ghost" id="reportTabCommissions" onclick="setReportTab('commissions')">Thu nhập / Hoa hồng</button><button class="btn ghost" id="reportTabWarranty" onclick="setReportTab('warranty')">Bảo hành</button></div><div id="reportContentTop" class="report-content-anchor"></div><div id="reportBox" class="report-grid report-section report-section-revenue report-section-profit"></div>
+          <div class="toolbar report-tabs report-tabs-v57 report-tabs-all"><b>📊 Danh mục báo cáo:</b><button class="btn ghost active" id="reportTabRevenue" onclick="setReportTab('revenue')">Bán hàng</button><button class="btn ghost" id="reportTabProfit" onclick="setReportTab('profit')">Lợi nhuận</button><button class="btn ghost" id="reportTabStock" onclick="setReportTab('stock')">Kho</button><button class="btn ghost" id="reportTabDebts" onclick="setReportTab('debts')">Công nợ</button><button class="btn ghost" id="reportTabPayment" onclick="setReportTab('payment')">Thanh toán</button><button class="btn ghost" id="reportTabCommissions" onclick="setReportTab('commissions')">Thu nhập / Hoa hồng</button><button class="btn ghost" id="reportTabWarranty" onclick="setReportTab('warranty')">Bảo hành</button></div><div id="reportContentTop" class="report-content-anchor"></div><div id="reportBox" class="report-grid report-section report-section-revenue report-section-profit"></div>
           <div id="reportRevenueCharts" class="report-chart-grid report-section report-section-revenue"></div>
           <div id="reportProfitCharts" class="report-chart-grid report-section report-section-profit"></div>
         </div>
@@ -621,6 +640,16 @@
         <div class="panel wide report-section report-section-debts">
           <div class="panel-head"><h3>🧾 Chi tiết công nợ theo phiếu</h3><span>Tìm bằng ô model/sản phẩm phía trên: mã phiếu, tên khách, SĐT, model</span></div>
           <table><thead><tr><th>Phiếu</th><th>Khách hàng</th><th>SĐT</th><th>Model</th><th>Tổng tiền</th><th>Đã thu</th><th>Còn nợ</th><th>Ngày bán</th><th>Trạng thái</th></tr></thead><tbody id="reportDebtDetailTable"></tbody></table>
+        </div>
+
+        <div class="panel wide report-section report-section-payment">
+          <div class="panel-head"><div><h3>💵 Báo cáo thanh toán & sổ quỹ</h3><span>Tổng hợp thu tiền theo phương thức, dòng tiền vào/ra và đối chiếu cuối ngày.</span></div><div><button class="btn ghost" onclick="exportExcel('paymentReport')">Xuất báo cáo</button><button class="btn ghost" onclick="showPage('cashbook')">Mở sổ quỹ</button></div></div>
+          <div id="reportPaymentSummary" class="report-grid"></div>
+          <div id="reportPaymentCharts" class="report-chart-grid"></div>
+          <div class="report-two-cols">
+            <div><h4>Tổng hợp theo phương thức</h4><table><thead><tr><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Chênh lệch</th><th>Số giao dịch</th></tr></thead><tbody id="reportPaymentMethodTable"></tbody></table></div>
+            <div><h4>Đối chiếu theo ngày</h4><table><thead><tr><th>Ngày</th><th>Thu</th><th>Chi</th><th>Chênh lệch</th><th>Giao dịch</th></tr></thead><tbody id="reportPaymentDailyTable"></tbody></table></div>
+          </div>
         </div>
 
         <div class="panel wide report-section report-section-commissions">
