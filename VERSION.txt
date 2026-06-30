@@ -1,1 +1,1 @@
-V93 - Finance QA: fix thực thu, sổ quỹ, chống cộng đôi thu trực tiếp/phiếu thu
+v95-receipt-payment-method-transfer

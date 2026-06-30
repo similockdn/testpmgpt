@@ -180,7 +180,7 @@ function activeStockVouchers(){return data.stockVouchers.filter(v=>!isVoucherCan
 function activeWarranties(){return data.warranties.filter(w=>!isWarrantyCanceled(w))}
 function col(n){return collection(db,n)}
 async function loadCol(n){try{const s=await getDocs(col(n));data[n]=s.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.warn('Không tải được collection '+n,e.message);data[n]=[];}}
-async function loadAll(){for(const n of ['customers','products','productCategories','warrantyReasons','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','warrantyReasons','expenses','salaries','users','logs']) await loadCol(n); renderAll();}
+async function loadAll(){for(const n of ['customers','products','productCategories','warrantyReasons','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','warrantyReasons','expenses','salaries','users','logs']) await loadCol(n); await normalizeUnknownReceiptPaymentMethods(); renderAll();}
 async function logAction(action,detail){try{await addDoc(col('logs'),{action,detail,email:currentUser?.email||'',at:serverTimestamp()})}catch(e){}}
 function fillSelect(el,arr,labelFn,valFn){if(!el)return;el.innerHTML='<option value="">-- Chọn --</option>'+arr.map(x=>`<option value="${valFn?valFn(x):x.id}">${labelFn(x)}</option>`).join('')}
 function nextCode(prefix,arr){let max=0;arr.forEach(x=>{const m=String(x.code||'').match(/(\d+)$/);if(m)max=Math.max(max,+m[1])});return prefix+String(max+1).padStart(6,'0')}
@@ -223,7 +223,12 @@ function stockStatusBadge(stock,minStock=3){
 function stockVoucherLocked(v){return !!(v.saleId||v.saleCode||v.locked)}
 
 const PAYMENT_METHODS=['Tiền mặt','Chuyển khoản','Quẹt thẻ','Ví điện tử','Cọc trước','Khác'];
-function paymentMethodText(v){return String(v||'').trim()||'Chưa khai báo'}
+const DEFAULT_RECEIPT_PAYMENT_METHOD='Chuyển khoản';
+function isUnknownPaymentMethod(v){
+  const m=String(v??'').trim();
+  return !m || ['Chưa chọn','Chưa xác định','Chưa khai báo','Chưa khai báo/Chưa chọn','Không xác định','undefined','null','NaN'].includes(m);
+}
+function paymentMethodText(v){return isUnknownPaymentMethod(v)?DEFAULT_RECEIPT_PAYMENT_METHOD:String(v||'').trim()}
 function paymentMethodBadge(v){const m=paymentMethodText(v);const cls=m.includes('Chuyển')?'blue':(m.includes('Tiền mặt')?'green':(m.includes('Cọc')?'orange':'gray'));return `<span class="badge ${cls}">${m}</span>`}
 function saleLocked(s){const pay=salePaymentInfo(s);return pay.paidTotal>0||!!stockVoucherForSale(s)}
 
@@ -1084,12 +1089,17 @@ function renderDashboard(){
   const settledDebtRows=calcSettledDebts();
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
-  // V93-FINANCE-QA: Tách đúng nguồn dữ liệu tài chính.
+  // V94-FINANCE-STRICT:
   // Doanh số = tổng giá trị phiếu bán trong kỳ.
-  // Thực thu/Tiền thu = dòng tiền vào thực tế trong kỳ từ Sổ quỹ (Phiếu thu + thu trực tiếp hợp lệ).
-  // Khoản này có thể lớn hơn Doanh số nếu trong kỳ khách thanh toán công nợ cũ.
+  // Thực thu trên Dashboard = số tiền đã thu của CÁC PHIẾU BÁN trong kỳ, capped theo doanh số từng phiếu.
+  // Không lấy theo Sổ quỹ, vì Sổ quỹ có thể có thu công nợ cũ ngoài kỳ bán hàng.
+  // Nếu cần xem tiền vào/ra thực tế theo ngày thu, dùng phân hệ Sổ quỹ/Báo cáo thanh toán.
+  const collected=salesInRange.reduce((a,s)=>{
+    const direct=saleDirectPaid(s);
+    const receiptInRange=receiptsForSalePayment(s).filter(r=>{const d=financeDocDate(r);return d&&d>=range.from&&d<=range.to}).reduce((x,r)=>x+(+r.amount||0),0);
+    return a+Math.min(+s.grand||0,direct+receiptInRange);
+  },0);
   const cashRowsInRange=cashbookRows(range.from,range.to);
-  const collected=cashRowsInRange.reduce((a,r)=>a+(+r.income||0),0);
   const cashOut=cashRowsInRange.reduce((a,r)=>a+(+r.expense||0),0);
   const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
   const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));
@@ -1665,10 +1675,28 @@ function receiptCustomerMatchesSale(r={},s={}){
   if(rAddr && sAddr && rAddr===sAddr && rCode && sCode && rCode===sCode) return true;
   return false;
 }
+function receiptDedupKey(r={}){
+  const saleKey=String(receiptSaleId(r)||r.debtKey||r.saleCode||r.customerCode||r.customerPhone||r.customerId||'');
+  const date=String(financeDocDate(r)||r.date||'');
+  const amount=String(Math.round((+r.amount||0)*100)/100);
+  const method=String(normalizePaymentMethod(r.paymentMethod||r.payMethod||r.method)||'');
+  // Nếu không có khóa nghiệp vụ thì giữ theo id để tránh gộp nhầm chứng từ độc lập.
+  return saleKey?['receipt',saleKey,date,amount,method].join('|'):['receipt-id',r.id||r.code||'',date,amount,method].join('|');
+}
+function uniqueReceiptsForFinance(rows=[]){
+  const seen=new Set(), out=[];
+  rows.forEach(r=>{
+    const k=receiptDedupKey(r);
+    if(seen.has(k))return;
+    seen.add(k);
+    out.push(r);
+  });
+  return out;
+}
 function receiptsForSalePayment(s={}){
   const sid=String(s.id||'');
   const scode=String(s.code||'');
-  return activeReceipts().filter(r=>{
+  return uniqueReceiptsForFinance(activeReceipts().filter(r=>{
     const rid=receiptSaleId(r);
     // Khóa mạnh: receipt có saleId hoặc debtKey sale:id đúng phiếu thì nhận.
     if(rid && sid && rid===sid){
@@ -1683,7 +1711,7 @@ function receiptsForSalePayment(s={}){
     // Khóa yếu saleCode chỉ dùng khi khách cũng khớp. Tuyệt đối không chỉ dựa vào tên.
     if(r.saleCode && scode && String(r.saleCode)===scode) return receiptCustomerMatchesSale(r,s);
     return false;
-  });
+  }));
 }
 function allocationForCustomer(customerId){
   // ERP-FIX: Không còn phân bổ tiền theo khách hàng/tên khách.
@@ -2117,7 +2145,7 @@ window.viewSaleDetail=id=>{
   const s=data.sales.find(x=>x.id===id); if(!s)return;
   const pay=salePaymentInfo(s); const sv=stockVoucherForSale(s); const recs=receiptsForSale(s); const returns=saleReturnVouchers(s); const ci=saleCustomerInfo(s);
   const returnHtml=returns.length?`<div class="receipt-list"><h4>Phiếu trả hàng bán</h4><table><thead><tr><th>Mã phiếu</th><th>Ngày</th><th>Kho nhập lại</th><th>Số dòng</th><th>Ghi chú</th><th></th></tr></thead><tbody>${returns.map(v=>`<tr><td>${v.code||''}</td><td>${v.date||''}</td><td>${voucherWarehouse(v)}</td><td>${(v.items||[]).map(it=>`${it.code}: ${it.qty}`).join('<br>')}</td><td>${v.note||''}</td><td><button class="btn ghost" onclick="printStock('${v.id}')">In phiếu</button></td></tr>`).join('')}</tbody></table></div>`:'';
-  const receiptHtml=recs.length?`<div class="receipt-list"><h4>Phiếu thu liên quan</h4><table><thead><tr><th>Mã PT</th><th>Ngày</th><th>Số tiền phân bổ</th><th>PTTT</th><th>Ghi chú</th><th></th></tr></thead><tbody>${recs.map(r=>`<tr><td>${r.code||''}</td><td>${r.date||''}</td><td><b>${money(r.allocatedAmount||r.amount)}</b></td><td>${paymentMethodText(r.paymentMethod)}</td><td>${r.note||''}</td><td><button class="btn ghost" onclick="printReceipt('${r.id}')">In PT</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="receipt-list"><h4>Phiếu thu liên quan</h4><p>Chưa có phiếu thu được phân bổ cho đơn này.</p></div>`;
+  const receiptHtml=recs.length?`<div class="receipt-list"><h4>Phiếu thu liên quan</h4><table><thead><tr><th>Mã PT</th><th>Ngày</th><th>Số tiền phân bổ</th><th>PTTT</th><th>Ghi chú</th><th></th></tr></thead><tbody>${recs.map(r=>`<tr><td>${r.code||''}</td><td>${r.date||''}</td><td><b>${money(r.allocatedAmount||r.amount)}</b></td><td>${paymentMethodText(receiptEffectivePaymentMethod(r))}</td><td>${r.note||''}</td><td><button class="btn ghost" onclick="printReceipt('${r.id}')">In PT</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="receipt-list"><h4>Phiếu thu liên quan</h4><p>Chưa có phiếu thu được phân bổ cho đơn này.</p></div>`;
   let html=`<div class="modal-backdrop" id="saleDetailModal"><div class="modal-card"><div class="panel-head"><h3>Chi tiết đơn ${s.code}</h3><button class="btn ghost" onclick="document.getElementById('saleDetailModal').remove()">Đóng</button></div>${isSaleCanceled(s)?`<div class="alert danger"><b>Phiếu đã hủy</b><br>Lý do: ${s.cancelReason||''}</div>`:''}<div class="sale-detail-grid"><div><b>Khách hàng</b><p><b>${ci.name}</b><br>Mã KH: ${ci.code||''}<br>SĐT: ${ci.phone||''}<br>Đ/c: ${ci.address||''}<br>Loại khách: ${ci.type||''}<br><button class="btn ghost" style="margin-top:8px" onclick="editSaleCustomerFromSale('${s.id}')">Sửa thông tin KH</button></p></div><div><b>Trạng thái công nợ</b><p><span class="badge ${pay.debtLeft>0?(pay.paidTotal>0?'orange':'red'):'green'}">${pay.paymentStatus}</span><br>Tổng tiền: <b>${money(s.grand)}</b><br>Đã thu: <b>${money(pay.paidTotal)}</b><br>Còn nợ: <b>${money(pay.debtLeft)}</b><br>PTTT: <b>${paymentMethodText(s.paymentMethod||s.payMethod)}</b><br>${saleMoneyStatus(s).overPaid>0?`Tiền dư: <b>${money(saleMoneyStatus(s).overPaid)}</b><br><span class="badge orange">${saleMoneyStatus(s).label}</span>`:''}</p></div><div><b>Kho</b><p>${sv?`<span class="badge green">Đã xuất kho</span><br>Kho xuất: <b>${voucherWarehouse(sv)}</b><br>Mã phiếu: <b>${sv.code||''}</b><br><button class="btn ghost" onclick="printStock('${sv.id}')">Xem/In phiếu xuất kho</button><br><button class="btn primary" style="margin-top:6px" onclick="openSaleReturn('${s.id}')">Trả lại hàng bán</button>`:`<span class="badge ${saleNeedSupplementStock(s)?'red':'orange'}">${saleNeedSupplementStock(s)?'Cần xuất kho bổ sung':'Chưa xuất kho'}</span><br>Đơn này chưa tạo phiếu xuất kho.<br><button class="btn primary" onclick="createSupplementStockVoucher('${s.id}')">Tạo phiếu xuất kho bổ sung</button>`}</p></div></div><table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK dòng</th><th>Thành tiền</th></tr></thead><tbody>${(s.items||[]).map(it=>`<tr><td>${it.code}</td><td>${it.name||''}</td><td>${it.qty}</td><td>${money(it.price)}</td><td>${it.discountType==='amount'?money(it.discount||0):((it.discount||0)+'%')}</td><td>${money(lineNet(it))}</td></tr>`).join('')}</tbody></table><div class="total-box"><div>Tiền hàng gốc: <b>${money(s.goodsBeforeDiscount||0)}</b></div><div>CK dòng: <b>${money(s.lineDiscountTotal||0)}</b></div><div>CK tổng đơn: <b>${money(s.orderDiscountTotal||0)}</b></div><div>Tiền sau CK: <b>${money(s.subtotal||0)}</b></div><div>Phụ thu: <b>${money(s.surcharge||0)}</b></div><div>Tổng tiền: <b>${money(s.grand)}</b></div><div>Đã thu: <b>${money(pay.paidTotal)}</b></div><div>Còn nợ: <b>${money(pay.debtLeft)}</b></div></div>${returnHtml}${receiptHtml}</div></div>`;
   document.body.insertAdjacentHTML('beforeend',html);
 }
@@ -2584,12 +2612,12 @@ function renderDebts(){
   if($('settledDebtTable'))$('settledDebtTable').innerHTML=settled.map((d,idx)=>{const ci=customerInfo(d.customer);const productText=debtGroupProductModels(d)||'-';const productTip=debtProductQtyTooltip(d);return `<tr class="settled-row"><td>${idx+1}</td><td>${d.saleCode||''}</td><td><b>${ci.name}</b><small>${ci.code||''}</small></td><td>${ci.phone||''}</td><td class="text-center"><b>${debtTotalQty(d)}</b></td><td title="${productTip}"><small>${productText}</small></td><td>${money(d.total)}</td><td>${money(d.paid)}</td><td>${debtSettledDate(d)}</td></tr>`}).join('')||'<tr><td colspan="9">Không tìm thấy công nợ đã tất toán phù hợp</td></tr>';
 }
 window.clearDebtSearch=()=>{if($('debtSearch'))$('debtSearch').value='';renderDebts();}
-window.resetReceiptForm=()=>{editingReceipt=null;fillReceiptCustomerOptions();$('receiptCustomer').value='';$('receiptAmount').value='';if($('receiptPaymentMethod'))$('receiptPaymentMethod').value='Tiền mặt';$('receiptDate').value=today();$('receiptNote').value=''}
+window.resetReceiptForm=()=>{editingReceipt=null;fillReceiptCustomerOptions();$('receiptCustomer').value='';$('receiptAmount').value='';if($('receiptPaymentMethod'))$('receiptPaymentMethod').value=DEFAULT_RECEIPT_PAYMENT_METHOD;$('receiptDate').value=today();$('receiptNote').value=''}
 window.receiptFor=keyEnc=>{const key=decodeURIComponent(keyEnc||'');let d=calcDebts().find(x=>x.debtKey===key)||calcDebtRows().find(x=>x.debtKey===key);if(d&&d.debt<=0)return alert('Phiếu này đã thu đủ tiền. Admin có thể sửa phiếu thu trong danh sách Phiếu thu nếu nhập sai.');resetReceiptForm();if(d){$('receiptCustomer').value='debtkey:'+encodeURIComponent(d.debtKey);if(d.debt>0)$('receiptAmount').value=d.debt;}$('receiptDate').value=today();showPage('debts');setTimeout(()=>$('receiptAmount')?.focus(),0)};window.openReceiptForm=()=>{resetReceiptForm();showPage('debts');setTimeout(()=>$('receiptCustomer')?.focus(),0)}
 function receiptDebtRowForEdit(r={}){const sid=receiptSaleId(r);let key=r.debtKey||'';if(sid)key=`sale:${sid}`;if(key)return calcDebtRows().find(x=>x.debtKey===key)||null;if(r.saleCode){const s=data.sales.find(x=>x.code===r.saleCode);if(s)return calcDebtRows().find(x=>x.saleId===s.id)||null;}return null;}
 window.saveReceipt=async()=>{let cid=$('receiptCustomer').value,amount=+$('receiptAmount').value||0;if(!cid||!amount)return alert('Chọn đúng phiếu công nợ và nhập số tiền');let d=null,c=null,ci=null,receiptKey='',oldReceipt=editingReceipt?data.receipts.find(x=>x.id===editingReceipt):null;if(editingReceipt&&currentPerm.role!=='Admin')return alert('Chỉ Admin được sửa phiếu thu đã lưu để đảm bảo doanh thu, công nợ và hoa hồng không bị lệch.');if(String(cid).startsWith('debtkey:')){receiptKey=decodeURIComponent(String(cid).slice(8));d=calcDebtRows().find(x=>x.debtKey===receiptKey);if(!d)return alert('Không tìm thấy công nợ cần thu. Vui lòng tải lại màn hình.');ci=customerInfo(d.customer);c=data.customers.find(x=>x.id===d.customer.id)||{};}else{return alert('Vui lòng chọn một dòng công nợ theo phiếu bán. Không thu tiền theo tên khách để tránh trừ nhầm.')}if(d&&d.debt<=0&&!editingReceipt)return alert('Phiếu này đã thu đủ tiền, không còn công nợ phải thu.');const oldAmount=editingReceipt?(+oldReceipt?.amount||0):0;const available=(+d.debt||0)+oldAmount;if(d&&amount>available&&!confirm(`Số tiền thu ${money(amount)} lớn hơn số còn có thể thu ${money(available)}. Nếu tiếp tục, phiếu sẽ bị thu dư. Vẫn lưu?`))return;if(editingReceipt){const changed=oldAmount!==amount || String(oldReceipt?.date||'')!==String($('receiptDate').value||today());if(changed){const reason=prompt('Nhập lý do sửa phiếu thu (bắt buộc):','');if(!String(reason||'').trim())return alert('Sửa phiếu thu bắt buộc nhập lý do.');$('receiptNote').value=(`${$('receiptNote').value||''} | Lý do sửa: ${reason}`).trim();}}
-const firstSale=d?.sales?.[0]||{};let o={customerId:c.id||firstSale.customerId||'',customerCode:ci.code,customerName:ci.name,customerPhone:ci.phone,customerAddress:ci.address,customerType:ci.type,amount,paymentMethod:$('receiptPaymentMethod')?.value||'Tiền mặt',date:$('receiptDate').value||today(),note:$('receiptNote').value||'',debtKey:receiptKey||'',saleId:firstSale.id||'',saleCode:firstSale.code||'',updatedAt:serverTimestamp()};if(editingReceipt){await updateDoc(doc(db,'receipts',editingReceipt),o);await logAction('Sửa phiếu thu',`${o.saleCode||''} ${o.customerName} ${money(oldAmount)} -> ${money(o.amount)} | ${o.note||''}`)}else{await addDoc(col('receipts'),{code:nextCode('PT',data.receipts),...o,createdAt:serverTimestamp()});await logAction('Thêm phiếu thu',`${o.saleCode||''} ${o.customerName} ${o.amount}`)}resetReceiptForm();await loadAll();if(o.saleId) await updatePaymentStatusForSaleSnapshot(o.saleId);await loadAll()}
-window.editReceipt=id=>{let r=data.receipts.find(x=>x.id===id);if(!r)return;if(currentPerm.role!=='Admin')return alert('Chỉ Admin được sửa phiếu thu đã lưu.');editingReceipt=id;fillReceiptCustomerOptions(false,true);let d=receiptDebtRowForEdit(r);let key=d?.debtKey||r.debtKey||(r.saleId?`sale:${r.saleId}`:'');if(key&&!([...$('receiptCustomer').options].some(o=>o.value==='debtkey:'+encodeURIComponent(key)))){const ci=customerInfo(d?.customer||findCustomerForReceipt(r)||{});$('receiptCustomer').insertAdjacentHTML('beforeend',`<option value="debtkey:${encodeURIComponent(key)}">${r.saleCode||d?.saleCode||''} | ${ci.code||r.customerCode||''} - ${ci.name||r.customerName||''} | Phiếu đang sửa</option>`);}$('receiptCustomer').value=key?'debtkey:'+encodeURIComponent(key):'';$('receiptAmount').value=r.amount||0;if($('receiptPaymentMethod'))$('receiptPaymentMethod').value=r.paymentMethod||'Tiền mặt';$('receiptDate').value=r.date||today();$('receiptNote').value=r.note||'';showPage('debts');setTimeout(()=>$('receiptAmount')?.focus(),0)}
+const firstSale=d?.sales?.[0]||{};let o={customerId:c.id||firstSale.customerId||'',customerCode:ci.code,customerName:ci.name,customerPhone:ci.phone,customerAddress:ci.address,customerType:ci.type,amount,paymentMethod:normalizePaymentMethod($('receiptPaymentMethod')?.value)||DEFAULT_RECEIPT_PAYMENT_METHOD,date:$('receiptDate').value||today(),note:$('receiptNote').value||'',debtKey:receiptKey||'',saleId:firstSale.id||'',saleCode:firstSale.code||'',updatedAt:serverTimestamp()};if(editingReceipt){await updateDoc(doc(db,'receipts',editingReceipt),o);await logAction('Sửa phiếu thu',`${o.saleCode||''} ${o.customerName} ${money(oldAmount)} -> ${money(o.amount)} | ${o.note||''}`)}else{await addDoc(col('receipts'),{code:nextCode('PT',data.receipts),...o,createdAt:serverTimestamp()});await logAction('Thêm phiếu thu',`${o.saleCode||''} ${o.customerName} ${o.amount}`)}resetReceiptForm();await loadAll();if(o.saleId) await updatePaymentStatusForSaleSnapshot(o.saleId);await loadAll()}
+window.editReceipt=id=>{let r=data.receipts.find(x=>x.id===id);if(!r)return;if(currentPerm.role!=='Admin')return alert('Chỉ Admin được sửa phiếu thu đã lưu.');editingReceipt=id;fillReceiptCustomerOptions(false,true);let d=receiptDebtRowForEdit(r);let key=d?.debtKey||r.debtKey||(r.saleId?`sale:${r.saleId}`:'');if(key&&!([...$('receiptCustomer').options].some(o=>o.value==='debtkey:'+encodeURIComponent(key)))){const ci=customerInfo(d?.customer||findCustomerForReceipt(r)||{});$('receiptCustomer').insertAdjacentHTML('beforeend',`<option value="debtkey:${encodeURIComponent(key)}">${r.saleCode||d?.saleCode||''} | ${ci.code||r.customerCode||''} - ${ci.name||r.customerName||''} | Phiếu đang sửa</option>`);}$('receiptCustomer').value=key?'debtkey:'+encodeURIComponent(key):'';$('receiptAmount').value=r.amount||0;if($('receiptPaymentMethod'))$('receiptPaymentMethod').value=receiptEffectivePaymentMethod(r);$('receiptDate').value=r.date||today();$('receiptNote').value=r.note||'';showPage('debts');setTimeout(()=>$('receiptAmount')?.focus(),0)}
 function receiptsForSale(s){
   // ERP-FIX V4: Phiếu thu chỉ đi theo đúng phiếu bán.
   // Không phân bổ theo customerId/tên/SĐT để tránh khách trùng tên hoặc nhiều đơn của cùng khách bị trừ nhầm.
@@ -2627,7 +2655,7 @@ window.printReceipt=id=>{
       </div>
       <div class="box"><h4>Thông tin thanh toán</h4>
         <p><b>Phiếu bán:</b> ${htmlesc(r.saleCode||s.code||'')}</p>
-        <p><b>Phương thức:</b> ${paymentMethodText(r.paymentMethod)}</p>
+        <p><b>Phương thức:</b> ${paymentMethodText(receiptEffectivePaymentMethod(r))}</p>
         <p><b>Người thu:</b> ${htmlesc(currentUser?.email||'')}</p>
         <p><b>Loại khách:</b> ${htmlesc(ci.type||'')}</p>
       </div>
@@ -2654,9 +2682,9 @@ window.printReceipt=id=>{
 }
 function renderReceipts(){
   const q=($('receiptSearch')?.value||'').toLowerCase().trim();
-  const rows=activeReceipts().filter(r=>{const c=data.customers.find(x=>x.id===r.customerId)||{};const ci=customerInfo(c);return matchSearchText(q,r.code,r.date,r.customerCode,ci.code,r.customerName,ci.name,r.customerPhone,ci.phone,r.customerAddress,ci.address,r.amount,money(r.amount),r.paymentMethod,r.note)}).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const rows=activeReceipts().filter(r=>{const c=data.customers.find(x=>x.id===r.customerId)||{};const ci=customerInfo(c);return matchSearchText(q,r.code,r.date,r.customerCode,ci.code,r.customerName,ci.name,r.customerPhone,ci.phone,r.customerAddress,ci.address,r.amount,money(r.amount),receiptEffectivePaymentMethod(r),r.paymentMethod,r.note)}).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   if($('receiptSearchCount'))$('receiptSearchCount').textContent=`Hiển thị ${rows.length}/${activeReceipts().length}`;
-  $('receiptTable').innerHTML=rows.map(r=>{const c=data.customers.find(x=>x.id===r.customerId)||{};const ci=customerInfo(c);return `<tr><td>${r.code||''}</td><td>${r.date||''}</td><td>${r.customerCode||ci.code||''}</td><td>${r.customerName||ci.name||''}</td><td>${money(r.amount)}</td><td>${paymentMethodBadge(r.paymentMethod)}</td><td>${r.note||''}</td><td><button class="btn ghost" onclick="printReceipt('${r.id}')">In</button> ${currentPerm.role==='Admin'?`<button class="btn ghost" onclick="editReceipt('${r.id}')">Sửa</button>`:''} <button class="btn danger" onclick="removeDoc('receipts','${r.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="8">Không tìm thấy phiếu thu phù hợp</td></tr>'
+  $('receiptTable').innerHTML=rows.map(r=>{const c=data.customers.find(x=>x.id===r.customerId)||{};const ci=customerInfo(c);return `<tr><td>${r.code||''}</td><td>${r.date||''}</td><td>${r.customerCode||ci.code||''}</td><td>${r.customerName||ci.name||''}</td><td>${money(r.amount)}</td><td>${paymentMethodBadge(receiptEffectivePaymentMethod(r))}</td><td>${r.note||''}</td><td><button class="btn ghost" onclick="printReceipt('${r.id}')">In</button> ${currentPerm.role==='Admin'?`<button class="btn ghost" onclick="editReceipt('${r.id}')">Sửa</button>`:''} <button class="btn danger" onclick="removeDoc('receipts','${r.id}')">Xóa</button></td></tr>`}).join('')||'<tr><td colspan="8">Không tìm thấy phiếu thu phù hợp</td></tr>'
 }
 window.clearReceiptSearch=()=>{if($('receiptSearch'))$('receiptSearch').value='';renderReceipts();}
 
@@ -2673,8 +2701,8 @@ function saleForReceipt(r={}){
   return null;
 }
 function normalizePaymentMethod(v){
-  const m=String(v||'').trim();
-  if(!m || m==='Chưa chọn' || m==='Chưa xác định' || m==='Chưa khai báo' || m==='undefined' || m==='null')return '';
+  const m=String(v??'').trim();
+  if(isUnknownPaymentMethod(m))return '';
   return m;
 }
 function receiptEffectivePaymentMethod(r={}){
@@ -2683,7 +2711,19 @@ function receiptEffectivePaymentMethod(r={}){
   const s=saleForReceipt(r);
   const fromSale=normalizePaymentMethod(s?.paymentMethod||s?.payMethod||s?.method);
   if(fromSale)return fromSale;
-  return 'Chưa khai báo';
+  // Theo yêu cầu V95: mọi phiếu thu chưa xác định phương thức được quy về Chuyển khoản.
+  return DEFAULT_RECEIPT_PAYMENT_METHOD;
+}
+async function normalizeUnknownReceiptPaymentMethods(){
+  if(!db || !Array.isArray(data.receipts) || !data.receipts.length)return;
+  const rows=data.receipts.filter(r=>r && r.id && !isReceiptCanceled(r) && isUnknownPaymentMethod(r.paymentMethod||r.payMethod||r.method));
+  if(!rows.length)return;
+  for(const r of rows){
+    try{
+      await updateDoc(doc(db,'receipts',r.id),{paymentMethod:DEFAULT_RECEIPT_PAYMENT_METHOD,updatedAt:serverTimestamp()});
+      r.paymentMethod=DEFAULT_RECEIPT_PAYMENT_METHOD;
+    }catch(e){console.warn('Không cập nhật phương thức thanh toán phiếu thu '+(r.code||r.id),e.message)}
+  }
 }
 function financeDocDate(obj={}){
   return reportDateValue(obj.date||obj.paymentDate||obj.createdDate||obj.createdAt||'');
@@ -2703,7 +2743,7 @@ function cashbookRows(from='',to=''){
 
   // 1) Phiếu thu: là nguồn chính của dòng tiền thu thực tế.
   // Không dùng ngày mặc định nếu phiếu thiếu ngày để tránh cộng nhầm vào kỳ hiện tại.
-  activeReceipts().forEach(r=>{
+  uniqueReceiptsForFinance(activeReceipts()).forEach(r=>{
     const amount=+r.amount||0; if(amount<=0)return;
     const date=financeDocDate(r); if(!date)return;
     const customer=r.customerName||customerInfo(data.customers.find(c=>c.id===r.customerId)||{}).name||'';
@@ -2715,26 +2755,21 @@ function cashbookRows(from='',to=''){
     });
   });
 
-  // 2) Thu trực tiếp trên Phiếu bán: chỉ lấy số tiền nhập ở ô Đã thu khi tạo phiếu bán.
-  // V93-FINANCE-QA: chống cộng đôi. Nếu đã tồn tại phiếu thu cùng phiếu bán, cùng ngày và cùng số tiền
-  // thì ưu tiên Phiếu thu là chứng từ quỹ, không tạo thêm dòng thu trực tiếp.
+  // 2) Thu trực tiếp trên Phiếu bán (legacy): dùng cho khoản thu ngay tại thời điểm lập phiếu bán.
+  // Chống cộng đôi: nếu đã có phiếu thu cùng phiếu bán, cùng ngày bán và tổng tiền thu cùng ngày >= khoản thu trực tiếp,
+  // coi phiếu thu là chứng từ quỹ chính và không tạo thêm dòng thu trực tiếp.
   activeSales().forEach(s=>{
     if(isSaleCanceled(s))return;
     const date=financeDocDate(s); if(!date)return;
     const direct=Math.min(+saleDirectPaid(s)||0,+s.grand||0);
     if(direct<=0)return;
-    const linkedReceipts=receiptsForSalePayment(s);
-    const duplicatedByReceipt=linkedReceipts.some(r=>{
-      const rd=financeDocDate(r);
-      const ra=+r.amount||0;
-      return rd===date && Math.abs(ra-direct)<1;
-    });
-    if(duplicatedByReceipt)return;
+    const sameDayReceiptTotal=receiptsForSalePayment(s).filter(r=>financeDocDate(r)===date).reduce((a,r)=>a+(+r.amount||0),0);
+    if(sameDayReceiptTotal>=direct)return;
     const ci=saleCustomerInfo(s);
     pushRow({
       id:s.id||'',date,code:s.code||'',type:'Thu',
-      content:`Thu trực tiếp phiếu bán ${s.code||''}${ci.name?(' - '+ci.name):''}`.trim(),
-      paymentMethod:normalizePaymentMethod(s.paymentMethod||s.payMethod)||'Chưa khai báo',income:direct,expense:0,source:'sale_direct'
+      content:`Thu trực tiếp chưa lập phiếu thu ${s.code||''}${ci.name?(' - '+ci.name):''}`.trim(),
+      paymentMethod:normalizePaymentMethod(s.paymentMethod||s.payMethod)||DEFAULT_RECEIPT_PAYMENT_METHOD,income:direct,expense:0,source:'sale_direct_legacy'
     });
   });
 
@@ -2767,7 +2802,7 @@ function renderCashbook(){
   const {from,to}=cashbookRange(); const method=$('cashbookMethod')?.value||'ALL'; const q=($('cashbookSearch')?.value||'').toLowerCase().trim();
   let rows=cashbookRows(from,to).filter(r=>(method==='ALL'||r.paymentMethod===method)&&matchSearchText(q,r.date,r.code,r.type,r.content,r.paymentMethod,r.income,r.expense,money(r.income),money(r.expense)));
   const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0), net=income-expense;
-  $('cashbookSummary').innerHTML=`<div class="report-card">Tổng thu trong kỳ<b>${money(income)}</b><small>Tiền thực nhận: phiếu thu + thu trực tiếp hợp lệ</small></div><div class="report-card">Tổng chi trong kỳ<b>${money(expense)}</b><small>Phiếu chi + lương</small></div><div class="report-card">Thu - chi trong kỳ<b>${money(net)}</b><small>Không phải số dư quỹ cuối nếu chưa nhập số dư đầu kỳ</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
+  $('cashbookSummary').innerHTML=`<div class="report-card">Tổng thu trong kỳ<b>${money(income)}</b><small>Phiếu thu + thu trực tiếp chưa lập phiếu thu</small></div><div class="report-card">Tổng chi trong kỳ<b>${money(expense)}</b><small>Phiếu chi + lương</small></div><div class="report-card">Thu - chi trong kỳ<b>${money(net)}</b><small>Không phải số dư quỹ cuối nếu chưa nhập số dư đầu kỳ</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
   let run=0;
   $('cashbookTable').innerHTML=rows.map(r=>{run+=r.income-r.expense;return `<tr><td>${r.date}</td><td><b>${r.code}</b></td><td><span class="badge ${r.type==='Thu'?'green':'orange'}">${r.type}</span></td><td>${htmlesc(r.content)}</td><td>${paymentMethodBadge(r.paymentMethod)}</td><td><b>${r.income?money(r.income):''}</b></td><td><b>${r.expense?money(r.expense):''}</b></td><td><b>${money(run)}</b></td></tr>`}).join('')||'<tr><td colspan="8">Không có phát sinh sổ quỹ trong kỳ</td></tr>';
 }
