@@ -2144,13 +2144,51 @@ window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quic
 window.saveSaleAndPrint=async()=>{const id=await saveSale(); if(id) setTimeout(()=>printSale(id),600)}
 function renderSales(){
   let q=($('saleSearch')?.value||'').toLowerCase();
-  const rows=data.sales.filter(s=>(s.code+(s.customerCode||'')+s.customerName+(s.customerPhone||'')+(s.customerType||'')+(s.cancelReason||'')+(saleItemSummary(s).models||'')).toLowerCase().includes(q)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const rows=data.sales
+    .filter(s=>(s.code+(s.customerCode||'')+s.customerName+(s.customerPhone||'')+(s.customerType||'')+(s.cancelReason||'')+(saleItemSummary(s).models||'')).toLowerCase().includes(q))
+    .sort((a,b)=>{
+      const ta=isSaleToday(a)?1:0, tb=isSaleToday(b)?1:0;
+      if(ta!==tb) return tb-ta; // phiếu hôm nay luôn lên đầu
+      const d=String(b.date||'').localeCompare(String(a.date||''));
+      if(d) return d;
+      return String(b.code||'').localeCompare(String(a.code||''));
+    });
   const totalQty=rows.reduce((a,s)=>a+(isSaleCanceled(s)?0:saleItemSummary(s).totalQty),0);
   const totalGrand=rows.reduce((a,s)=>a+(isSaleCanceled(s)?0:(+s.grand||0)),0);
   const totalPaid=rows.reduce((a,s)=>a+(isSaleCanceled(s)?0:salePaymentInfo(s).paidTotal),0);
   const totalDebt=rows.reduce((a,s)=>a+(isSaleCanceled(s)?0:salePaymentInfo(s).debtLeft),0);
-  $('saleTable').innerHTML=rows.map((s,idx)=>{const canceled=isSaleCanceled(s);const pay=salePaymentInfo(s);const sv=stockVoucherForSale(s);const stockStatus=!!sv;const ci=saleCustomerInfo(s);const itemSum=saleItemSummary(s);const productTip=productQtyTooltipFromItems(s.items||[]);return `<tr class="${canceled?'row-canceled':''}"><td class="text-center">${idx+1}</td><td><b>${s.code}</b>${canceled?'<br><span class="badge red">Đã hủy</span>':''}</td><td>${s.date||''}</td><td>${ci.code||''}</td><td><b>${ci.name}</b><br><small>${ci.phone||''}</small></td><td class="text-center"><b>${canceled?0:itemSum.totalQty}</b></td><td class="sale-products-cell" title="${productTip}"><small>${itemSum.models||'-'}</small></td><td><b>${money(canceled?0:s.grand)}</b></td><td>${money(pay.paidTotal)}</td><td><b class="${pay.debtLeft>0?'text-danger':''}">${money(pay.debtLeft)}</b></td><td>${paymentMethodBadge(s.paymentMethod||s.payMethod)}</td><td class="view-cost">${money(saleCommissionValue(s))}</td><td class="view-cost">${money(saleProfitValue(s))}</td><td><span class="badge ${canceled?'red':(pay.debtLeft>0?(pay.paidTotal>0?'orange':'red'):'green')}">${canceled?'Đã hủy':pay.paymentStatus}</span></td><td>${canceled?'<span class="badge red">Đã hủy nghiệp vụ</span>':(s.hasReturn?'<span class="badge orange">Có trả hàng</span><br>':'')+(stockStatus?'<span class="badge green">Đã xuất kho</span>':(saleNeedSupplementStock(s)?'<span class="badge red">Cần xuất kho bổ sung</span>':'<span class="badge orange">Chưa xuất kho</span>'))}</td><td><button class="btn ghost" onclick="viewSaleDetail('${s.id}')">Chi tiết</button> <button class="btn ghost" onclick="printSale('${s.id}')">In A5</button> ${has('editSales')&&!canceled?`<button class="btn ghost" onclick="editSale('${s.id}')">Sửa</button>`:''} ${has('deleteSales')&&!canceled?`<button class="btn danger" onclick="cancelSale('${s.id}')">Hủy phiếu</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="16">Chưa có phiếu bán</td></tr>';
-  if($('saleListSummary'))$('saleListSummary').innerHTML=`<div><span>Tổng phiếu</span><b>${rows.length}</b></div><div><span>Tổng bộ khóa</span><b>${totalQty}</b></div><div><span>Doanh thu</span><b>${money(totalGrand)}</b></div><div><span>Đã thu</span><b>${money(totalPaid)}</b></div><div><span>Còn nợ</span><b class="${totalDebt>0?'text-danger':''}">${money(totalDebt)}</b></div>`;
+  const todayCount=rows.filter(isSaleToday).length;
+  if($('saleListHint'))$('saleListHint').innerHTML=`${todayCount?`<span class="sale-new-count">${todayCount} phiếu hôm nay</span>`:'Không có phiếu mới hôm nay'} · Danh sách đã ưu tiên phiếu hôm nay lên trước.`;
+  $('saleTable').innerHTML=rows.map((s,idx)=>{
+    const canceled=isSaleCanceled(s);
+    const isNew=isSaleToday(s);
+    const pay=salePaymentInfo(s);
+    const sv=stockVoucherForSale(s);
+    const stockStatus=!!sv;
+    const ci=saleCustomerInfo(s);
+    const itemSum=saleItemSummary(s);
+    const productTip=productQtyTooltipFromItems(s.items||[]);
+    const debtBadgeClass=canceled?'red':(pay.debtLeft>0?(pay.paidTotal>0?'orange':'red'):'green');
+    const stockHtml=canceled?'<span class="mini-status red">Đã hủy</span>':(s.hasReturn?'<span class="mini-status orange">Có trả hàng</span> ':'')+(stockStatus?'<span class="mini-status green">Đã xuất</span>':(saleNeedSupplementStock(s)?'<span class="mini-status red">Cần xuất bổ sung</span>':'<span class="mini-status orange">Chưa xuất</span>'));
+    return `<tr class="sale-row ${canceled?'row-canceled':''} ${isNew?'sale-row-new':''}">
+      <td class="text-center sale-index">${idx+1}</td>
+      <td class="sale-code-cell"><div><b>${htmlesc(s.code||'')}</b>${isNew?'<span class="new-sticker">NEW</span>':''}</div>${canceled?'<span class="mini-status red">Đã hủy</span>':''}</td>
+      <td class="sale-date-cell"><b>${htmlesc(s.date||'')}</b>${isNew?'<small>Hôm nay</small>':''}</td>
+      <td class="sale-customer-code">${htmlesc(ci.code||'')}</td>
+      <td class="sale-customer-cell"><b>${htmlesc(ci.name||'')}</b><small>${htmlesc(ci.phone||'')}${ci.address?' · '+htmlesc(ci.address):''}</small></td>
+      <td class="text-center sale-qty"><b>${canceled?0:itemSum.totalQty}</b><small>bộ</small></td>
+      <td class="sale-products-cell" title="${htmlesc(productTip)}"><div class="product-chip-wrap">${saleProductChipHtml(s)}</div></td>
+      <td class="money-cell"><b>${money(canceled?0:s.grand)}</b></td>
+      <td class="money-cell">${money(pay.paidTotal)}</td>
+      <td class="money-cell"><b class="${pay.debtLeft>0?'text-danger':''}">${money(pay.debtLeft)}</b></td>
+      <td>${paymentMethodBadge(s.paymentMethod||s.payMethod)}</td>
+      <td class="view-cost money-cell">${money(saleCommissionValue(s))}</td>
+      <td class="view-cost money-cell">${money(saleProfitValue(s))}</td>
+      <td><span class="mini-status ${debtBadgeClass}">${canceled?'Đã hủy':pay.paymentStatus}</span></td>
+      <td>${stockHtml}</td>
+      <td class="sale-actions"><button class="btn ghost" onclick="viewSaleDetail('${s.id}')">Chi tiết</button><button class="btn ghost" onclick="printSale('${s.id}')">In A5</button>${has('editSales')&&!canceled?`<button class="btn ghost" onclick="editSale('${s.id}')">Sửa</button>`:''}${has('deleteSales')&&!canceled?`<button class="btn danger" onclick="cancelSale('${s.id}')">Hủy</button>`:''}</td>
+    </tr>`}).join('')||'<tr><td colspan="16">Chưa có phiếu bán</td></tr>';
+  if($('saleListSummary'))$('saleListSummary').innerHTML=`<div><span>Tổng phiếu</span><b>${rows.length}</b></div><div><span>Phiếu hôm nay</span><b>${todayCount}</b></div><div><span>Tổng bộ khóa</span><b>${totalQty}</b></div><div><span>Doanh số</span><b>${money(totalGrand)}</b></div><div><span>Đã thu</span><b>${money(totalPaid)}</b></div><div><span>Còn nợ</span><b class="${totalDebt>0?'text-danger':''}">${money(totalDebt)}</b></div>`;
 }
 
 window.viewSaleDetail=id=>{
@@ -2540,6 +2578,13 @@ function productQtyTooltipFromItems(items=[]){
   items.forEach(it=>{const code=it.code||it.model||''; if(!code)return; map[code]=(map[code]||0)+(+it.qty||0)});
   return Object.entries(map).map(([code,qty])=>`${code} × ${qty}`).join(' | ');
 }
+function saleProductChipHtml(s){
+  const sum=saleItemSummary(s);
+  const chips=sum.items.slice(0,4).map(it=>`<span class="product-chip"><b>${htmlesc(it.code)}</b><em>×${+it.qty||0}</em></span>`).join('');
+  const more=sum.items.length>4?`<span class="product-chip more">+${sum.items.length-4}</span>`:'';
+  return chips+more || '<span class="muted-small">-</span>';
+}
+function isSaleToday(s){return String(s?.date||'')===today()}
 function debtProductQtyTooltip(g){
   const map={};
   (g?.sales||[]).forEach(s=>(s.items||[]).forEach(it=>{const code=it.code||it.model||''; if(!code)return; map[code]=(map[code]||0)+(+it.qty||0)}));
