@@ -1084,7 +1084,14 @@ function renderDashboard(){
   const settledDebtRows=calcSettledDebts();
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
-  const collected=activeReceipts().filter(r=>String(r.date||'')>=range.from&&String(r.date||'')<=range.to).reduce((a,r)=>a+(+r.amount||0),0);
+  // V88-FIX: Thực thu trên Dashboard phải đi cùng Doanh số của kỳ đang lọc.
+  // Không cộng toàn bộ phiếu thu phát sinh trong kỳ, vì phiếu thu có thể là thu công nợ
+  // của đơn cũ ngoài kỳ hoặc dữ liệu mở đầu, dẫn đến Thực thu lớn bất thường so với Doanh số.
+  // Công thức mới: tổng số đã thu của các phiếu bán nằm trong kỳ, giới hạn tối đa bằng tổng phiếu.
+  const collected=salesInRange.reduce((a,s)=>{
+    const pay=salePaymentInfo(s);
+    return a+Math.min(+s.grand||0,+pay.paidTotal||0);
+  },0);
   const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
   const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));
   const monthlySalaries=data.salaries.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to);
