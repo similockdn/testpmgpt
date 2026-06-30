@@ -88,7 +88,7 @@
           <div class="dash-v8-title">
             <span class="dash-v8-pill">Quản lý</span>
             <h2>Trung tâm điều hành</h2>
-            <p>Theo dõi nhanh doanh thu, lợi nhuận, kho, công nợ, bảo hành và hiệu suất nhân viên trên một màn hình.</p>
+            <p>Theo dõi nhanh doanh số, thực thu, lợi nhuận, kho, công nợ, bảo hành và hiệu suất nhân viên trên một màn hình.</p>
           </div>
           <div class="dash-v8-filter-wrap">
             <div class="dash-v8-filter dash-filter">
@@ -105,13 +105,13 @@
         </div>
 
         <div class="dash-v8-kpis dash-kpi-grid">
-          <div class="dash-v8-kpi revenue"><div class="kpi-icon">💰</div><div><span>Doanh thu</span><b id="kpiRevenue">0</b><small id="dashRevenueNote">Trong kỳ</small></div></div>
+          <div class="dash-v8-kpi revenue"><div class="kpi-icon">💰</div><div><span>Doanh số</span><b id="kpiRevenue">0</b><small id="dashRevenueNote">Tổng giá trị phiếu bán</small></div></div>
           <div class="dash-v8-kpi profit view-cost" id="kpiProfitCard"><div class="kpi-icon">📈</div><div><span>Lợi nhuận</span><b id="kpiProfit">0</b><small>Sau giá vốn & chi phí</small></div></div>
           <div class="dash-v8-kpi debt"><div class="kpi-icon">💳</div><div><span>Công nợ</span><b id="kpiDebt">0</b><small><i id="kpiDebtCount">0</i> phiếu đang nợ</small></div></div>
           <div class="dash-v8-kpi overdue"><div class="kpi-icon">⚠️</div><div><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý</small></div></div>
           <div class="dash-v8-kpi orders"><div class="kpi-icon">🧾</div><div><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div></div>
           <div class="dash-v8-kpi stock"><div class="kpi-icon">📦</div><div><span>Giá trị tồn</span><b id="dashStockValue">0</b><small><i id="kpiLowStock">0</i> model sắp hết</small></div></div>
-          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Đã tất toán</span><b id="kpiSettledCount">0</b><small>Phiếu thu đủ</small></div></div>
+          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Thực thu</span><b id="kpiCollected">0</b><small>Tiền đã thu trong kỳ</small></div></div>
           <div class="dash-v8-kpi service"><div class="kpi-icon">🛠️</div><div><span>Bảo hành</span><b id="dashWarrantyCount">0</b><small>Phát sinh trong kỳ</small></div></div>
         </div>
 
@@ -121,7 +121,7 @@
           <div class="panel dash-v8-panel"><div class="panel-head"><h3>🧾 Đơn hàng gần nhất</h3><span>Phiếu mới nhất</span></div><table><thead><tr><th>Mã</th><th>Khách</th><th>Model</th><th>Tổng</th></tr></thead><tbody id="latestSales"></tbody></table></div>
           <div class="panel dash-v8-panel"><div class="panel-head"><h3>⚠️ Công nợ cần xử lý</h3><span>Ưu tiên quá hạn</span></div><table><thead><tr><th>Phiếu</th><th>Khách</th><th>Còn nợ</th><th>Quá hạn</th></tr></thead><tbody id="dashboardDebtRows"></tbody></table></div>
           <div class="panel dash-v8-panel"><div class="panel-head"><h3>📦 Hàng sắp hết</h3><span>Dưới mức tối thiểu</span></div><table><thead><tr><th>Model</th><th>Sản phẩm</th><th>Tồn</th></tr></thead><tbody id="lowStockRows"></tbody></table></div>
-          <div class="panel dash-v8-panel"><div class="panel-head"><h3>🏆 Hiệu suất nhân viên</h3><span>Top doanh thu</span></div><table><thead><tr><th>Nhân viên</th><th>Doanh thu</th><th>Đơn</th></tr></thead><tbody id="topStaff"></tbody></table></div>
+          <div class="panel dash-v8-panel"><div class="panel-head"><h3>🏆 Hiệu suất nhân viên</h3><span>Top doanh thu</span></div><table><thead><tr><th>Nhân viên</th><th>Doanh số</th><th>Đơn</th></tr></thead><tbody id="topStaff"></tbody></table></div>
         </div>
       </section>
 
@@ -539,7 +539,7 @@
 
       <section id="reports" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📈 Báo cáo doanh thu - chi phí - lợi nhuận</h3><div><button class="btn ghost" onclick="exportExcel('sales')">Xuất bán hàng</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất chi phí</button><button class="btn ghost" onclick="exportExcel('returns')">Xuất hàng trả</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div>
+          <div class="panel-head"><h3>📈 Báo cáo doanh số - thực thu - chi phí - lợi nhuận</h3><div><button class="btn ghost" onclick="exportExcel('sales')">Xuất bán hàng</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất chi phí</button><button class="btn ghost" onclick="exportExcel('returns')">Xuất hàng trả</button><button class="btn ghost" onclick="exportBackup()">Backup toàn bộ</button></div></div>
           <div class="grid form-grid">
             <div><label>Kiểu xem</label><select id="reportPeriod" onchange="setReportQuickRange();renderReports()"><option value="day">Theo ngày</option><option value="week">Theo tuần</option><option value="month" selected>Theo tháng</option><option value="year">Theo năm</option><option value="custom">Tùy chọn ngày</option></select></div>
             <div><label>Từ ngày</label><input id="reportFrom" type="date" onchange="document.getElementById('reportPeriod').value='custom';renderReports()"></div>
@@ -557,12 +557,12 @@
 
         <div class="panel wide report-section report-section-revenue">
           <div class="panel-head"><h3>🔐 Tổng sản phẩm bán ra</h3><span>Tìm theo model hoặc tên sản phẩm</span></div>
-          <table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>Số lượng</th><th>Doanh thu</th><th class="view-cost">Giá vốn</th><th class="view-cost">Lãi gộp SP</th></tr></thead><tbody id="reportProductTable"></tbody></table>
+          <table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>Số lượng</th><th>Doanh số</th><th class="view-cost">Giá vốn</th><th class="view-cost">Lãi gộp SP</th></tr></thead><tbody id="reportProductTable"></tbody></table>
         </div>
 
         <div class="panel wide report-section report-section-revenue">
-          <div class="panel-head"><h3>📊 Doanh thu theo thời gian</h3><span>Ngày / tuần / tháng / năm</span></div>
-          <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh thu</th><th>Phụ thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công + xăng KT</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
+          <div class="panel-head"><h3>📊 Doanh số & thực thu theo thời gian</h3><span>Ngày / tuần / tháng / năm</span></div>
+          <table><thead><tr><th>Mốc thời gian</th><th>Số đơn</th><th>Số lượng SP</th><th>Doanh số</th><th>Phụ thu</th><th>Đã thu</th><th>Còn nợ</th><th class="view-cost">Hoa hồng Sale</th><th class="view-cost">Công + xăng KT</th><th class="view-cost">Lợi nhuận đơn</th></tr></thead><tbody id="reportRevenueTable"></tbody></table>
         </div>
 
 

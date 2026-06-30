@@ -1084,6 +1084,7 @@ function renderDashboard(){
   const settledDebtRows=calcSettledDebts();
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
+  const collected=activeReceipts().filter(r=>String(r.date||'')>=range.from&&String(r.date||'')<=range.to).reduce((a,r)=>a+(+r.amount||0),0);
   const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
   const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));
   const monthlySalaries=data.salaries.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to);
@@ -1096,6 +1097,7 @@ function renderDashboard(){
   if($('kpiProfit'))$('kpiProfit').textContent=money(profit);
   if($('kpiDebt'))$('kpiDebt').textContent=money(debt);
   if($('kpiDebtCount'))$('kpiDebtCount').textContent=activeDebtRows.length;
+  if($('kpiCollected'))$('kpiCollected').textContent=money(collected);
   if($('kpiSettledCount'))$('kpiSettledCount').textContent=settledDebtRows.length;
   if($('kpiOverdueCount'))$('kpiOverdueCount').textContent=overdueRows.length;
   if($('kpiLowStock'))$('kpiLowStock').textContent=low.length;
@@ -1115,7 +1117,7 @@ function renderDashboard(){
   const incomeSale=salesInRange.reduce((a,s)=>a+saleCommissionValue(s),0);
   const incomeTech=salesInRange.reduce((a,s)=>a+(+s.techCost||0)+(+s.techFuel||0),0);
   renderChartHtml('dashboardCharts',
-    modernLineChart('Doanh thu 12 tháng',last12.map(x=>({label:x.label,value:x.value})),{sub:'Xu hướng doanh thu toàn hệ thống',money:true,badge:compactMoney(last12.reduce((a,x)=>a+x.value,0))})+
+    modernLineChart('Doanh số 12 tháng',last12.map(x=>({label:x.label,value:x.value})),{sub:'Xu hướng doanh số theo phiếu bán',money:true,badge:compactMoney(last12.reduce((a,x)=>a+x.value,0))})+
     modernDonutChart('Cơ cấu công nợ',debtPie,{sub:'Tình trạng thu tiền theo phiếu'})+
     modernBarChart('Top model bán chạy',productRows.map(x=>({label:x.code,value:x.qty})),{sub:'Số lượng bán trong '+range.label,limit:8})+
     modernBarChart('Tồn kho theo model',stockRows.map(x=>({label:x.label,value:x.value})),{sub:'Top model còn tồn nhiều nhất',limit:8})+
@@ -2596,46 +2598,52 @@ window.printReceipt=id=>{
   let ci=s.id?saleCustomerInfo(s):customerInfo(c);
   ci={...ci,code:r.customerCode||ci.code||ensureCustomerCode(c)||'',name:r.customerName||ci.name||'',phone:r.customerPhone||ci.phone||'',address:r.customerAddress||ci.address||'',type:r.customerType||ci.type||''};
   let salePay=s.id?salePaymentInfo(s):null;
+  let paidBefore=salePay?Math.max(0,(+salePay.paid||0)-(+r.amount||0)):'';
   let debtAfter=salePay?salePay.debtLeft:'';
   let debtBefore=salePay?(debtAfter+(+r.amount||0)):'';
   let items=(s.items||[]);
-  let itemRows=items.length?items.map((it,i)=>`<tr><td style="width:9%;text-align:center">${i+1}</td><td style="width:18%">${it.code||''}</td><td>${it.name||''}</td><td style="width:12%;text-align:center">${it.qty||0}</td><td style="width:22%;text-align:right">${money(lineNet(it))}</td></tr>`).join(''):`<tr><td style="text-align:center">1</td><td>${r.saleCode||''}</td><td>Thu tiền công nợ / thanh toán</td><td style="text-align:center">1</td><td style="text-align:right">${money(r.amount)}</td></tr>`;
-  let html=`<div class="print-a5">${printHeader('PHIẾU THU')}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;border-bottom:1px solid #999;padding-bottom:8px;margin-bottom:8px;line-height:1.55">
-    <div>
-      <div><b>Mã phiếu thu:</b> ${r.code||''}</div>
-      <div><b>Ngày thu:</b> ${r.date||''}</div>
-      <div><b>Phiếu bán:</b> ${r.saleCode||s.code||''}</div>
-      <div><b>Mã KH:</b> ${ci.code||''}</div>
-      <div><b>Khách hàng:</b> ${ci.name||''}</div>
+  let itemRows=items.length?items.map((it,i)=>`<tr><td class="c">${i+1}</td><td><b>${htmlesc(it.code||'')}</b><br><small>${htmlesc(it.name||'')}</small></td><td class="c">${it.qty||0}</td><td class="r">${money(lineNet(it))}</td></tr>`).join(''):`<tr><td class="c">1</td><td><b>${htmlesc(r.saleCode||r.code||'')}</b><br><small>Thu tiền công nợ / thanh toán</small></td><td class="c">1</td><td class="r">${money(r.amount)}</td></tr>`;
+  let purpose = r.note || (s.code ? `Thu tiền theo phiếu bán ${s.code}` : 'Thu tiền khách hàng');
+  let html=`<div class="print-a5 receipt-a5">
+    <div class="receipt-brand">
+      <div><b>SIMILOCK ĐÀ NẴNG</b><br><span>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng</span><br><span>CN HCM: 403 Nguyễn Thái Bình, P. Bảy Hiền, TP.HCM</span><br><span>Hotline: 0905.244.009</span></div>
+      <div class="receipt-code"><b>${r.code||''}</b><span>${r.date||''}</span></div>
     </div>
-    <div>
-      <div><b>SĐT:</b> ${ci.phone||''}</div>
-      <div><b>Đ/c:</b> ${ci.address||''}</div>
-      <div><b>Loại khách:</b> ${ci.type||''}</div>
-      <div><b>Phương thức TT:</b> ${paymentMethodText(r.paymentMethod)}</div>
-      <div><b>Người thu:</b> ${currentUser?.email||''}</div>
+    <h2>PHIẾU THU</h2>
+    <div class="receipt-sub">Khổ in A5 • Giá trị thu tiền / công nợ</div>
+
+    <div class="receipt-info">
+      <div class="box"><h4>Thông tin khách hàng</h4>
+        <p><b>Mã KH:</b> ${htmlesc(ci.code||'')}</p>
+        <p><b>Khách hàng:</b> ${htmlesc(ci.name||'')}</p>
+        <p><b>SĐT:</b> ${htmlesc(ci.phone||'')}</p>
+        <p><b>Địa chỉ:</b> ${htmlesc(ci.address||'')}</p>
+      </div>
+      <div class="box"><h4>Thông tin thanh toán</h4>
+        <p><b>Phiếu bán:</b> ${htmlesc(r.saleCode||s.code||'')}</p>
+        <p><b>Phương thức:</b> ${paymentMethodText(r.paymentMethod)}</p>
+        <p><b>Người thu:</b> ${htmlesc(currentUser?.email||'')}</p>
+        <p><b>Loại khách:</b> ${htmlesc(ci.type||'')}</p>
+      </div>
     </div>
-  </div>
-  <table><thead><tr><th>STT</th><th>Mã/Model</th><th>Nội dung thu</th><th>SL</th><th>Số tiền</th></tr></thead><tbody>${itemRows}</tbody></table>
-  <div style="display:flex;justify-content:flex-end;margin-top:10px">
-    <div style="min-width:250px;line-height:1.65">
-      ${s.id?`<div style="display:flex;justify-content:space-between"><b>Tổng phiếu bán:</b><span>${money(s.grand||0)}</span></div>`:''}
-      ${salePay?`<div style="display:flex;justify-content:space-between"><b>Công nợ trước thu:</b><span>${money(debtBefore)}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between;font-weight:bold;border-top:1px dashed #999;padding-top:4px;margin-top:4px"><span>Số tiền thu:</span><span>${money(r.amount)}</span></div>
-      ${salePay?`<div style="display:flex;justify-content:space-between"><b>Còn lại sau thu:</b><span>${money(debtAfter)}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between"><b>PTTT:</b><span>${paymentMethodText(r.paymentMethod)}</span></div>
+
+    <div class="receipt-purpose"><b>Nội dung thu:</b> ${htmlesc(purpose)}</div>
+    <table class="receipt-items"><thead><tr><th style="width:10%">STT</th><th>Nội dung / Model</th><th style="width:12%">SL</th><th style="width:25%">Số tiền</th></tr></thead><tbody>${itemRows}</tbody></table>
+
+    <div class="receipt-bottom">
+      <div class="receipt-words"><b>Số tiền bằng chữ:</b><br>${numberToVietnamese(r.amount)}</div>
+      <div class="receipt-total">
+        ${s.id?`<p><span>Doanh số phiếu bán</span><b>${money(s.grand||0)}</b></p>`:''}
+        ${salePay?`<p><span>Đã thu trước phiếu này</span><b>${money(paidBefore)}</b></p>`:''}
+        ${salePay?`<p><span>Công nợ trước thu</span><b>${money(debtBefore)}</b></p>`:''}
+        <p class="main"><span>Số tiền thu</span><b>${money(r.amount)}</b></p>
+        ${salePay?`<p><span>Còn nợ sau thu</span><b>${money(debtAfter)}</b></p>`:''}
+      </div>
     </div>
-  </div>
-  <div style="border:1px solid #999;border-radius:4px;margin-top:12px;padding:10px;min-height:44px;line-height:1.5">
-    <b>Số tiền bằng chữ:</b> ${numberToVietnamese(r.amount)}<br>
-    <b>Ghi chú:</b> ${r.note||''}
-  </div>
-  <div style="display:flex;justify-content:space-between;text-align:center;margin-top:35px">
-    <div>Người nộp tiền<br><small>(Ký, ghi rõ họ tên)</small><br><br><br></div>
-    <div>Người thu tiền<br><small>(Ký, ghi rõ họ tên)</small><br><br><br></div>
-    <div>Kế toán<br><small>(Ký, ghi rõ họ tên)</small><br><br><br></div>
-  </div></div>`;
+
+    <div class="receipt-note"><b>Ghi chú:</b> ${htmlesc(r.note||'')}</div>
+    <div class="sign-row"><div>Người nộp tiền<br><small>(Ký, ghi rõ họ tên)</small></div><div>Người thu tiền<br><small>(Ký, ghi rõ họ tên)</small></div><div>Kế toán / Quản lý<br><small>(Ký, ghi rõ họ tên)</small></div></div>
+  </div>`;
   doPrint(html)
 }
 function renderReceipts(){
@@ -3430,7 +3438,7 @@ function renderReports(){
   const surchargeTotal=sales.reduce((a,s)=>a+(+s.surcharge||0),0);
   const qty=sales.reduce((a,s)=>a+(s.items||[]).reduce((b,it)=>b+(+it.qty||0),0),0);
   $('reportBox').innerHTML=`
-    <div class="report-card">Doanh thu kỳ này<small>${from} → ${to}</small><b>${money(rev)}</b></div>
+    <div class="report-card">Doanh số kỳ này<small>${from} → ${to}</small><b>${money(rev)}</b></div>
     <div class="report-card">Số đơn / Sản phẩm<b>${sales.length} đơn / ${qty} SP</b></div>
     <div class="report-card">Đã thu<b>${money(paid)}</b></div>
     <div class="report-card">Còn nợ<b>${money(debt)}</b></div>
@@ -3441,10 +3449,10 @@ function renderReports(){
     <div class="report-card view-cost">Lợi nhuận ròng<b>${money(profit)}</b></div>
     <div class="report-card">Tổng phụ thu<b>${money(surchargeTotal)}</b></div><div class="report-card view-cost">Sale + Kỹ thuật<b>${money(comm+tech)}</b></div>`;
   if($('reportProfitBreakdownTable'))$('reportProfitBreakdownTable').innerHTML=[
-    ['Doanh thu trên đơn', rev, 'Tổng tiền khách phải trả sau chiết khấu, gồm phụ thu và VAT nếu có'],
-    ['Doanh thu trước VAT', revenueBeforeVat, 'Cơ sở tính lợi nhuận và hoa hồng'],
+    ['Doanh số trên đơn', rev, 'Tổng tiền khách phải trả theo phiếu bán sau chiết khấu, gồm phụ thu và VAT nếu có'],
+    ['Doanh số trước VAT', revenueBeforeVat, 'Cơ sở tính lợi nhuận và hoa hồng'],
     ['Giá vốn sản phẩm', -totalCost, 'Lấy từ Bảng giá vốn hiệu lực, nếu không có thì lấy Giá vốn trong Sản phẩm'],
-    ['Lãi gộp', grossMargin, 'Doanh thu trước VAT - Giá vốn'],
+    ['Lãi gộp', grossMargin, 'Doanh số trước VAT - Giá vốn'],
     ['Hoa hồng Sale', -comm, 'Theo % hoa hồng trên đơn hàng'],
     ['Công kỹ thuật', -techCostOnly, 'Tiền công lắp đặt nhập trong phiếu bán'],
     ['Tiền xăng kỹ thuật', -techFuelOnly, 'Tiền xăng nhập trong phiếu bán'],
@@ -3472,15 +3480,15 @@ function renderReports(){
     byTime[k]=byTime[k]||{key:k,orders:0,qty:0,revenue:0,surcharge:0,paid:0,debt:0,comm:0,tech:0,profit:0};
     const pay=salePaymentInfo(s);byTime[k].orders++;byTime[k].qty+=(s.items||[]).reduce((a,it)=>a+(+it.qty||0),0);byTime[k].revenue+=+s.grand||0;byTime[k].surcharge+=+s.surcharge||0;byTime[k].paid+=+pay.paidTotal||0;byTime[k].debt+=+pay.debtLeft||0;byTime[k].comm+=saleCommissionValue(s);byTime[k].tech+=(+s.techCost||0)+(+s.techFuel||0);byTime[k].profit+=saleProfitValue(s);
   });
-  if($('reportRevenueTable'))$('reportRevenueTable').innerHTML=Object.values(byTime).sort((a,b)=>String(b.key).localeCompare(String(a.key))).map(x=>`<tr><td><b>${x.key}</b></td><td>${x.orders}</td><td>${x.qty}</td><td>${money(x.revenue)}</td><td>${money(x.surcharge)}</td><td>${money(x.paid)}</td><td>${money(x.debt)}</td><td class="view-cost">${money(x.comm)}</td><td class="view-cost">${money(x.tech)}</td><td class="view-cost">${money(x.profit)}</td></tr>`).join('')||'<tr><td colspan="10">Chưa có doanh thu trong kỳ</td></tr>';
+  if($('reportRevenueTable'))$('reportRevenueTable').innerHTML=Object.values(byTime).sort((a,b)=>String(b.key).localeCompare(String(a.key))).map(x=>`<tr><td><b>${x.key}</b></td><td>${x.orders}</td><td>${x.qty}</td><td>${money(x.revenue)}</td><td>${money(x.surcharge)}</td><td>${money(x.paid)}</td><td>${money(x.debt)}</td><td class="view-cost">${money(x.comm)}</td><td class="view-cost">${money(x.tech)}</td><td class="view-cost">${money(x.profit)}</td></tr>`).join('')||'<tr><td colspan="10">Chưa có doanh số trong kỳ</td></tr>';
   const timeAsc=Object.values(byTime).sort((a,b)=>String(a.key).localeCompare(String(b.key)));
   renderChartHtml('reportRevenueCharts',
-    modernLineChart('Xu hướng doanh thu',timeAsc.map(x=>({label:x.key,value:x.revenue})),{sub:'Doanh thu theo mốc thời gian',money:true,badge:money(rev)})+
+    modernLineChart('Xu hướng doanh số',timeAsc.map(x=>({label:x.key,value:x.revenue})),{sub:'Doanh số theo mốc thời gian',money:true,badge:money(rev)})+
     modernBarChart('Top model bán chạy',productRows.map(x=>({label:x.code,value:x.qty})),{sub:'Số lượng bán ra theo model',limit:8})+
-    modernBarChart('Doanh thu theo model',productRows.map(x=>({label:x.code,value:x.revenue})),{sub:'Top model tạo doanh thu',money:true,limit:8})
+    modernBarChart('Doanh số theo model',productRows.map(x=>({label:x.code,value:x.revenue})),{sub:'Top model tạo doanh số',money:true,limit:8})
   );
   renderChartHtml('reportProfitCharts',
-    modernBarChart('Cơ cấu lợi nhuận',[{label:'Doanh thu trước VAT',value:revenueBeforeVat},{label:'Giá vốn',value:totalCost},{label:'Lãi gộp',value:grossMargin},{label:'Hoa hồng Sale',value:comm},{label:'Công + xăng KT',value:tech},{label:'Chi phí CTY',value:totalCompanyCost},{label:'Lợi nhuận ròng',value:profit}],{sub:'Các chỉ tiêu chính trong kỳ',money:true,limit:8})+
+    modernBarChart('Cơ cấu lợi nhuận',[{label:'Doanh số trước VAT',value:revenueBeforeVat},{label:'Giá vốn',value:totalCost},{label:'Lãi gộp',value:grossMargin},{label:'Hoa hồng Sale',value:comm},{label:'Công + xăng KT',value:tech},{label:'Chi phí CTY',value:totalCompanyCost},{label:'Lợi nhuận ròng',value:profit}],{sub:'Các chỉ tiêu chính trong kỳ',money:true,limit:8})+
     modernLineChart('Lợi nhuận đơn hàng theo thời gian',timeAsc.map(x=>({label:x.key,value:x.profit})),{sub:'Lợi nhuận trước chi phí vận hành',money:true,badge:money(grossProfit)})+
     modernDonutChart('Chi phí vận hành',[{label:'Chi phí khác',value:op},{label:'Lương nhân viên',value:sal},{label:'Hoa hồng Sale',value:comm},{label:'Kỹ thuật + xăng',value:tech}],{sub:'Các khoản chi phí chính',money:true})
   );
@@ -3594,7 +3602,7 @@ window.cancelSale=async(id)=>{
   await loadAll();
   if(s.customerId) await updatePaymentStatusesForCustomer(s.customerId);
   await loadAll();
-  alert('Đã hủy phiếu. Doanh thu, công nợ, hoa hồng, tồn kho, phiếu thu và bảo hành liên quan đã được loại khỏi số liệu hiệu lực.');
+  alert('Đã hủy phiếu. Doanh số, công nợ, hoa hồng, tồn kho, phiếu thu và bảo hành liên quan đã được loại khỏi số liệu hiệu lực.');
 };
 window.removeDoc=async(name,id)=>{
   const label={sales:'đơn bán',stockVouchers:'phiếu kho',customers:'khách hàng',products:'sản phẩm',prices:'bảng giá',staff:'nhân viên',warranties:'bảo hành',expenses:'chi phí',receipts:'phiếu thu'}[name]||name;
@@ -3615,7 +3623,7 @@ window.removeDoc=async(name,id)=>{
   await deleteDoc(doc(db,name,id));await logAction('Xóa '+label,id);await loadAll();
   if(customerToRefresh){await updatePaymentStatusesForCustomer(customerToRefresh);await loadAll()}
 }
-function doPrint(html){let w=window.open('','PRINT','width=800,height=900');w.document.write(`<!doctype html><html><head><title>In phiếu</title><style>body{font-family:Arial;margin:0;color:#111}.print-a5{width:148mm;min-height:210mm;padding:7mm 8mm;font-size:11.5px;box-sizing:border-box;page-break-after:always}table{width:100%;border-collapse:collapse;margin-top:6px;table-layout:fixed}th,td{border:1px solid #222;padding:4px;text-align:left;vertical-align:top;word-break:break-word}th{background:#f1f5f9}p{line-height:1.4}.print-a5 h2{font-size:17px;margin:3px 0 7px}@page{size:A5 portrait;margin:0}@media print{html,body{width:148mm;min-height:210mm}.print-a5{width:148mm;min-height:210mm}}</style></head><body>${html}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);w.document.close()}
+function doPrint(html){let w=window.open('','PRINT','width=800,height=900');w.document.write(`<!doctype html><html><head><title>In phiếu</title><style>body{font-family:Arial;margin:0;color:#111}.print-a5{width:148mm;min-height:210mm;padding:7mm 8mm;font-size:11.5px;box-sizing:border-box;page-break-after:always}table{width:100%;border-collapse:collapse;margin-top:6px;table-layout:fixed}th,td{border:1px solid #222;padding:4px;text-align:left;vertical-align:top;word-break:break-word}th{background:#f1f5f9}p{line-height:1.4}.print-a5 h2{font-size:17px;margin:3px 0 7px}.receipt-a5{font-size:11px;color:#0f172a}.receipt-brand{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border-bottom:2px solid #0f172a;padding-bottom:6px}.receipt-brand b{font-size:13px}.receipt-brand span{font-size:10.5px}.receipt-code{text-align:right;border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;min-width:34mm}.receipt-code b{display:block;font-size:14px}.receipt-code span{font-size:11px}.receipt-a5 h2{text-align:center;font-size:20px;letter-spacing:.5px;margin:8px 0 2px}.receipt-sub{text-align:center;color:#475569;font-size:10.5px;margin-bottom:7px}.receipt-info{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0}.receipt-info .box{border:1px solid #cbd5e1;border-radius:6px;padding:6px;background:#f8fafc}.receipt-info h4{margin:0 0 4px;font-size:11.5px}.receipt-info p{margin:2px 0;line-height:1.35}.receipt-purpose{border:1px dashed #94a3b8;border-radius:6px;padding:6px;margin:6px 0;background:#fff}.receipt-items th,.receipt-items td{font-size:10.8px}.receipt-items .c{text-align:center}.receipt-items .r{text-align:right}.receipt-bottom{display:grid;grid-template-columns:1fr 58mm;gap:8px;margin-top:8px;align-items:start}.receipt-words,.receipt-note{border:1px solid #cbd5e1;border-radius:6px;padding:7px;min-height:26px}.receipt-total{border:1px solid #0f172a;border-radius:6px;overflow:hidden}.receipt-total p{display:flex;justify-content:space-between;gap:8px;margin:0;padding:5px 7px;border-bottom:1px solid #e2e8f0}.receipt-total p:last-child{border-bottom:0}.receipt-total .main{background:#0f172a;color:white;font-size:12.5px;font-weight:bold}.receipt-note{margin-top:7px}.sign-row{display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:10px;margin-top:18mm}.sign-row small{font-size:10px;color:#334155}@page{size:A5 portrait;margin:0}@media print{html,body{width:148mm;min-height:210mm}.print-a5{width:148mm;min-height:210mm}}</style></head><body>${html}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);w.document.close()}
 
 function excelReady(){return !!window.XLSX}
 function assertExcel(){if(!excelReady())throw new Error('Thư viện Excel chưa tải xong. Kiểm tra Internet hoặc tải lại trang.');}
