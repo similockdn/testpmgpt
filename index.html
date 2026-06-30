@@ -45,7 +45,7 @@
           <button type="button" class="menu-toggle">💰 Tài chính</button>
           <div class="submenu">
             <button data-page="commissions">Thu nhập nhân viên</button>
-            <button data-page="expenses">Chi phí</button>
+            <button data-page="expenses">Phiếu chi</button>
             <button data-page="cashbook">Sổ quỹ</button>
             <button data-page="salaries">Lương nhân viên</button>
           </div>
@@ -111,7 +111,7 @@
           <div class="dash-v8-kpi overdue"><div class="kpi-icon">⚠️</div><div><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý</small></div></div>
           <div class="dash-v8-kpi orders"><div class="kpi-icon">🧾</div><div><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div></div>
           <div class="dash-v8-kpi stock"><div class="kpi-icon">📦</div><div><span>Giá trị tồn</span><b id="dashStockValue">0</b><small><i id="kpiLowStock">0</i> model sắp hết</small></div></div>
-          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Thực thu</span><b id="kpiCollected">0</b><small>Đã thu của phiếu trong kỳ</small></div></div>
+          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Thực thu</span><b id="kpiCollected">0</b><small>Tiền thu thực tế trong kỳ</small></div></div>
           <div class="dash-v8-kpi service"><div class="kpi-icon">🛠️</div><div><span>Bảo hành</span><b id="dashWarrantyCount">0</b><small>Phát sinh trong kỳ</small></div></div>
         </div>
 
@@ -258,16 +258,17 @@
 
       <section id="expenses" class="page">
         <div class="panel">
-          <div class="panel-head"><h3>📒 Chi phí vận hành</h3><div><button class="btn ghost" onclick="resetExpenseForm()">Phiếu mới</button><input type="file" id="importExpenses" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'expenses')"><button class="btn ghost" onclick="downloadTemplateExcel('expenses')">Mẫu Excel</button><button class="btn ghost" onclick="importExpenses.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất Excel</button><button class="btn primary" onclick="saveExpense()">Lưu chi phí</button></div></div>
+          <div class="panel-head"><h3>📒 Phiếu chi / Chi phí vận hành</h3><div><button class="btn ghost" onclick="resetExpenseForm()">Phiếu mới</button><input type="file" id="importExpenses" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'expenses')"><button class="btn ghost" onclick="downloadTemplateExcel('expenses')">Mẫu Excel</button><button class="btn ghost" onclick="importExpenses.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('expenses')">Xuất Excel</button><button class="btn primary" onclick="saveExpense()">Lưu chi phí</button></div></div>
           <div class="grid form-grid">
             <div><label>Ngày</label><input id="exDate" type="date"></div>
             <div><label>Loại chi phí</label><select id="exCategory"><option>Tiền điện</option><option>Tiền nước</option><option>Tiền Internet</option><option>Tiền thuê nhà</option><option>Tiền vận chuyển hàng</option><option>Marketing</option><option>Văn phòng phẩm</option><option>Xăng xe</option><option>Khác</option></select></div>
             <div><label>Số tiền</label><input id="exAmount" type="number"></div>
+            <div><label>Phương thức chi</label><select id="exPaymentMethod"><option>Tiền mặt</option><option>Chuyển khoản</option><option>Quẹt thẻ</option><option>Ví điện tử</option><option>Khác</option></select></div>
             <div class="span2"><label>Ghi chú</label><input id="exNote" placeholder="VD: Tiền điện tháng 6"></div>
           </div>
-          <div class="total-box"><div>Tổng chi phí vận hành: <b id="expenseTotal">0</b> <small>(không bao gồm lương)</small></div></div>
-          <div class="toolbar"><input class="search" id="expenseSearch" placeholder="Tìm chi phí theo ngày / loại / số tiền / ghi chú" oninput="renderExpenses()" /><button class="btn ghost" onclick="clearExpenseSearch()">Xóa tìm</button><span id="expenseSearchCount" class="muted-small"></span></div>
-          <table><thead><tr><th>Ngày</th><th>Loại chi phí</th><th>Số tiền</th><th>PTTT</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="expenseTable"></tbody></table>
+          <div class="total-box"><div>Tổng phiếu chi: <b id="expenseTotal">0</b> <small>(không bao gồm lương)</small></div></div>
+          <div class="toolbar"><input class="search" id="expenseSearch" placeholder="Tìm phiếu chi theo ngày / loại / số tiền / phương thức / ghi chú" oninput="renderExpenses()" /><button class="btn ghost" onclick="clearExpenseSearch()">Xóa tìm</button><span id="expenseSearchCount" class="muted-small"></span></div>
+          <table><thead><tr><th>Ngày</th><th>Loại chi</th><th>Số tiền</th><th>Phương thức chi</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="expenseTable"></tbody></table>
         </div>
       </section>
 
@@ -643,7 +644,7 @@
         </div>
 
         <div class="panel wide report-section report-section-payment">
-          <div class="panel-head"><div><h3>💵 Báo cáo thanh toán & sổ quỹ</h3><span>Tổng hợp thu tiền theo phương thức, dòng tiền vào/ra và đối chiếu cuối ngày.</span></div><div><button class="btn ghost" onclick="exportExcel('paymentReport')">Xuất báo cáo</button><button class="btn ghost" onclick="showPage('cashbook')">Mở sổ quỹ</button></div></div>
+          <div class="panel-head"><div><h3>💵 Báo cáo thanh toán & sổ quỹ</h3><span>Tổng hợp thực thu, phiếu chi, dòng tiền vào/ra và đối chiếu cuối ngày.</span></div><div><button class="btn ghost" onclick="exportExcel('paymentReport')">Xuất báo cáo</button><button class="btn ghost" onclick="showPage('cashbook')">Mở sổ quỹ</button></div></div>
           <div id="reportPaymentSummary" class="report-grid"></div>
           <div id="reportPaymentCharts" class="report-chart-grid"></div>
           <div class="report-two-cols">

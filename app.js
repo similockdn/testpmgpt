@@ -126,7 +126,7 @@ const permissionMap={
  'Kho Văn Phòng':['dashboard','inventory','stockbook','products'],
  'Kế toán':['dashboard','expenses','cashbook','commissions','debts','reports','sales','customers','products']
 };
-const permLabels={dashboard:'Dashboard',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí',cashbook:'Sổ quỹ',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận',editSales:'Sửa đơn bán',deleteSales:'Hủy phiếu bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký thao tác',salaries:'Lương nhân viên',viewSalary:'Xem lương',manageSalary:'Quản lý lương'};
+const permLabels={dashboard:'Dashboard',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Phiếu chi',cashbook:'Sổ quỹ',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận',editSales:'Sửa đơn bán',deleteSales:'Hủy phiếu bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký thao tác',salaries:'Lương nhân viên',viewSalary:'Xem lương',manageSalary:'Quản lý lương'};
 
 const permissionGroups=[
   {title:'Tổng quan',desc:'Các màn hình điều hành chung',keys:['dashboard','reports','audit']},
@@ -223,7 +223,7 @@ function stockStatusBadge(stock,minStock=3){
 function stockVoucherLocked(v){return !!(v.saleId||v.saleCode||v.locked)}
 
 const PAYMENT_METHODS=['Tiền mặt','Chuyển khoản','Quẹt thẻ','Ví điện tử','Cọc trước','Khác'];
-function paymentMethodText(v){return String(v||'').trim()||'Chưa chọn'}
+function paymentMethodText(v){return String(v||'').trim()||'Chưa xác định'}
 function paymentMethodBadge(v){const m=paymentMethodText(v);const cls=m.includes('Chuyển')?'blue':(m.includes('Tiền mặt')?'green':(m.includes('Cọc')?'orange':'gray'));return `<span class="badge ${cls}">${m}</span>`}
 function saleLocked(s){const pay=salePaymentInfo(s);return pay.paidTotal>0||!!stockVoucherForSale(s)}
 
@@ -934,7 +934,7 @@ function applyPermissions(){
 }
 document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn.closest('.menu-group').classList.toggle('open'));document.querySelectorAll('#menu button[data-page]').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page));
 function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));const activeBtn=document.querySelector(`#menu button[data-page="${id}"]`);if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='Similock Đà Nẵng - Quản lý bán hàng, kho, công nợ, bảo hành';if(id==='reports')setTimeout(()=>window.setReportTab?.(currentReportTab||'revenue'),0)}
-function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Chi phí vận hành',cashbook:'Sổ quỹ',salaries:'Lương nhân viên',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống',audit:'Nhật ký thao tác'}[id]||id)}
+function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Hoa hồng',expenses:'Phiếu chi / Chi phí',cashbook:'Sổ quỹ',salaries:'Lương nhân viên',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',prices:'Bảng giá',staff:'Nhân viên',reports:'Báo cáo',permissions:'Phân quyền',system:'Hệ thống',audit:'Nhật ký thao tác'}[id]||id)}
 
 function renderAll(){
   // V49: gọi hàm nội bộ trực tiếp, không phụ thuộc window.* khi module chưa export xong.
@@ -1084,14 +1084,13 @@ function renderDashboard(){
   const settledDebtRows=calcSettledDebts();
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
-  // V88-FIX: Thực thu trên Dashboard phải đi cùng Doanh số của kỳ đang lọc.
-  // Không cộng toàn bộ phiếu thu phát sinh trong kỳ, vì phiếu thu có thể là thu công nợ
-  // của đơn cũ ngoài kỳ hoặc dữ liệu mở đầu, dẫn đến Thực thu lớn bất thường so với Doanh số.
-  // Công thức mới: tổng số đã thu của các phiếu bán nằm trong kỳ, giới hạn tối đa bằng tổng phiếu.
-  const collected=salesInRange.reduce((a,s)=>{
-    const pay=salePaymentInfo(s);
-    return a+Math.min(+s.grand||0,+pay.paidTotal||0);
-  },0);
+  // V89-FINANCE: Thực thu là dòng tiền thu thực tế trong kỳ lọc.
+  // Nguồn: Phiếu thu + tiền thu trực tiếp trên Phiếu bán tại đúng ngày phát sinh.
+  // Doanh số vẫn là tổng giá trị phiếu bán trong kỳ, nên Thực thu có thể lớn hơn Doanh số
+  // khi trong kỳ có thu công nợ của các đơn cũ.
+  const cashRowsInRange=cashbookRows(range.from,range.to);
+  const collected=cashRowsInRange.reduce((a,r)=>a+(+r.income||0),0);
+  const cashOut=cashRowsInRange.reduce((a,r)=>a+(+r.expense||0),0);
   const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
   const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));
   const monthlySalaries=data.salaries.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to);
@@ -2399,7 +2398,7 @@ function renderCommissions(){
   if($('techPerformanceTable'))$('techPerformanceTable').innerHTML=techPerformanceRows().map(r=>`<tr><td><b>${r.name}</b></td><td>${r.count}</td><td>${r.qty}</td><td>${money(r.techCost)}</td><td>${money(r.techFuel)}</td><td>${r.warranty||0}</td></tr>`).join('')||'<tr><td colspan="6">Không có dữ liệu hiệu suất kỹ thuật</td></tr>';
   showIncomeTab(incomeActiveTab||'sale');
 }
-window.resetExpenseForm=()=>{editingExpense=null;$('exDate').value=today();$('exCategory').value='Tiền điện';$('exAmount').value='';$('exNote').value=''}
+window.resetExpenseForm=()=>{editingExpense=null;$('exDate').value=today();$('exCategory').value='Tiền điện';$('exAmount').value='';if($('exPaymentMethod'))$('exPaymentMethod').value='Tiền mặt';$('exNote').value=''}
 function isSalaryCategory(c){return /lương|luong|salary|payroll/i.test(String(c||''))}
 
 let editingSalary=null;
@@ -2430,10 +2429,10 @@ function renderSalaries(){
 window.clearSalarySearch=()=>{if($('salarySearch'))$('salarySearch').value='';renderSalaries();}
 window.editSalary=id=>{if(!has('manageSalary'))return alert('Bạn không có quyền sửa lương');let e=data.salaries.find(x=>x.id===id);if(!e)return;editingSalary=id;$('salId').value=id;$('salDate').value=e.date||today();$('salStaff').value=e.staffId||'';$('salBase').value=e.base||0;$('salAllowance').value=e.allowance||0;$('salBonus').value=e.bonus||0;$('salDeduct').value=e.deduct||0;$('salNote').value=e.note||'';showPage('salaries')}
 
-window.saveExpense=async()=>{let o={date:$('exDate').value||today(),category:$('exCategory').value,amount:+$('exAmount').value||0,note:$('exNote').value||'',updatedAt:serverTimestamp()};if(!o.amount)return alert('Nhập số tiền chi phí');if(isSalaryCategory(o.category))return alert('Chi phí lương đã được tách sang mục Lương nhân viên. Vui lòng nhập tại menu Lương nhân viên.');if(editingExpense)await updateDoc(doc(db,'expenses',editingExpense),o);else await addDoc(col('expenses'),{...o,createdAt:serverTimestamp()});await logAction(editingExpense?'Sửa chi phí':'Thêm chi phí',o.category+' '+o.amount);resetExpenseForm();await loadAll()}
-function renderExpenses(){if(!$('expenseTable'))return;let visibleExpenses=data.expenses.filter(e=>!isSalaryCategory(e.category));let total=visibleExpenses.reduce((a,e)=>a+(+e.amount||0),0);$('expenseTotal').textContent=money(total);const q=($('expenseSearch')?.value||'').toLowerCase().trim();let rows=visibleExpenses.filter(e=>matchSearchText(q,e.date,e.category,e.amount,money(e.amount),e.note)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));if($('expenseSearchCount'))$('expenseSearchCount').textContent=`Hiển thị ${rows.length}/${visibleExpenses.length}`;$('expenseTable').innerHTML=rows.map(e=>`<tr><td>${e.date||''}</td><td>${e.category||''}</td><td>${money(e.amount)}</td><td>${e.note||''}</td><td><button class="btn ghost" onclick="editExpense('${e.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('expenses','${e.id}')">Xóa</button></td></tr>`).join('')||'<tr><td colspan="5">Không tìm thấy chi phí phù hợp</td></tr>'}
+window.saveExpense=async()=>{let o={date:$('exDate').value||today(),category:$('exCategory').value,amount:+$('exAmount').value||0,paymentMethod:$('exPaymentMethod')?.value||'Tiền mặt',note:$('exNote').value||'',updatedAt:serverTimestamp()};if(!o.amount)return alert('Nhập số tiền chi phí');if(isSalaryCategory(o.category))return alert('Chi phí lương đã được tách sang mục Lương nhân viên. Vui lòng nhập tại menu Lương nhân viên.');if(editingExpense)await updateDoc(doc(db,'expenses',editingExpense),o);else await addDoc(col('expenses'),{...o,createdAt:serverTimestamp()});await logAction(editingExpense?'Sửa chi phí':'Thêm chi phí',o.category+' '+o.amount);resetExpenseForm();await loadAll()}
+function renderExpenses(){if(!$('expenseTable'))return;let visibleExpenses=data.expenses.filter(e=>!isSalaryCategory(e.category));let total=visibleExpenses.reduce((a,e)=>a+(+e.amount||0),0);$('expenseTotal').textContent=money(total);const q=($('expenseSearch')?.value||'').toLowerCase().trim();let rows=visibleExpenses.filter(e=>matchSearchText(q,e.date,e.category,e.amount,money(e.amount),e.paymentMethod,e.note)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));if($('expenseSearchCount'))$('expenseSearchCount').textContent=`Hiển thị ${rows.length}/${visibleExpenses.length}`;$('expenseTable').innerHTML=rows.map(e=>`<tr><td>${e.date||''}</td><td>${e.category||''}</td><td>${money(e.amount)}</td><td>${paymentMethodBadge(e.paymentMethod||'Tiền mặt')}</td><td>${e.note||''}</td><td><button class="btn ghost" onclick="editExpense('${e.id}')">Sửa</button> <button class="btn danger" onclick="removeDoc('expenses','${e.id}')">Xóa</button></td></tr>`).join('')||'<tr><td colspan="6">Không tìm thấy chi phí phù hợp</td></tr>'}
 window.clearExpenseSearch=()=>{if($('expenseSearch'))$('expenseSearch').value='';renderExpenses();}
-window.editExpense=id=>{let e=data.expenses.find(x=>x.id===id);if(!e)return;editingExpense=id;$('exDate').value=e.date||today();$('exCategory').value=e.category||'Khác';$('exAmount').value=e.amount||0;$('exNote').value=e.note||'';showPage('expenses')}
+window.editExpense=id=>{let e=data.expenses.find(x=>x.id===id);if(!e)return;editingExpense=id;$('exDate').value=e.date||today();$('exCategory').value=e.category||'Khác';$('exAmount').value=e.amount||0;if($('exPaymentMethod'))$('exPaymentMethod').value=e.paymentMethod||'Tiền mặt';$('exNote').value=e.note||'';showPage('expenses')}
 
 
 function debtClean(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ')}
@@ -2670,19 +2669,33 @@ function cashbookRows(from='',to=''){
   from=from||$('cashbookFrom')?.value||monthStart();
   to=to||$('cashbookTo')?.value||monthEnd();
   const rows=[];
+  // 1) Thu tiền: lấy từ Phiếu thu đã xác nhận. Đây là nguồn chính của Thực thu.
   activeReceipts().forEach(r=>{
     const date=reportDateValue(r.date||today()); if(date<from||date>to)return;
-    rows.push({date,code:r.code||'',type:'Thu',content:`Thu tiền ${r.saleCode?('phiếu '+r.saleCode):''} - ${r.customerName||customerInfo(data.customers.find(c=>c.id===r.customerId)||{}).name||''}`.trim(),paymentMethod:paymentMethodText(r.paymentMethod),income:+r.amount||0,expense:0,source:'receipt'});
+    const customer=r.customerName||customerInfo(data.customers.find(c=>c.id===r.customerId)||{}).name||'';
+    rows.push({date,code:r.code||'',type:'Thu',content:`Phiếu thu ${r.saleCode?('cho '+r.saleCode):''}${customer?(' - '+customer):''}`.trim(),paymentMethod:paymentMethodText(r.paymentMethod),income:+r.amount||0,expense:0,source:'receipt'});
   });
+  // 2) Thu trực tiếp trên Phiếu bán: chỉ tính phần nhập trực tiếp ở phiếu bán, trừ phần đã có phiếu thu để tránh cộng đôi dữ liệu cũ.
+  activeSales().forEach(s=>{
+    if(isSaleCanceled(s))return;
+    const date=reportDateValue(s.date||today()); if(date<from||date>to)return;
+    const receiptPaid=receiptsForSalePayment(s).reduce((a,r)=>a+(+r.amount||0),0);
+    const direct=Math.max(0,(+saleDirectPaid(s)||0)-receiptPaid);
+    if(direct<=0)return;
+    const ci=saleCustomerInfo(s);
+    rows.push({date,code:s.code||'',type:'Thu',content:`Thu trực tiếp phiếu bán ${s.code||''}${ci.name?(' - '+ci.name):''}`.trim(),paymentMethod:paymentMethodText(s.paymentMethod||s.payMethod||'Tiền mặt'),income:direct,expense:0,source:'sale_direct'});
+  });
+  // 3) Chi tiền: lấy từ phiếu chi/chi phí vận hành.
   (data.expenses||[]).filter(e=>!isSalaryCategory(e.category)).forEach(e=>{
     const date=reportDateValue(e.date||today()); if(date<from||date>to)return;
-    rows.push({date,code:e.code||'',type:'Chi',content:`Chi phí ${e.category||'Khác'}${e.note?' - '+e.note:''}`,paymentMethod:paymentMethodText(e.paymentMethod||'Tiền mặt'),income:0,expense:+e.amount||0,source:'expense'});
+    rows.push({date,code:e.code||'',type:'Chi',content:`Phiếu chi ${e.category||'Khác'}${e.note?' - '+e.note:''}`,paymentMethod:paymentMethodText(e.paymentMethod||'Tiền mặt'),income:0,expense:+e.amount||0,source:'expense'});
   });
+  // 4) Chi lương: đưa vào sổ quỹ như một khoản chi riêng.
   (data.salaries||[]).forEach(e=>{
     const date=reportDateValue(e.date||today()); if(date<from||date>to)return;
-    rows.push({date,code:e.code||'',type:'Chi',content:`Lương ${e.staffName||''}${e.note?' - '+e.note:''}`,paymentMethod:paymentMethodText(e.paymentMethod||'Tiền mặt'),income:0,expense:+(e.total||e.amount)||0,source:'salary'});
+    rows.push({date,code:e.code||'',type:'Chi',content:`Chi lương ${e.staffName||''}${e.note?' - '+e.note:''}`,paymentMethod:paymentMethodText(e.paymentMethod||'Tiền mặt'),income:0,expense:+(e.total||e.amount)||0,source:'salary'});
   });
-  rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.code).localeCompare(String(b.code)));
+  rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.type).localeCompare(String(b.type))||String(a.code).localeCompare(String(b.code)));
   let bal=0; rows.forEach(r=>{bal+=r.income-r.expense;r.balance=bal});
   return rows;
 }
@@ -3640,7 +3653,7 @@ const excelSchemas={
   prices:{sheet:'Bang_gia',headers:['listName','code','type','price','validFrom','validTo','active','note'],sample:[{listName:'Bảng giá bán lẻ tháng hiện hành',code:'F07',type:'Khách lẻ',price:1850000,validFrom:today(),validTo:'',active:true,note:'Giá bán lẻ'}]},
   costPrices:{sheet:'Bang_gia_von',headers:['listName','code','cost','validFrom','validTo','active','note'],sample:[{listName:'Giá vốn tháng hiện hành',code:'F07',cost:950000,validFrom:today(),validTo:'',active:true,note:'Giá vốn tháng hiện hành'}]},
   staff:{sheet:'Nhan_vien',headers:['name','dept','functions','phone','commissionPercent','techFee'],sample:[{name:'Nguyễn Sale + Kỹ thuật',dept:'Sale',functions:'Sale;Kỹ thuật',phone:'0900000001',commissionPercent:5,techFee:100000},{name:'Lê Kỹ Thuật',dept:'Kỹ thuật',functions:'Kỹ thuật',phone:'0900000002',commissionPercent:0,techFee:100000}]},
-  expenses:{sheet:'Chi_phi_van_hanh',headers:['date','category','amount','note'],sample:[{date:today(),category:'Tiền điện',amount:1500000,note:'Tiền điện tháng'}]},
+  expenses:{sheet:'Phieu_chi_Chi_phi',headers:['date','category','amount','paymentMethod','note'],sample:[{date:today(),category:'Tiền điện',amount:1500000,paymentMethod:'Tiền mặt',note:'Tiền điện tháng'}]},
   salaries:{sheet:'Luong_nhan_vien',headers:['date','staffName','base','allowance','bonus','deduct','total','note'],sample:[{date:today(),staffName:'Nguyễn Văn A',base:8000000,allowance:0,bonus:0,deduct:0,total:8000000,note:'Lương tháng'}]},
   warranties:{sheet:'Bao_hanh',headers:['code','saleCode','customer','phone','address','serial','start','months','end','receiveDate','receiverName','techName','priority','status','reasons','reasonOther','problem','result','completeDate','note'],sample:[{code:'BH000001',saleCode:'BH000001',customer:'Nguyễn Văn A',phone:'0902950816',address:'Đà Nẵng',serial:'F07 x1',start:today(),months:24,end:'',receiveDate:today(),receiverName:'',techName:'',priority:'Bình thường',status:'Mới tiếp nhận',reasons:'Không nhận vân tay;Kẹt chốt',reasonOther:'',problem:'Khách báo lỗi',result:'',completeDate:'',note:''}]},
   stockVouchers:{sheet:'Chung_tu_kho',headers:['code','date','type','warehouse','productCode','productName','qty','cost','note'],sample:[{code:'NK000001',date:today(),type:'IN',warehouse:defaultWarehouse(),productCode:'F07',productName:'Khóa thông minh F07',qty:10,cost:950000,note:'Nhập kho'}]},
@@ -3661,7 +3674,7 @@ function exportRows(type){let rows=[];
   if(type==='prices')rows=data.prices.map(p=>({listName:p.listName||'',code:p.code,type:p.type,price:p.price,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));
   if(type==='costPrices')rows=(data.costPrices||[]).map(p=>({listName:p.listName||'',code:p.code,cost:p.cost,validFrom:p.validFrom||'',validTo:p.validTo||'',active:String(p.active)!=='false',note:p.note||''}));
   if(type==='staff')rows=data.staff.map(e=>({name:e.name,dept:e.dept,functions:staffFunctionText(e),phone:e.phone,commissionPercent:e.commissionPercent||0,techFee:e.techFee||0}));
-  if(type==='expenses')rows=data.expenses.filter(e=>!isSalaryCategory(e.category)).map(e=>({date:e.date,category:e.category,amount:e.amount,note:e.note}));
+  if(type==='expenses')rows=data.expenses.filter(e=>!isSalaryCategory(e.category)).map(e=>({date:e.date,category:e.category,amount:e.amount,paymentMethod:e.paymentMethod||'Tiền mặt',note:e.note}));
   if(type==='salaries')rows=data.salaries.map(e=>({date:e.date,staffName:e.staffName,base:e.base,allowance:e.allowance,bonus:e.bonus,deduct:e.deduct,total:e.total,note:e.note}));
   if(type==='warranties')rows=activeWarranties().map(w=>({code:warrantyCode(w),saleCode:w.saleCode||'',customer:w.customer||'',phone:w.phone||'',address:w.address||'',serial:w.serial||'',start:w.start||'',months:w.months||24,end:w.end||'',receiveDate:w.receiveDate||'',receiverName:w.receiverName||'',techName:w.techName||'',priority:w.priority||'',status:w.status||'',reasons:(w.reasons||[]).join(';'),reasonOther:w.reasonOther||'',problem:w.problem||'',result:w.result||'',completeDate:w.completeDate||'',note:w.note||''}));
   if(type==='stockVouchers')rows=activeStockVouchers().flatMap(v=>(v.items||[]).map(it=>({code:v.code,date:v.date,type:v.type,warehouse:voucherWarehouse(v),productCode:it.code,productName:it.name,qty:it.actualQty??it.inputQty??it.qty,cost:it.cost,note:it.note||v.note||''})));
