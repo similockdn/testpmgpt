@@ -1084,10 +1084,10 @@ function renderDashboard(){
   const settledDebtRows=calcSettledDebts();
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
-  // V89-FINANCE: Thực thu là dòng tiền thu thực tế trong kỳ lọc.
-  // Nguồn: Phiếu thu + tiền thu trực tiếp trên Phiếu bán tại đúng ngày phát sinh.
-  // Doanh số vẫn là tổng giá trị phiếu bán trong kỳ, nên Thực thu có thể lớn hơn Doanh số
-  // khi trong kỳ có thu công nợ của các đơn cũ.
+  // V91-FINANCE-AUDIT: Tách chuẩn kế toán quản trị.
+  // Doanh số = tổng phiếu bán trong kỳ.
+  // Thực thu = dòng tiền THU thực tế phát sinh trong kỳ (phiếu thu + thu trực tiếp tại phiếu bán),
+  // không bị giới hạn bởi ngày bán và không cộng các chứng từ thiếu ngày. Vì vậy thực thu có thể lớn hơn doanh số nếu khách trả công nợ cũ.
   const cashRowsInRange=cashbookRows(range.from,range.to);
   const collected=cashRowsInRange.reduce((a,r)=>a+(+r.income||0),0);
   const cashOut=cashRowsInRange.reduce((a,r)=>a+(+r.expense||0),0);
@@ -2665,40 +2665,89 @@ function cashbookRange(){
   const to=$('cashbookTo')?.value||monthEnd();
   return {from,to};
 }
+function saleForReceipt(r={}){
+  const sid=receiptSaleId(r);
+  if(sid){const s=data.sales.find(x=>String(x.id||'')===String(sid)); if(s)return s;}
+  if(r.saleCode){const s=data.sales.find(x=>String(x.code||'')===String(r.saleCode)); if(s)return s;}
+  if(r.debtKey && String(r.debtKey).startsWith('sale:')){const id=String(r.debtKey).slice(5); const s=data.sales.find(x=>String(x.id||'')===id); if(s)return s;}
+  return null;
+}
+function normalizePaymentMethod(v){
+  const m=String(v||'').trim();
+  if(!m || m==='Chưa chọn' || m==='undefined' || m==='null')return '';
+  return m;
+}
+function receiptEffectivePaymentMethod(r={}){
+  const direct=normalizePaymentMethod(r.paymentMethod||r.payMethod||r.method);
+  if(direct)return direct;
+  const s=saleForReceipt(r);
+  const fromSale=normalizePaymentMethod(s?.paymentMethod||s?.payMethod||s?.method);
+  if(fromSale)return fromSale;
+  return 'Chưa xác định';
+}
+function financeDocDate(obj={}){
+  return reportDateValue(obj.date||obj.paymentDate||obj.createdDate||obj.createdAt||'');
+}
 function cashbookRows(from='',to=''){
   from=from||$('cashbookFrom')?.value||monthStart();
   to=to||$('cashbookTo')?.value||monthEnd();
   const rows=[];
-  // 1) Thu tiền: lấy từ Phiếu thu đã xác nhận. Đây là nguồn chính của Thực thu.
+  const seen=new Set();
+  const pushRow=(r)=>{
+    if(!r.date || r.date<from || r.date>to)return;
+    const key=[r.source,r.id||'',r.code||'',r.type,r.date,r.income||0,r.expense||0].join('|');
+    if(seen.has(key))return;
+    seen.add(key);
+    rows.push(r);
+  };
+
+  // 1) Phiếu thu: là nguồn chính của dòng tiền thu thực tế.
+  // Không dùng ngày mặc định nếu phiếu thiếu ngày để tránh cộng nhầm vào kỳ hiện tại.
   activeReceipts().forEach(r=>{
-    const date=reportDateValue(r.date||today()); if(date<from||date>to)return;
+    const amount=+r.amount||0; if(amount<=0)return;
+    const date=financeDocDate(r); if(!date)return;
     const customer=r.customerName||customerInfo(data.customers.find(c=>c.id===r.customerId)||{}).name||'';
-    rows.push({date,code:r.code||'',type:'Thu',content:`Phiếu thu ${r.saleCode?('cho '+r.saleCode):''}${customer?(' - '+customer):''}`.trim(),paymentMethod:paymentMethodText(r.paymentMethod),income:+r.amount||0,expense:0,source:'receipt'});
+    const sale=saleForReceipt(r);
+    pushRow({
+      id:r.id||'',date,code:r.code||'',type:'Thu',
+      content:`Phiếu thu ${r.saleCode||sale?.code?('cho '+(r.saleCode||sale?.code||'')):''}${customer?(' - '+customer):''}`.trim(),
+      paymentMethod:receiptEffectivePaymentMethod(r),income:amount,expense:0,source:'receipt'
+    });
   });
-  // 2) Thu trực tiếp trên Phiếu bán: chỉ tính phần nhập trực tiếp ở phiếu bán, trừ phần đã có phiếu thu để tránh cộng đôi dữ liệu cũ.
+
+  // 2) Thu trực tiếp trên Phiếu bán: chỉ lấy số tiền nhập ở ô Đã thu khi tạo phiếu bán.
+  // Không trừ các phiếu thu phát sinh sau đó, vì phiếu thu là dòng tiền riêng theo ngày thu.
+  // saleDirectPaid() đã có khóa paidEntryKey/paidSaleCode để không tự nhận nhầm dữ liệu legacy.
   activeSales().forEach(s=>{
     if(isSaleCanceled(s))return;
-    const date=reportDateValue(s.date||today()); if(date<from||date>to)return;
-    const receiptPaid=receiptsForSalePayment(s).reduce((a,r)=>a+(+r.amount||0),0);
-    const direct=Math.max(0,(+saleDirectPaid(s)||0)-receiptPaid);
+    const date=financeDocDate(s); if(!date)return;
+    const direct=Math.min(+saleDirectPaid(s)||0,+s.grand||0);
     if(direct<=0)return;
     const ci=saleCustomerInfo(s);
-    rows.push({date,code:s.code||'',type:'Thu',content:`Thu trực tiếp phiếu bán ${s.code||''}${ci.name?(' - '+ci.name):''}`.trim(),paymentMethod:paymentMethodText(s.paymentMethod||s.payMethod||'Tiền mặt'),income:direct,expense:0,source:'sale_direct'});
+    pushRow({
+      id:s.id||'',date,code:s.code||'',type:'Thu',
+      content:`Thu trực tiếp phiếu bán ${s.code||''}${ci.name?(' - '+ci.name):''}`.trim(),
+      paymentMethod:normalizePaymentMethod(s.paymentMethod||s.payMethod)||'Chưa xác định',income:direct,expense:0,source:'sale_direct'
+    });
   });
-  // 3) Chi tiền: lấy từ phiếu chi/chi phí vận hành.
-  (data.expenses||[]).filter(e=>!isSalaryCategory(e.category)).forEach(e=>{
-    const date=reportDateValue(e.date||today()); if(date<from||date>to)return;
-    rows.push({date,code:e.code||'',type:'Chi',content:`Phiếu chi ${e.category||'Khác'}${e.note?' - '+e.note:''}`,paymentMethod:paymentMethodText(e.paymentMethod||'Tiền mặt'),income:0,expense:+e.amount||0,source:'expense'});
+
+  // 3) Phiếu chi/chi phí. Chỉ lấy chứng từ có ngày hợp lệ.
+  data.expenses.filter(e=>!isSalaryCategory(e.category)).forEach(e=>{
+    const amount=+e.amount||0; if(amount<=0)return;
+    const date=financeDocDate(e); if(!date)return;
+    pushRow({id:e.id||'',date,code:e.code||'',type:'Chi',content:`Phiếu chi ${e.category||'Khác'}${e.note?' - '+e.note:''}`,paymentMethod:normalizePaymentMethod(e.paymentMethod)||'Tiền mặt',income:0,expense:amount,source:'expense'});
   });
-  // 4) Chi lương: đưa vào sổ quỹ như một khoản chi riêng.
-  (data.salaries||[]).forEach(e=>{
-    const date=reportDateValue(e.date||today()); if(date<from||date>to)return;
-    rows.push({date,code:e.code||'',type:'Chi',content:`Chi lương ${e.staffName||''}${e.note?' - '+e.note:''}`,paymentMethod:paymentMethodText(e.paymentMethod||'Tiền mặt'),income:0,expense:+(e.total||e.amount)||0,source:'salary'});
+
+  // 4) Chi lương.
+  data.salaries.forEach(e=>{
+    const amount=+(e.total||e.amount)||0; if(amount<=0)return;
+    const date=financeDocDate(e); if(!date)return;
+    pushRow({id:e.id||'',date,code:e.code||'',type:'Chi',content:`Chi lương ${e.staffName||''}${e.note?' - '+e.note:''}`,paymentMethod:normalizePaymentMethod(e.paymentMethod)||'Tiền mặt',income:0,expense:amount,source:'salary'});
   });
-  rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.type).localeCompare(String(b.type))||String(a.code).localeCompare(String(b.code)));
-  let bal=0; rows.forEach(r=>{bal+=r.income-r.expense;r.balance=bal});
-  return rows;
+
+  return rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.code).localeCompare(String(b.code)));
 }
+
 function paymentMethodSummary(from,to){
   const map={};
   cashbookRows(from,to).forEach(r=>{const k=paymentMethodText(r.paymentMethod);map[k]=map[k]||{method:k,income:0,expense:0,net:0,count:0};map[k].income+=r.income;map[k].expense+=r.expense;map[k].net+=r.income-r.expense;map[k].count++});
@@ -3420,9 +3469,9 @@ function renderPaymentReports(from,to){
   const days=Object.values(daily).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   if($('reportPaymentDailyTable'))$('reportPaymentDailyTable').innerHTML=days.map(d=>`<tr><td><b>${d.date}</b></td><td>${money(d.income)}</td><td>${money(d.expense)}</td><td><b class="${d.income-d.expense<0?'text-red':'text-green'}">${money(d.income-d.expense)}</b></td><td>${d.count}</td></tr>`).join('')||'<tr><td colspan="5">Chưa có dữ liệu đối chiếu ngày</td></tr>';
   renderChartHtml('reportPaymentCharts',
-    modernDonutChart('Cơ cấu thu theo phương thức',methods.map(x=>({label:x.method,value:x.income})),{sub:'Tiền thu từ phiếu thu theo phương thức',money:true})+
+    modernDonutChart('Cơ cấu thu theo phương thức',methods.map(x=>({label:x.method,value:x.income})),{sub:'Dòng tiền thu theo phương thức',money:true})+
     modernBarChart('Thu - chi theo ngày',days.slice().reverse().map(x=>({label:x.date,value:x.income-x.expense})),{sub:'Chênh lệch thu chi từng ngày',money:true,limit:14})+
-    modernBarChart('Tổng thu theo phương thức',methods.map(x=>({label:x.method,value:x.income})),{sub:'Xếp hạng nguồn tiền thu',money:true,limit:8})
+    modernBarChart('Dòng tiền thu theo phương thức',methods.map(x=>({label:x.method,value:x.income})),{sub:'Xếp hạng nguồn tiền thu',money:true,limit:8})
   );
 }
 
