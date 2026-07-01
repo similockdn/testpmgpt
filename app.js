@@ -1089,13 +1089,13 @@ function renderDashboard(){
   const settledDebtRows=calcSettledDebts();
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
-  // V97-FINANCE-FIX:
-  // Doanh số = tổng giá trị phiếu bán có NGÀY BÁN trong kỳ.
-  // Thực thu Dashboard = số tiền đã thu CỦA CÁC PHIẾU BÁN trong kỳ.
-  // Không lấy toàn bộ Phiếu thu trong kỳ, vì phiếu thu có thể là khách trả công nợ cũ
-  // và sẽ làm Thực thu trên Dashboard phình lớn hơn Doanh số kỳ hiện tại.
-  const collected=salesInRange.reduce((a,s)=>a+saleCollectedInRange(s,range.from,range.to),0);
   const cashRowsInRange=cashbookRows(range.from,range.to);
+  // V100-FINANCE-STRICT:
+  // Doanh số = tổng giá trị Phiếu bán theo ngày bán.
+  // Thực thu = dòng tiền thực nhận theo ngày Phiếu thu.
+  // Vì vậy Thực thu trên Dashboard phải khớp với Tổng thu trong Sổ quỹ cùng kỳ.
+  // Nếu thu công nợ cũ trong kỳ thì Thực thu có thể lớn hơn Doanh số kỳ này; đó là đúng về dòng tiền.
+  const collected=cashRowsInRange.reduce((a,r)=>a+(+r.income||0),0);
   const cashOut=cashRowsInRange.reduce((a,r)=>a+(+r.expense||0),0);
   const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
   const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));
@@ -2846,7 +2846,7 @@ function renderCashbook(){
   const {from,to}=cashbookRange(); const method=$('cashbookMethod')?.value||'ALL'; const q=($('cashbookSearch')?.value||'').toLowerCase().trim();
   let rows=cashbookRows(from,to).filter(r=>(method==='ALL'||r.paymentMethod===method)&&matchSearchText(q,r.date,r.code,r.type,r.content,r.paymentMethod,r.income,r.expense,money(r.income),money(r.expense)));
   const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0), net=income-expense;
-  $('cashbookSummary').innerHTML=`<div class="report-card">Tiền vào sổ quỹ<b>${money(income)}</b><small>Dòng tiền vào theo ngày phiếu thu</small></div><div class="report-card">Tổng chi trong kỳ<b>${money(expense)}</b><small>Phiếu chi + lương theo ngày chứng từ</small></div><div class="report-card">Thu - chi trong kỳ<b>${money(net)}</b><small>Chỉ là phát sinh ròng trong kỳ, không phải số dư cuối quỹ nếu chưa nhập số dư đầu kỳ</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
+  $('cashbookSummary').innerHTML=`<div class="report-card">Tổng thu theo phiếu thu<b>${money(income)}</b><small>Khớp với Thực thu Dashboard cùng kỳ nếu cùng bộ lọc ngày</small></div><div class="report-card">Tổng chi trong kỳ<b>${money(expense)}</b><small>Phiếu chi + lương theo ngày chứng từ</small></div><div class="report-card">Phát sinh ròng<b>${money(net)}</b><small>= Tổng thu - Tổng chi, chưa cộng số dư đầu kỳ</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
   let run=0;
   $('cashbookTable').innerHTML=rows.map(r=>{run+=r.income-r.expense;return `<tr><td>${r.date}</td><td><b>${r.code}</b></td><td><span class="badge ${r.type==='Thu'?'green':'orange'}">${r.type}</span></td><td>${htmlesc(r.content)}</td><td>${paymentMethodBadge(r.paymentMethod)}</td><td><b>${r.income?money(r.income):''}</b></td><td><b>${r.expense?money(r.expense):''}</b></td><td><b>${money(run)}</b></td></tr>`}).join('')||'<tr><td colspan="8">Không có phát sinh sổ quỹ trong kỳ</td></tr>';
 }
@@ -2854,7 +2854,7 @@ window.renderCashbook=renderCashbook;
 window.clearCashbookFilter=()=>{if($('cashbookFrom'))$('cashbookFrom').value=monthStart();if($('cashbookTo'))$('cashbookTo').value=monthEnd();if($('cashbookMethod'))$('cashbookMethod').value='ALL';if($('cashbookSearch'))$('cashbookSearch').value='';renderCashbook();}
 window.printCashbook=()=>{
   const {from,to}=cashbookRange(); const rows=cashbookRows(from,to); const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0);
-  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Tiền vào sổ quỹ:</b> ${money(income)}<br><b>Tổng chi trong kỳ:</b> ${money(expense)}<br><b>Thu - chi trong kỳ:</b> ${money(income-expense)}<br><small>Tiền vào sổ quỹ chỉ lấy Phiếu thu theo ngày chứng từ. Thu - chi trong kỳ chỉ là phát sinh ròng, không phải số dư quỹ cuối nếu chưa nhập số dư đầu kỳ.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
+  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Tổng thu theo phiếu thu:</b> ${money(income)}<br><b>Tổng chi trong kỳ:</b> ${money(expense)}<br><b>Phát sinh ròng:</b> ${money(income-expense)}<br><small>Tổng thu theo phiếu thu phải khớp với Thực thu Dashboard khi cùng bộ lọc ngày. Phát sinh ròng chưa phải số dư cuối nếu chưa nhập số dư đầu kỳ.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
   doPrint(html);
 }
 
