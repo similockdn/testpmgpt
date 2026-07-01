@@ -38,6 +38,7 @@
           <div class="submenu">
             <button data-page="customers">Khách hàng</button>
             <button data-page="products">Sản phẩm</button>
+            <button data-page="categories">Danh mục chung</button>
             <button data-page="prices">Bảng giá</button>
             <button data-page="staff">Nhân viên</button>
           </div>
@@ -367,7 +368,7 @@
       <section id="cashbook" class="page">
         <div class="panel wide">
           <div class="panel-head">
-            <div><h3>💵 Sổ quỹ</h3><span>Sổ quỹ chỉ theo dõi dòng tiền thực tế: Phiếu thu là tiền vào, Phiếu chi/lương là tiền ra.</span></div>
+            <div><h3>💵 Sổ quỹ</h3><span>Sổ quỹ theo dõi dòng tiền thực tế: Phiếu thu + thu trực tiếp là tiền vào, Phiếu chi/lương là tiền ra.</span></div>
             <div><button class="btn ghost" onclick="exportExcel('cashbook')">Xuất Excel</button><button class="btn ghost" onclick="printCashbook()">In sổ quỹ</button></div>
           </div>
           <div class="toolbar compact-filter">
@@ -379,7 +380,7 @@
             <button class="btn ghost" onclick="clearCashbookFilter()">Xóa lọc</button>
           </div>
           <div id="cashbookSummary" class="report-grid"></div>
-          <div class="field-note cashbook-note"><b>Cách hiểu sổ quỹ:</b> Sổ quỹ chỉ đọc <b>Phiếu thu</b> và <b>Phiếu chi/Lương</b>. Không đọc Phiếu bán. Doanh số là bán được bao nhiêu, còn Thực thu/Tổng thu sổ quỹ là tiền thật đã lập phiếu thu trong kỳ. Nếu bán chịu hoặc thu công nợ cũ thì Doanh số và Thực thu có thể khác nhau.</div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Số dư trong kỳ</th></tr></thead><tbody id="cashbookTable"></tbody></table>
+          <div class="field-note cashbook-note"><b>Cách hiểu sổ quỹ:</b> Sổ quỹ đọc <b>Phiếu thu</b>, <b>thu trực tiếp trên Phiếu bán</b> và <b>Phiếu chi/Lương</b>. Doanh số là bán được bao nhiêu; Thực thu/Tổng thu sổ quỹ là tiền thật đã thu trong kỳ. Nếu bán chịu hoặc thu công nợ cũ thì Doanh số và Thực thu có thể khác nhau.</div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Số dư trong kỳ</th></tr></thead><tbody id="cashbookTable"></tbody></table>
         </div>
       </section>
 
@@ -481,6 +482,27 @@
       </section>
 
       <section id="customers" class="page"><div class="panel"><div class="panel-head"><h3>👥 Danh mục khách hàng</h3><div><input type="file" id="importCustomers" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'customers')"><button class="btn ghost" onclick="downloadTemplateExcel('customers')">Mẫu Excel</button><button class="btn ghost" onclick="importCustomers.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('customers')">Xuất Excel</button><button class="btn primary" onclick="saveCustomer()">Lưu</button></div></div><div id="customerFormAnchor" class="customer-edit-anchor"></div><div class="grid form-grid"><input id="cId" hidden><div><label>Mã khách hàng</label><input id="cCode" placeholder="VD: KL0902950816"></div><div><label>Tên khách <span class="req">*</span></label><input id="cName" placeholder="Nhập đầy đủ tên khách hàng"></div><div><label>Loại khách</label><select id="cType"><option>Khách lẻ</option><option>Đại lý</option><option>CTV</option><option>Công ty</option></select></div><div><label>SĐT <span class="req">*</span></label><input id="cPhone" placeholder="090..."></div><div><label>Địa chỉ</label><input id="cAddress"></div><div><label>Email</label><input id="cEmail" type="email" placeholder="email nếu có"></div><div><label>Người liên hệ</label><input id="cContact" placeholder="Dành cho công ty/đại lý"></div><div><label>Nguồn khách</label><select id="cSource"><option></option><option>Facebook</option><option>Zalo</option><option>TikTok</option><option>Website</option><option>Giới thiệu</option><option>Khách cũ</option><option>Khác</option></select></div><div><label>Ngày sinh</label><input id="cBirthday" type="date"></div><div><label>Chiết khấu %</label><input id="cDiscount" type="number" value="0"></div><div><label>Công nợ đầu kỳ</label><input id="cOpeningDebt" type="number" value="0"></div><div class="span2"><label>Ghi chú</label><input id="cNote" placeholder="Ghi chú chăm sóc khách hàng"></div></div><div class="toolbar customer-toolbar"><input class="search" id="customerSearch" placeholder="Tìm khách theo tên / SĐT / mã KH / địa chỉ / nguồn" oninput="renderCustomers()" /><button class="btn ghost" onclick="clearCustomerSearch()">Xóa tìm</button><span id="customerSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã KH</th><th>Tên khách</th><th>Loại</th><th>SĐT</th><th>Địa chỉ</th><th>Nguồn</th><th>CK</th><th>Hành động</th></tr></thead><tbody id="customerTable"></tbody></table></div></section>
+
+      <section id="categories" class="page">
+        <div class="panel category-admin-panel">
+          <div class="panel-head">
+            <div><h3>📚 Quản lý danh mục chung</h3><span>Thêm / sửa / xóa các danh mục dùng chung trong ERP. Khi đổi tên danh mục, hệ thống sẽ cập nhật lại dữ liệu liên quan.</span></div>
+            <div><button class="btn ghost" onclick="resetSystemCategoryForm()">Danh mục mới</button><button class="btn primary" onclick="saveSystemCategory()">Lưu danh mục</button></div>
+          </div>
+          <div class="grid form-grid">
+            <input id="catId" hidden>
+            <input id="catOldType" hidden>
+            <input id="catOldName" hidden>
+            <div><label>Nhóm danh mục</label><select id="catType" onchange="renderSystemCategories()"><option value="productCategory">Danh mục sản phẩm</option><option value="expenseCategory">Loại phiếu chi</option><option value="paymentMethod">Phương thức thanh toán</option><option value="warrantyReason">Lý do bảo hành</option><option value="installStatus">Trạng thái lắp đặt</option><option value="orderStatus">Trạng thái đơn hàng</option></select></div>
+            <div><label>Tên danh mục <span class="req">*</span></label><input id="catName" placeholder="VD: Khóa cửa nhôm Xingfa"></div>
+            <div><label>Trạng thái</label><select id="catActive"><option value="active">Đang sử dụng</option><option value="inactive">Tạm ẩn</option></select></div>
+            <div><label>Ghi chú</label><input id="catNote" placeholder="Ghi chú nội bộ nếu có"></div>
+          </div>
+          <div class="toolbar category-toolbar"><select id="catFilterType" onchange="renderSystemCategories()"><option value="">Tất cả nhóm</option><option value="productCategory">Danh mục sản phẩm</option><option value="expenseCategory">Loại phiếu chi</option><option value="paymentMethod">Phương thức thanh toán</option><option value="warrantyReason">Lý do bảo hành</option><option value="installStatus">Trạng thái lắp đặt</option><option value="orderStatus">Trạng thái đơn hàng</option></select><input class="search" id="catSearch" placeholder="Tìm danh mục theo tên / nhóm / ghi chú" oninput="renderSystemCategories()"><button class="btn ghost" onclick="clearSystemCategorySearch()">Xóa tìm</button><span id="catSearchCount" class="muted-small"></span></div>
+          <table><thead><tr><th>Nhóm</th><th>Tên danh mục</th><th>Trạng thái</th><th>Đang sử dụng</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="categoryTable"></tbody></table>
+          <div class="hint category-hint"><b>Lưu ý:</b> Không nên xóa danh mục đang phát sinh dữ liệu. Nếu cần thay đổi tên, dùng nút <b>Sửa</b> để hệ thống đổi tên đồng bộ trên sản phẩm, phiếu chi, phiếu thu hoặc bảo hành.</div>
+        </div>
+      </section>
 
       <section id="products" class="page"><div class="panel"><div class="panel-head"><h3>🔐 Danh mục sản phẩm</h3><div><input type="file" id="importProducts" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'products')"><button class="btn ghost" onclick="downloadTemplateExcel('products')">Mẫu Excel</button><button class="btn ghost" onclick="importProducts.click()">Nhập Excel</button><button class="btn ghost" onclick="exportExcel('products')">Xuất Excel</button><button class="btn primary" onclick="saveProduct()">Lưu</button></div></div><div class="grid form-grid"><input id="pId" hidden><div><label>Model</label><input id="pCode"></div><div><label>Tên sản phẩm</label><input id="pName"></div><div><label>Danh mục</label><select id="pCategory"></select></div><div class="view-cost"><label>Giá vốn</label><input id="pCost" type="number"></div><div><label>Giá bán</label><input id="pPrice" type="number"></div><div><label>Tồn tối thiểu</label><input id="pMinStock" type="number" value="3"></div><div><label>Trạng thái</label><select id="pActive"><option value="active">Đang kinh doanh</option><option value="inactive">Ngừng bán</option></select></div></div><div class="toolbar product-category-toolbar"><input class="search" id="productSearch" placeholder="Tìm Model / tên sản phẩm / danh mục" oninput="renderProducts()" /><button class="btn ghost" onclick="clearProductSearch()">Xóa tìm</button><select id="productCategoryFilter" onchange="renderProducts()"><option value="">Tất cả danh mục</option></select><input id="newProductCategory" placeholder="Tên danh mục mới" /><button class="btn ghost" onclick="saveProductCategory()">+ Danh mục</button><button class="btn danger" onclick="deleteSelectedProductCategory()">Xóa danh mục</button></div><table><thead><tr><th>Model</th><th>Tên</th><th>Danh mục</th><th class="view-cost">Giá vốn</th><th>Giá bán</th><th>Tồn</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody id="productTable"></tbody></table></div></section>
 
