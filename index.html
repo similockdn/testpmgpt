@@ -34,41 +34,41 @@
           </div>
         </div>
         <div class="menu-group open">
-          <button type="button" class="menu-toggle">🛒 Kinh doanh</button>
+          <button type="button" class="menu-toggle">📚 Danh mục</button>
           <div class="submenu">
-            <button data-page="sales">Bán hàng</button>
             <button data-page="customers">Khách hàng</button>
-            <button data-page="debts">Công nợ</button>
+            <button data-page="products">Sản phẩm</button>
+            <button data-page="prices">Bảng giá</button>
+            <button data-page="staff">Nhân viên</button>
+          </div>
+        </div>
+        <div class="menu-group open">
+          <button type="button" class="menu-toggle">🛒 Bán hàng</button>
+          <div class="submenu">
+            <button data-page="sales">Phiếu bán hàng</button>
+            <button data-page="debts">Công nợ phải thu</button>
+            <button data-page="warranty">Bảo hành</button>
           </div>
         </div>
         <div class="menu-group open">
           <button type="button" class="menu-toggle">💰 Tài chính</button>
           <div class="submenu">
-            <button data-page="commissions">Thu nhập nhân viên</button>
-            <button data-page="expenses">Phiếu chi</button>
             <button data-page="cashbook">Sổ quỹ</button>
+            <button data-page="expenses">Phiếu chi</button>
+            <button data-page="commissions">Thu nhập nhân viên</button>
             <button data-page="salaries">Lương nhân viên</button>
           </div>
         </div>
         <div class="menu-group">
-          <button type="button" class="menu-toggle">📦 Kho & sản phẩm</button>
+          <button type="button" class="menu-toggle">📦 Kho vận</button>
           <div class="submenu">
             <button data-page="inventory">Kho hàng</button>
             <button data-page="stockbook">Sổ kho</button>
-            <button data-page="products">Sản phẩm</button>
-            <button data-page="prices">Bảng giá</button>
-          </div>
-        </div>
-        <div class="menu-group">
-          <button type="button" class="menu-toggle">🛡️ Bảo hành</button>
-          <div class="submenu">
-            <button data-page="warranty">Bảo hành</button>
           </div>
         </div>
         <div class="menu-group">
           <button type="button" class="menu-toggle">⚙️ Hệ thống</button>
           <div class="submenu">
-            <button data-page="staff">Nhân viên</button>
             <button data-page="permissions">Phân quyền</button>
             <button data-page="system">Clear Data</button>
             <button data-page="audit">Nhật ký thao tác</button>
@@ -168,6 +168,7 @@
                     <div><label>Nhân viên Sale</label><select id="saleStaff"></select></div>
                     <div><label>Nhân viên kỹ thuật</label><select id="saleTech"></select></div>
                     <div><label>Kho xuất hàng</label><select id="saleWarehouse"></select></div>
+                    <div><label>Trạng thái lắp đặt</label><select id="saleInstallStatus"><option>Chưa lắp</option><option>Đang lắp</option><option>Đã lắp</option><option>Đã hủy</option></select></div>
                     <div><label>Ngày hoàn thành lắp</label><input id="saleInstallCompletedDate" type="date" /></div>
                     <div><label>Hoa hồng Sale %</label><select id="saleCommissionPercent"><option value="5">5%</option><option value="2">2%</option><option value="0">0%</option></select></div>
                     <div class="sale-stock-action"><label>Xuất kho</label><label class="checkline big-stock-check"><input id="saleExportStock" type="checkbox" /> <span>Kiêm xuất kho</span></label></div>
@@ -299,7 +300,7 @@
           <div class="debt-card paid"><span>Đã tất toán</span><b id="debtSettledCount">0</b><small>Lưu lịch sử phía dưới</small></div>
           <div class="debt-card danger"><span>Quá hạn</span><b id="debtOverdueTotal">0</b><small>Nợ quá 30 ngày</small></div>
         </div>
-        <div class="panel debt-filter-panel"><div class="toolbar debt-filter-toolbar"><b>Lọc công nợ:</b><label><input type="radio" name="debtStatusFilter" value="active" checked onchange="renderDebts()"> Đang nợ</label><label><input type="radio" name="debtStatusFilter" value="settled" onchange="renderDebts()"> Đã tất toán</label><label><input type="radio" name="debtStatusFilter" value="all" onchange="renderDebts()"> Tất cả</label><button class="btn ghost" onclick="exportExcel('debtsSettled')">Xuất công nợ đã tất toán</button></div><div class="total-box debt-stats-box" id="debtStatsBox"></div></div>
+        <div class="panel debt-filter-panel"><div class="toolbar debt-filter-toolbar"><b>Lọc công nợ:</b><label><input type="radio" name="debtStatusFilter" value="deposit_pending_install" checked onchange="renderDebts()"> Đã cọc - Chưa lắp</label><label><input type="radio" name="debtStatusFilter" value="installed_unpaid" onchange="renderDebts()"> Đã lắp - Chưa thanh toán</label><label><input type="radio" name="debtStatusFilter" value="active" onchange="renderDebts()"> Đang nợ</label><label><input type="radio" name="debtStatusFilter" value="settled" onchange="renderDebts()"> Đã tất toán</label><label><input type="radio" name="debtStatusFilter" value="all" onchange="renderDebts()"> Tất cả</label><button class="btn ghost" onclick="exportExcel('debtsSettled')">Xuất công nợ đã tất toán</button></div><div class="workflow-note"><b>Quy tắc công nợ:</b> Đã cọc - Chưa lắp = có phiếu thu nhưng chưa hoàn thành lắp. Đã lắp - Chưa thanh toán = đã lắp xong nhưng còn nợ.</div><div class="total-box debt-stats-box" id="debtStatsBox"></div></div>
         <div class="panel debt-panel debt-active-panel"><div class="panel-head"><div><h3>💳 Công nợ phải thu</h3><span>Giao diện gọn: gom thông tin khách và sản phẩm vào một dòng để dễ thu tiền.</span></div><button class="btn primary debt-big-btn" onclick="openReceiptForm()">+ Tạo phiếu thu</button></div><div class="toolbar"><input class="search" id="debtSearch" placeholder="Tìm mã phiếu / tên khách / SĐT / mã KH / model" oninput="renderDebts()" /><button class="btn ghost" onclick="clearDebtSearch()">Xóa tìm</button><span id="debtSearchCount" class="muted-small"></span></div><div class="table-scroll"><table class="debt-table compact-table"><thead><tr><th>Phiếu</th><th>Khách hàng</th><th>SL</th><th>Sản phẩm</th><th>Tổng mua</th><th>Đã thu</th><th>Còn nợ</th><th>Ngày bán</th><th>Quá hạn</th><th>Thao tác</th></tr></thead><tbody id="debtTable"></tbody></table></div></div>
         <div class="panel receipt-panel"><div class="panel-head"><div><h3>🧾 Phiếu thu</h3><span>Tạo, sửa, in phiếu thu. Sau khi thu đủ, công nợ tự chuyển xuống mục đã tất toán bên dưới.</span></div><div><button class="btn ghost" onclick="resetReceiptForm()">Nhập lại</button><button class="btn primary" onclick="saveReceipt()">Lưu phiếu thu</button></div></div><div class="grid form-grid receipt-form"><div><label>Khách hàng</label><select id="receiptCustomer"></select></div><div><label>Số tiền thu</label><input id="receiptAmount" type="number" /></div><div><label>Phương thức TT</label><select id="receiptPaymentMethod"><option>Tiền mặt</option><option>Chuyển khoản</option><option>Quẹt thẻ</option><option>Ví điện tử</option><option>Khác</option></select></div><div><label>Ngày thu</label><input id="receiptDate" type="date" /></div><div><label>Ghi chú</label><input id="receiptNote" placeholder="VD: Thu đủ đơn BH..." /></div></div><div class="toolbar"><input class="search" id="receiptSearch" placeholder="Tìm phiếu thu theo mã PT / tên khách / SĐT / mã KH / ghi chú" oninput="renderReceipts()" /><button class="btn ghost" onclick="clearReceiptSearch()">Xóa tìm</button><span id="receiptSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã PT</th><th>Ngày</th><th>Mã KH</th><th>Khách</th><th>Số tiền</th><th>PTTT</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="receiptTable"></tbody></table></div>
         <div class="panel settled-panel"><div class="panel-head"><div><h3>✅ Công nợ đã tất toán</h3><span>Đưa xuống dưới phiếu thu để không lẫn với danh sách cần thu tiền.</span></div></div><table><thead><tr><th>STT</th><th>Phiếu</th><th>Khách hàng</th><th>SĐT</th><th>SL</th><th>Model</th><th>Tổng tiền</th><th>Đã thu</th><th>Ngày tất toán</th></tr></thead><tbody id="settledDebtTable"></tbody></table></div>
@@ -372,12 +373,13 @@
           <div class="toolbar compact-filter">
             <label>Từ ngày <input id="cashbookFrom" type="date" onchange="renderCashbook()"></label>
             <label>Đến ngày <input id="cashbookTo" type="date" onchange="renderCashbook()"></label>
+            <label>Số dư đầu kỳ <input id="cashbookOpening" type="number" value="0" oninput="renderCashbook()" placeholder="Nhập số dư quỹ đầu kỳ"></label>
             <label>Phương thức <select id="cashbookMethod" onchange="renderCashbook()"><option value="ALL">Tất cả</option><option>Tiền mặt</option><option>Chuyển khoản</option><option>Quẹt thẻ</option><option>Ví điện tử</option><option>Cọc trước</option><option>Khác</option></select></label>
             <input class="search" id="cashbookSearch" placeholder="Tìm chứng từ / khách hàng / nội dung" oninput="renderCashbook()">
             <button class="btn ghost" onclick="clearCashbookFilter()">Xóa lọc</button>
           </div>
           <div id="cashbookSummary" class="report-grid"></div>
-          <div class="field-note cashbook-note"><b>Cách hiểu:</b> Doanh số = tổng phiếu bán. Thực thu/Tổng thu sổ quỹ = tổng phiếu thu theo ngày thu tiền. Hai số này có thể khác nhau khi thu công nợ cũ hoặc bán chịu.</div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Phát sinh lũy kế</th></tr></thead><tbody id="cashbookTable"></tbody></table>
+          <div class="field-note cashbook-note"><b>Cách hiểu sổ quỹ:</b> Sổ quỹ chỉ đọc <b>Phiếu thu</b> và <b>Phiếu chi/Lương</b>. Không đọc Phiếu bán. Doanh số là bán được bao nhiêu, còn Thực thu/Tổng thu sổ quỹ là tiền thật đã lập phiếu thu trong kỳ. Nếu bán chịu hoặc thu công nợ cũ thì Doanh số và Thực thu có thể khác nhau.</div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Số dư trong kỳ</th></tr></thead><tbody id="cashbookTable"></tbody></table>
         </div>
       </section>
 

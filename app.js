@@ -1800,6 +1800,29 @@ function canViewAllCommissions(){
 function warrantyStartFromSale(s={}){
   return String(s.installCompletedDate||s.installCompleteDate||s.completedInstallDate||s.installedAt||s.installDate||s.date||today()).slice(0,10);
 }
+function inferSaleInstallStatus(s={}){
+  const st=String(s.installStatus||s.installationStatus||'').trim();
+  if(st) return st;
+  if(s.installCompletedDate||s.installCompleteDate||s.completedInstallDate||s.installedAt||s.installDate) return 'Đã lắp';
+  if(stockVoucherForSale(s)) return 'Đã lắp';
+  return 'Chưa lắp';
+}
+function saleIsInstalled(s={}){return inferSaleInstallStatus(s)==='Đã lắp';}
+function debtWorkflowType(d={}){
+  const pay=+d.paid||0, debt=+d.debt||0;
+  const installed=(d.sales||[]).some(s=>saleIsInstalled(s));
+  if(debt>0 && pay>0 && !installed) return 'deposit_pending_install';
+  if(debt>0 && installed) return 'installed_unpaid';
+  if(debt>0) return 'active';
+  if(d.settled) return 'settled';
+  return 'all';
+}
+function debtWorkflowBadge(d={}){
+  const t=debtWorkflowType(d);
+  const map={deposit_pending_install:['Đã cọc - Chưa lắp','orange'],installed_unpaid:['Đã lắp - Chưa thanh toán','red'],active:['Đang nợ','red'],settled:['Đã tất toán','green'],all:['Tất cả','gray']};
+  const m=map[t]||map.all;
+  return `<span class="badge ${m[1]}">${m[0]}</span>`;
+}
 function saleMoneyStatus(s){
   const pay=salePaymentInfo(s);
   const paid=+pay.paidTotal||0, grand=+s.grand||0, over=Math.max(0,paid-grand);
@@ -1916,7 +1939,7 @@ window.createSupplementStockVoucher=async(id)=>{
   viewSaleDetail(id);
 }
 
-window.resetSaleForm=()=>{editingSale=null;$('saleCode').value=nextCode('BH',data.sales);$('saleDate').value=today();$('saleCustomerSearch').value='';if($('saleCustomerId'))$('saleCustomerId').value='';if($('saleCustomerPhone')){$('saleCustomerPhone').value=''; window.__saleCustomerPhoneManual=false;}if($('saleCustomerAddress')){$('saleCustomerAddress').value=''; window.__saleCustomerAddressManual=false;}if($('saleCustomerType'))$('saleCustomerType').value='Khách lẻ';if($('saleVatMode'))$('saleVatMode').value='included8';$('salePaid').value=0;if($('salePaymentMethod'))$('salePaymentMethod').value='Tiền mặt';if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff')?.value);if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech')?.value);if($('saleTechFuel'))$('saleTechFuel').value=0;if($('saleSurcharge'))$('saleSurcharge').value=0;if($('saleOrderDiscountType'))$('saleOrderDiscountType').value='none';if($('saleOrderDiscountValue'))$('saleOrderDiscountValue').value=0;$('saleNote').value='';if($('saleInstallCompletedDate'))$('saleInstallCompletedDate').value='';if($('saleWarehouse'))$('saleWarehouse').value='Kho Văn Phòng';if($('saleExportStock'))$('saleExportStock').checked=false;if($('saleExportStockSticky'))$('saleExportStockSticky').checked=false;ensureProductDatalist();$('saleItems').innerHTML='';addSaleItem();updateSaleTotals()}
+window.resetSaleForm=()=>{editingSale=null;$('saleCode').value=nextCode('BH',data.sales);$('saleDate').value=today();$('saleCustomerSearch').value='';if($('saleCustomerId'))$('saleCustomerId').value='';if($('saleCustomerPhone')){$('saleCustomerPhone').value=''; window.__saleCustomerPhoneManual=false;}if($('saleCustomerAddress')){$('saleCustomerAddress').value=''; window.__saleCustomerAddressManual=false;}if($('saleCustomerType'))$('saleCustomerType').value='Khách lẻ';if($('saleVatMode'))$('saleVatMode').value='included8';$('salePaid').value=0;if($('salePaymentMethod'))$('salePaymentMethod').value='Tiền mặt';if($('saleCommissionPercent'))$('saleCommissionPercent').value=salePercentDefault($('saleStaff')?.value);if($('saleTechCost'))$('saleTechCost').value=techFeeDefault($('saleTech')?.value);if($('saleTechFuel'))$('saleTechFuel').value=0;if($('saleSurcharge'))$('saleSurcharge').value=0;if($('saleOrderDiscountType'))$('saleOrderDiscountType').value='none';if($('saleOrderDiscountValue'))$('saleOrderDiscountValue').value=0;$('saleNote').value='';if($('saleInstallStatus'))$('saleInstallStatus').value='Chưa lắp';if($('saleInstallCompletedDate'))$('saleInstallCompletedDate').value='';if($('saleWarehouse'))$('saleWarehouse').value='Kho Văn Phòng';if($('saleExportStock'))$('saleExportStock').checked=false;if($('saleExportStockSticky'))$('saleExportStockSticky').checked=false;ensureProductDatalist();$('saleItems').innerHTML='';addSaleItem();updateSaleTotals()}
 window.addSaleItem=(it={})=>{let tr=document.createElement('tr');tr.innerHTML=`<td><input list="productCodesList" placeholder="Tìm model..." value="${it.code||''}" onchange="saleProductChanged(this)" oninput="saleProductChanged(this)"></td><td><input value="${it.name||''}" readonly></td><td><input type="number" value="${it.qty||1}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td><input type="number" value="${it.price||0}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td><select onchange="updateSaleTotals()"><option value="percent" ${(it.discountType||'percent')==='percent'?'selected':''}>%</option><option value="amount" ${(it.discountType||'percent')==='amount'?'selected':''}>VNĐ</option></select></td><td><input type="number" value="${it.discount||0}" oninput="updateSaleTotals()" onkeydown="saleItemKeyNav(event,this)"></td><td class="line-total">0</td><td><button class="btn danger" onclick="this.closest('tr').remove();updateSaleTotals()">X</button></td>`;$('saleItems').appendChild(tr);updateSaleTotals();setTimeout(()=>tr.querySelector('input')?.focus(),30);return tr}
 window.saleItemKeyNav=(e,el)=>{if(e.key!=='Enter')return;e.preventDefault();const tr=el.closest('tr');const inputs=[...tr.querySelectorAll('input:not([readonly]),select')];let i=inputs.indexOf(el);if(i<inputs.length-1){inputs[i+1].focus();inputs[i+1].select?.();}else{addSaleItem();}}
 window.addQuickSaleModel=(code)=>{let p=data.products.find(x=>String(x.code).toLowerCase()===String(code).toLowerCase() || String(x.code).toLowerCase().includes(String(code).toLowerCase()));if(!p)return alert('Chưa có model '+code+' trong danh mục sản phẩm'); if(p.active==='inactive')return alert('Model '+p.code+' đang ngừng bán, không thể thêm vào phiếu bán.');let customer=findCustomerBySearch();let bp=activePriceFor(p.code,saleCustomerType(),saleDateValue());let tr=addSaleItem({code:p.code,name:p.name,qty:1,price:bp?.price||p.price||0,discount:customer?.discount||0});saleProductChanged(tr.children[0].querySelector('input'));setTimeout(()=>tr.children[2].querySelector('input')?.focus(),30)}
@@ -2114,7 +2137,7 @@ window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quic
   if(exportStock){for(const it of items){const available=stockOf(it.code,excludeVoucherId,saleWarehouse); if(it.qty>available && !confirm(`Sản phẩm ${it.code} tồn tại kho ${saleWarehouse} hiện có ${available}, vẫn lưu đơn kiêm xuất kho?`)) return;}}
   const saleDateVal=saleDateValue();
   const paidForTotals=editingSale?(oldSalePay?.paidTotal||0):(+($('salePaid')?.value||0)||0);
-  let totals=calcSaleTotals(items,$('saleVatMode').value,paidForTotals,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);let installCompletedDate=($('saleInstallCompletedDate')?.value||'').slice(0,10);let cost=items.reduce((a,it)=>a+costFor(it.code,saleDateVal)*it.qty,0);let commissionPercent=+($('saleCommissionPercent')?.value||0)||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+($('saleTechCost')?.value||0)||0;let techFuel=+($('saleTechFuel')?.value||0)||0;let commissionBase=calcCommissionBase(totals);let snap=customerSnapshotFromCustomer(customer,saleCustomerType()); snap.phone=saleCustomerPhoneValue(customer)||snap.phone; snap.address=saleCustomerAddressValue(customer); let o={code:$('saleCode').value,date:saleDateVal,...customerSnapshotPayload(snap),staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,techFuel,vatMode:$('saleVatMode').value,paid:editingSale?(+(oldSale?.paid||0)||0):paidForTotals,paidSource:editingSale?(oldSale?.paidSource||''):(paidForTotals>0?'sale_form':''),paidEntryKey:editingSale?(oldSale?.paidEntryKey||oldSale?.paidSaleCode||''):(paidForTotals>0?$('saleCode').value:''),paymentMethod:editingSale?(oldSale?.paymentMethod||$('salePaymentMethod')?.value||'Tiền mặt'):($('salePaymentMethod')?.value||'Tiền mặt'),directPaidLocked:editingSale?(oldSale?.directPaidLocked===true):(paidForTotals>0),note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost-techFuel,status:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paymentStatus:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:paidForTotals,debtLeft:totals.debt,installCompletedDate,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
+  let totals=calcSaleTotals(items,$('saleVatMode').value,paidForTotals,$('saleSurcharge')?.value||0,$('saleOrderDiscountType')?.value||'none',$('saleOrderDiscountValue')?.value||0);let installCompletedDate=($('saleInstallCompletedDate')?.value||'').slice(0,10);let installStatus=$('saleInstallStatus')?.value||((installCompletedDate||exportStock)?'Đã lắp':'Chưa lắp');let cost=items.reduce((a,it)=>a+costFor(it.code,saleDateVal)*it.qty,0);let commissionPercent=+($('saleCommissionPercent')?.value||0)||0;let saleCommission=calcCommission(totals,commissionPercent);let techCost=+($('saleTechCost')?.value||0)||0;let techFuel=+($('saleTechFuel')?.value||0)||0;let commissionBase=calcCommissionBase(totals);let snap=customerSnapshotFromCustomer(customer,saleCustomerType()); snap.phone=saleCustomerPhoneValue(customer)||snap.phone; snap.address=saleCustomerAddressValue(customer); let o={code:$('saleCode').value,date:saleDateVal,...customerSnapshotPayload(snap),staffId:$('saleStaff').value,staffName:data.staff.find(x=>x.id===$('saleStaff').value)?.name||'',techId:$('saleTech').value,techName:data.staff.find(x=>x.id===$('saleTech').value)?.name||'',commissionPercent,commissionBase,saleCommission,techCost,techFuel,vatMode:$('saleVatMode').value,paid:editingSale?(+(oldSale?.paid||0)||0):paidForTotals,paidSource:editingSale?(oldSale?.paidSource||''):(paidForTotals>0?'sale_form':''),paidEntryKey:editingSale?(oldSale?.paidEntryKey||oldSale?.paidSaleCode||''):(paidForTotals>0?$('saleCode').value:''),paymentMethod:editingSale?(oldSale?.paymentMethod||$('salePaymentMethod')?.value||'Tiền mặt'):($('salePaymentMethod')?.value||'Tiền mặt'),directPaidLocked:editingSale?(oldSale?.directPaidLocked===true):(paidForTotals>0),note:$('saleNote').value,items,...totals,cost,profit:commissionBase-cost-saleCommission-techCost-techFuel,status:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paymentStatus:totals.debt>0?(paidForTotals>0?'Thanh toán một phần':'Chưa thu tiền'):'Đã thu tiền',paidTotal:paidForTotals,debtLeft:totals.debt,installStatus,installCompletedDate,warehouse:saleWarehouse,stockExported:exportStock,stockVoucherId:oldSale?.stockVoucherId||'',updatedAt:serverTimestamp()};
   let financialEditReason='';
   if(editingSale){
     if(!has('editSales'))return alert('Không có quyền sửa đơn');
@@ -2227,7 +2250,7 @@ window.editSale=id=>{
   if($('saleVatMode')) $('saleVatMode').value=s.vatMode||'none';
   if($('salePaid')) $('salePaid').value=s.paid||0;
   if($('salePaymentMethod')) $('salePaymentMethod').value=s.paymentMethod||s.payMethod||'Tiền mặt';
-  if($('saleCommissionPercent')) $('saleCommissionPercent').value=s.commissionPercent??salePercentDefault(s.staffId);if($('saleInstallCompletedDate'))$('saleInstallCompletedDate').value=s.installCompletedDate||s.installCompleteDate||s.completedInstallDate||s.installedAt||s.installDate||'';
+  if($('saleCommissionPercent')) $('saleCommissionPercent').value=s.commissionPercent??salePercentDefault(s.staffId);if($('saleInstallStatus'))$('saleInstallStatus').value=s.installStatus||inferSaleInstallStatus(s);if($('saleInstallCompletedDate'))$('saleInstallCompletedDate').value=s.installCompletedDate||s.installCompleteDate||s.completedInstallDate||s.installedAt||s.installDate||'';
   if($('saleTechCost')) $('saleTechCost').value=s.techCost??techFeeDefault(s.techId);
   if($('saleTechFuel')) $('saleTechFuel').value=s.techFuel||0;
   if($('saleSurcharge')) $('saleSurcharge').value=s.surcharge||0;
@@ -2624,7 +2647,7 @@ function dateDaysBetween(a,b){const da=new Date(a||today()), db=new Date(b||toda
 function debtSaleDate(d){return d.sales?.[0]?.date||'';}
 function debtOverdueDays(d){return d.debt>0?Math.max(0,dateDaysBetween(debtSaleDate(d),today())-30):0;}
 function debtSettledDate(d){const dates=(d.receipts||[]).map(r=>r.date).filter(Boolean).sort();return dates[dates.length-1]||'';}
-function debtCurrentFilter(){return document.querySelector('input[name="debtStatusFilter"]:checked')?.value||'active';}
+function debtCurrentFilter(){return document.querySelector('input[name="debtStatusFilter"]:checked')?.value||'deposit_pending_install';}
 
 function fillReceiptCustomerOptions(includeAll=false, includeSettled=false){
   const el=$('receiptCustomer'); if(!el)return;
@@ -2642,7 +2665,9 @@ function renderDebts(){
   const settledAll=calcSettledDebts();
   const allRows=calcDebtRows().sort((a,b)=>String(b.saleCode||'').localeCompare(String(a.saleCode||'')));
   const filter=debtCurrentFilter();
-  const visibleBase=filter==='settled'?settledAll:(filter==='all'?allRows:activeAll);
+  const depositPendingAll=activeAll.filter(d=>debtWorkflowType(d)==='deposit_pending_install');
+  const installedUnpaidAll=activeAll.filter(d=>debtWorkflowType(d)==='installed_unpaid');
+  const visibleBase=filter==='deposit_pending_install'?depositPendingAll:(filter==='installed_unpaid'?installedUnpaidAll:(filter==='settled'?settledAll:(filter==='all'?allRows:activeAll)));
   const rows=visibleBase.filter(d=>!q||debtRowText(d).includes(q));
   const settled=settledAll.filter(d=>!q||debtRowText(d).includes(q));
   const overdue=activeAll.filter(d=>debtOverdueDays(d)>0);
@@ -2650,15 +2675,15 @@ function renderDebts(){
   if($('debtActiveTotal'))$('debtActiveTotal').textContent=money(activeAll.reduce((a,d)=>a+d.debt,0));
   if($('debtSettledCount'))$('debtSettledCount').textContent=settledAll.length;
   if($('debtOverdueTotal'))$('debtOverdueTotal').textContent=money(overdue.reduce((a,d)=>a+d.debt,0));
-  if($('debtStatsBox'))$('debtStatsBox').innerHTML=`<div><span>Tổng công nợ</span><b>${money(activeAll.reduce((a,d)=>a+d.debt,0))}</b></div><div><span>Đã tất toán</span><b>${money(settledAll.reduce((a,d)=>a+d.total,0))}</b></div><div><span>Quá hạn</span><b>${money(overdue.reduce((a,d)=>a+d.debt,0))}</b></div>`;
+  if($('debtStatsBox'))$('debtStatsBox').innerHTML=`<div><span>Đã cọc - Chưa lắp</span><b>${money(depositPendingAll.reduce((a,d)=>a+d.debt,0))}</b><small>${depositPendingAll.length} phiếu</small></div><div><span>Đã lắp - Chưa thanh toán</span><b>${money(installedUnpaidAll.reduce((a,d)=>a+d.debt,0))}</b><small>${installedUnpaidAll.length} phiếu</small></div><div><span>Tổng công nợ</span><b>${money(activeAll.reduce((a,d)=>a+d.debt,0))}</b></div><div><span>Đã tất toán</span><b>${money(settledAll.reduce((a,d)=>a+d.total,0))}</b></div><div><span>Quá hạn</span><b>${money(overdue.reduce((a,d)=>a+d.debt,0))}</b></div>`;
   document.querySelectorAll('.debt-active-panel').forEach(el=>el.style.display=(filter==='settled')?'none':'');
-  document.querySelectorAll('.settled-panel').forEach(el=>el.style.display=(filter==='active')?'none':'');
+  document.querySelectorAll('.settled-panel').forEach(el=>el.style.display=(filter==='settled'||filter==='all')?'':'none');
   if($('debtSearchCount'))$('debtSearchCount').textContent=`Hiển thị ${rows.length}/${visibleBase.length} dòng`;
   $('debtTable').innerHTML=rows.map(d=>{const ci=customerInfo(d.customer);const productText=debtGroupProductModels(d)||'-';const productTip=debtProductQtyTooltip(d);const qty=debtTotalQty(d);const od=debtOverdueDays(d);return `<tr>
     <td><b>${d.saleCode||''}</b><small>${ci.code||''}</small></td>
     <td><b>${ci.name}</b><small>${ci.phone||''}${ci.address?' • '+ci.address:''}</small></td>
     <td class="text-center"><b>${qty}</b></td>
-    <td class="debt-products" title="${productTip}"><small>${productText}</small></td>
+    <td class="debt-products" title="${productTip}"><small>${productText}</small><br>${debtWorkflowBadge(d)}</td>
     <td>${money(d.total)}</td>
     <td>${money(d.paid)}</td>
     <td><b class="${d.debt>0?'text-danger debt-money':''}">${money(d.debt)}</b></td>
@@ -2846,15 +2871,17 @@ function renderCashbook(){
   const {from,to}=cashbookRange(); const method=$('cashbookMethod')?.value||'ALL'; const q=($('cashbookSearch')?.value||'').toLowerCase().trim();
   let rows=cashbookRows(from,to).filter(r=>(method==='ALL'||r.paymentMethod===method)&&matchSearchText(q,r.date,r.code,r.type,r.content,r.paymentMethod,r.income,r.expense,money(r.income),money(r.expense)));
   const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0), net=income-expense;
-  $('cashbookSummary').innerHTML=`<div class="report-card">Tổng thu theo phiếu thu<b>${money(income)}</b><small>Khớp với Thực thu Dashboard cùng kỳ nếu cùng bộ lọc ngày</small></div><div class="report-card">Tổng chi trong kỳ<b>${money(expense)}</b><small>Phiếu chi + lương theo ngày chứng từ</small></div><div class="report-card">Phát sinh ròng<b>${money(net)}</b><small>= Tổng thu - Tổng chi, chưa cộng số dư đầu kỳ</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
-  let run=0;
+  const opening=+$('cashbookOpening')?.value||0;
+  const closing=opening+net;
+  $('cashbookSummary').innerHTML=`<div class="report-card">Số dư đầu kỳ<b>${money(opening)}</b><small>Nhập tay theo số quỹ thực tế đầu kỳ</small></div><div class="report-card">Tổng thu sổ quỹ<b>${money(income)}</b><small>Chỉ lấy Phiếu thu theo ngày thu</small></div><div class="report-card">Tổng chi sổ quỹ<b>${money(expense)}</b><small>Chỉ lấy Phiếu chi + lương theo ngày chứng từ</small></div><div class="report-card">Số dư cuối kỳ<b>${money(closing)}</b><small>= Số dư đầu kỳ + Thu - Chi</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
+  let run=opening;
   $('cashbookTable').innerHTML=rows.map(r=>{run+=r.income-r.expense;return `<tr><td>${r.date}</td><td><b>${r.code}</b></td><td><span class="badge ${r.type==='Thu'?'green':'orange'}">${r.type}</span></td><td>${htmlesc(r.content)}</td><td>${paymentMethodBadge(r.paymentMethod)}</td><td><b>${r.income?money(r.income):''}</b></td><td><b>${r.expense?money(r.expense):''}</b></td><td><b>${money(run)}</b></td></tr>`}).join('')||'<tr><td colspan="8">Không có phát sinh sổ quỹ trong kỳ</td></tr>';
 }
 window.renderCashbook=renderCashbook;
-window.clearCashbookFilter=()=>{if($('cashbookFrom'))$('cashbookFrom').value=monthStart();if($('cashbookTo'))$('cashbookTo').value=monthEnd();if($('cashbookMethod'))$('cashbookMethod').value='ALL';if($('cashbookSearch'))$('cashbookSearch').value='';renderCashbook();}
+window.clearCashbookFilter=()=>{if($('cashbookFrom'))$('cashbookFrom').value=monthStart();if($('cashbookTo'))$('cashbookTo').value=monthEnd();if($('cashbookOpening'))$('cashbookOpening').value=0;if($('cashbookMethod'))$('cashbookMethod').value='ALL';if($('cashbookSearch'))$('cashbookSearch').value='';renderCashbook();}
 window.printCashbook=()=>{
-  const {from,to}=cashbookRange(); const rows=cashbookRows(from,to); const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0);
-  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Tổng thu theo phiếu thu:</b> ${money(income)}<br><b>Tổng chi trong kỳ:</b> ${money(expense)}<br><b>Phát sinh ròng:</b> ${money(income-expense)}<br><small>Tổng thu theo phiếu thu phải khớp với Thực thu Dashboard khi cùng bộ lọc ngày. Phát sinh ròng chưa phải số dư cuối nếu chưa nhập số dư đầu kỳ.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
+  const {from,to}=cashbookRange(); const rows=cashbookRows(from,to); const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0); const opening=+$('cashbookOpening')?.value||0; const closing=opening+income-expense;
+  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Số dư đầu kỳ:</b> ${money(opening)}<br><b>Tổng thu theo phiếu thu:</b> ${money(income)}<br><b>Tổng chi trong kỳ:</b> ${money(expense)}<br><b>Số dư cuối kỳ:</b> ${money(closing)}<br><small>Tổng thu theo phiếu thu phải khớp với Thực thu Dashboard khi cùng bộ lọc ngày. Số dư cuối kỳ = số dư đầu kỳ + thu - chi.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
   doPrint(html);
 }
 

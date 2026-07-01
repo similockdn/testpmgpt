@@ -1617,3 +1617,9 @@ table .text-center{text-align:center}
   .sales-table-note{align-items:flex-start;flex-direction:column}
   .sales-table-wrap{max-height:65vh!important;min-height:320px!important}
 }
+
+/* V101 - nghiệp vụ chuẩn */
+.workflow-note{width:100%;font-size:13px;color:#475569;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:10px 12px;margin-top:8px}
+.debt-table .badge{white-space:nowrap;margin-top:4px;display:inline-block}
+.cashbook-note{background:#f8fafc;border-left:4px solid #2563eb;padding:12px 14px;border-radius:10px;margin:10px 0 12px;color:#334155}
+.nav-menu .menu-group:first-child .menu-toggle{color:#1d4ed8;font-weight:800}
