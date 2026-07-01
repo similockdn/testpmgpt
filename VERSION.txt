@@ -1,1 +1,1 @@
-VERSION v103-finance-cashbook-directpaid
+V106_ENTERPRISE_WORKFLOW_STABLE_RC

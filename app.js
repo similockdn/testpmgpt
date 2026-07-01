@@ -1091,9 +1091,11 @@ function renderDashboard(){
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
   const cashRowsInRange=cashbookRows(range.from,range.to);
-  // V104-FINANCE-CLARITY:
+  // V105-WORKFLOW-STABLE:
+  // Quy tắc nghiệp vụ chốt: Doanh số, Thu theo đơn và Tiền vào quỹ là 3 chỉ số khác nhau.
+  //
   // Doanh số = tổng giá trị các Phiếu bán có ngày bán trong kỳ lọc.
-  // Thực thu đơn bán = số tiền đã thu cho chính các Phiếu bán trong kỳ lọc.
+  // Thu theo đơn = số tiền đã thu cho chính các Phiếu bán có ngày bán trong kỳ lọc.
   // Sổ quỹ = dòng tiền thực tế theo ngày chứng từ thu/chi.
   // Hai chỉ số này KHÔNG dùng chung công thức vì Sổ quỹ có thể gồm thu công nợ cũ hoặc khoản thu ngoài kỳ bán.
   const collected=salesInRange.reduce((a,s)=>a+saleCollectedInRange(s,range.from,range.to),0);
@@ -1112,6 +1114,7 @@ function renderDashboard(){
   if($('kpiDebt'))$('kpiDebt').textContent=money(debt);
   if($('kpiDebtCount'))$('kpiDebtCount').textContent=activeDebtRows.length;
   if($('kpiCollected'))$('kpiCollected').textContent=money(collected);
+  if($('kpiCashIn'))$('kpiCashIn').textContent=money(cashIn);
   if($('kpiSettledCount'))$('kpiSettledCount').textContent=settledDebtRows.length;
   if($('kpiOverdueCount'))$('kpiOverdueCount').textContent=overdueRows.length;
   if($('kpiLowStock'))$('kpiLowStock').textContent=low.length;
@@ -2942,7 +2945,7 @@ function cashbookRows(from='',to=''){
   });
 
   // 2) Thu trực tiếp trên Phiếu bán: đây cũng là tiền thực nhận nếu người dùng nhập "Đã thu" ngay khi tạo phiếu.
-  // Không được bỏ khỏi Sổ quỹ, nếu không Dashboard Thực thu và Sổ quỹ sẽ thấp hơn thực tế.
+  // Không được bỏ khỏi Sổ quỹ, nếu không Dashboard Thu theo đơn và Sổ quỹ sẽ thấp hơn thực tế.
   // Dữ liệu hiện tại KHÔNG tự sinh Phiếu thu khi nhập đã thu ở Phiếu bán, nên cần ghi dòng tiền riêng.
   activeSales().forEach(s=>{
     const amount=saleDirectPaid(s); if(amount<=0)return;
@@ -2986,7 +2989,7 @@ function renderCashbook(){
   const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0), net=income-expense;
   const opening=+$('cashbookOpening')?.value||0;
   const closing=opening+net;
-  $('cashbookSummary').innerHTML=`<div class="report-card">Số dư đầu kỳ<b>${money(opening)}</b><small>Nhập tay theo số quỹ thực tế đầu kỳ</small></div><div class="report-card">Tổng thu sổ quỹ<b>${money(income)}</b><small>Phiếu thu + thu trực tiếp trên Phiếu bán</small></div><div class="report-card">Tổng chi sổ quỹ<b>${money(expense)}</b><small>Chỉ lấy Phiếu chi + lương theo ngày chứng từ</small></div><div class="report-card">Số dư cuối kỳ<b>${money(closing)}</b><small>= Số dư đầu kỳ + Thu - Chi</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
+  $('cashbookSummary').innerHTML=`<div class="report-card">Số dư đầu kỳ<b>${money(opening)}</b><small>Nhập tay theo số quỹ thực tế đầu kỳ</small></div><div class="report-card">Tổng thu sổ quỹ<b>${money(income)}</b><small>Dòng tiền vào theo ngày thu: Phiếu thu + thu trực tiếp hợp lệ</small></div><div class="report-card">Tổng chi sổ quỹ<b>${money(expense)}</b><small>Chỉ lấy Phiếu chi + lương theo ngày chứng từ</small></div><div class="report-card">Số dư cuối kỳ<b>${money(closing)}</b><small>= Số dư đầu kỳ + Thu - Chi</small></div><div class="report-card">Giao dịch thu / chi<b>${rows.filter(r=>r.income>0).length} / ${rows.filter(r=>r.expense>0).length}</b></div>`;
   let run=opening;
   $('cashbookTable').innerHTML=rows.map(r=>{run+=r.income-r.expense;return `<tr><td>${r.date}</td><td><b>${r.code}</b></td><td><span class="badge ${r.type==='Thu'?'green':'orange'}">${r.type}</span></td><td>${htmlesc(r.content)}</td><td>${paymentMethodBadge(r.paymentMethod)}</td><td><b>${r.income?money(r.income):''}</b></td><td><b>${r.expense?money(r.expense):''}</b></td><td><b>${money(run)}</b></td></tr>`}).join('')||'<tr><td colspan="8">Không có phát sinh sổ quỹ trong kỳ</td></tr>';
 }
@@ -2994,7 +2997,7 @@ window.renderCashbook=renderCashbook;
 window.clearCashbookFilter=()=>{if($('cashbookFrom'))$('cashbookFrom').value=monthStart();if($('cashbookTo'))$('cashbookTo').value=monthEnd();if($('cashbookOpening'))$('cashbookOpening').value=0;if($('cashbookMethod'))$('cashbookMethod').value='ALL';if($('cashbookSearch'))$('cashbookSearch').value='';renderCashbook();}
 window.printCashbook=()=>{
   const {from,to}=cashbookRange(); const rows=cashbookRows(from,to); const income=rows.reduce((a,r)=>a+r.income,0), expense=rows.reduce((a,r)=>a+r.expense,0); const opening=+$('cashbookOpening')?.value||0; const closing=opening+income-expense;
-  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Số dư đầu kỳ:</b> ${money(opening)}<br><b>Tổng thu theo phiếu thu:</b> ${money(income)}<br><b>Tổng chi trong kỳ:</b> ${money(expense)}<br><b>Số dư cuối kỳ:</b> ${money(closing)}<br><small>Tổng thu theo phiếu thu phải khớp với Thực thu Dashboard khi cùng bộ lọc ngày. Số dư cuối kỳ = số dư đầu kỳ + thu - chi.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
+  const html=`<div class="print-a5"><div style="text-align:center"><b>SIMILOCK ĐÀ NẴNG</b><br>Đ/c: 223 Trường Chinh, P. An Khê, TP. Đà Nẵng<br>Hotline: 0905.244.009<h2>SỔ QUỸ</h2><div>Từ ${from} đến ${to}</div></div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Nội dung</th><th>Thu</th><th>Chi</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${htmlesc(r.content)}<br><small>${r.paymentMethod}</small></td><td>${r.income?money(r.income):''}</td><td>${r.expense?money(r.expense):''}</td></tr>`).join('')}</tbody></table><p><b>Số dư đầu kỳ:</b> ${money(opening)}<br><b>Tổng thu theo phiếu thu:</b> ${money(income)}<br><b>Tổng chi trong kỳ:</b> ${money(expense)}<br><b>Số dư cuối kỳ:</b> ${money(closing)}<br><small>Số dư cuối kỳ = số dư đầu kỳ + thu - chi. Tiền vào quỹ trên Dashboard dùng cùng nguồn với Tổng thu sổ quỹ; Thu theo đơn là chỉ số quản trị bán hàng nên có thể khác khi thu công nợ cũ.</small></p><div style="display:flex;justify-content:space-between;text-align:center;margin-top:30px"><div>Người lập<br><br><br></div><div>Kế toán<br><br><br></div><div>Quản lý<br><br><br></div></div></div>`;
   doPrint(html);
 }
 
