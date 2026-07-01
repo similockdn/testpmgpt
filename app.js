@@ -1091,12 +1091,13 @@ function renderDashboard(){
   const overdueRows=activeDebtRows.filter(d=>debtOverdueDays(d)>0).sort((a,b)=>debtOverdueDays(b)-debtOverdueDays(a)||b.debt-a.debt);
   const rev=salesInRange.reduce((a,s)=>a+(+s.grand||0),0);
   const cashRowsInRange=cashbookRows(range.from,range.to);
-  // V100-FINANCE-STRICT:
-  // Doanh số = tổng giá trị Phiếu bán theo ngày bán.
-  // Thực thu = dòng tiền thực nhận trong kỳ = Phiếu thu + thu trực tiếp trên Phiếu bán.
-  // Vì vậy Thực thu trên Dashboard phải khớp với Tổng thu trong Sổ quỹ cùng kỳ.
-  // Nếu thu công nợ cũ trong kỳ thì Thực thu có thể lớn hơn Doanh số kỳ này; đó là đúng về dòng tiền.
-  const collected=cashRowsInRange.reduce((a,r)=>a+(+r.income||0),0);
+  // V104-FINANCE-CLARITY:
+  // Doanh số = tổng giá trị các Phiếu bán có ngày bán trong kỳ lọc.
+  // Thực thu đơn bán = số tiền đã thu cho chính các Phiếu bán trong kỳ lọc.
+  // Sổ quỹ = dòng tiền thực tế theo ngày chứng từ thu/chi.
+  // Hai chỉ số này KHÔNG dùng chung công thức vì Sổ quỹ có thể gồm thu công nợ cũ hoặc khoản thu ngoài kỳ bán.
+  const collected=salesInRange.reduce((a,s)=>a+saleCollectedInRange(s,range.from,range.to),0);
+  const cashIn=cashRowsInRange.reduce((a,r)=>a+(+r.income||0),0);
   const cashOut=cashRowsInRange.reduce((a,r)=>a+(+r.expense||0),0);
   const orderProfit=salesInRange.reduce((a,s)=>a+(+s.profit||saleProfitValue(s)||0),0);
   const monthlyExpenses=data.expenses.filter(e=>String(e.date||'')>=range.from&&String(e.date||'')<=range.to&&!isSalaryCategory(e.category));

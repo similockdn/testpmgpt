@@ -89,7 +89,7 @@
           <div class="dash-v8-title">
             <span class="dash-v8-pill">Quản lý</span>
             <h2>Trung tâm điều hành</h2>
-            <p>Theo dõi nhanh doanh số, thực thu, lợi nhuận, kho, công nợ, bảo hành và hiệu suất nhân viên trên một màn hình.</p>
+            <p>Theo dõi doanh số, thực thu đơn bán, sổ quỹ, công nợ, kho và hiệu suất nhân viên trên một màn hình.</p>
           </div>
           <div class="dash-v8-filter-wrap">
             <div class="dash-v8-filter dash-filter">
@@ -112,7 +112,7 @@
           <div class="dash-v8-kpi overdue"><div class="kpi-icon">⚠️</div><div><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý</small></div></div>
           <div class="dash-v8-kpi orders"><div class="kpi-icon">🧾</div><div><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div></div>
           <div class="dash-v8-kpi stock"><div class="kpi-icon">📦</div><div><span>Giá trị tồn</span><b id="dashStockValue">0</b><small><i id="kpiLowStock">0</i> model sắp hết</small></div></div>
-          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Thực thu</span><b id="kpiCollected">0</b><small>Tiền thực nhận từ phiếu thu trong kỳ</small></div></div>
+          <div class="dash-v8-kpi paid"><div class="kpi-icon">✅</div><div><span>Thực thu</span><b id="kpiCollected">0</b><small>Đã thu của phiếu bán trong kỳ</small></div></div>
           <div class="dash-v8-kpi service"><div class="kpi-icon">🛠️</div><div><span>Bảo hành</span><b id="dashWarrantyCount">0</b><small>Phát sinh trong kỳ</small></div></div>
         </div>
 
@@ -380,7 +380,7 @@
             <button class="btn ghost" onclick="clearCashbookFilter()">Xóa lọc</button>
           </div>
           <div id="cashbookSummary" class="report-grid"></div>
-          <div class="field-note cashbook-note"><b>Cách hiểu sổ quỹ:</b> Sổ quỹ đọc <b>Phiếu thu</b>, <b>thu trực tiếp trên Phiếu bán</b> và <b>Phiếu chi/Lương</b>. Doanh số là bán được bao nhiêu; Thực thu/Tổng thu sổ quỹ là tiền thật đã thu trong kỳ. Nếu bán chịu hoặc thu công nợ cũ thì Doanh số và Thực thu có thể khác nhau.</div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Số dư trong kỳ</th></tr></thead><tbody id="cashbookTable"></tbody></table>
+          <div class="field-note cashbook-note"><b>Cách hiểu sổ quỹ:</b> Sổ quỹ là dòng tiền thực tế theo <b>ngày chứng từ thu/chi</b>. Dashboard “Thực thu” là số tiền đã thu cho <b>các phiếu bán trong kỳ lọc</b>. Vì vậy Sổ quỹ có thể khác Dashboard nếu trong kỳ có thu công nợ cũ hoặc thu cho phiếu bán ngoài kỳ.</div><table><thead><tr><th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Nội dung</th><th>Phương thức</th><th>Thu</th><th>Chi</th><th>Số dư trong kỳ</th></tr></thead><tbody id="cashbookTable"></tbody></table>
         </div>
       </section>
 
