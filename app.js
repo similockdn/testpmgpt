@@ -185,19 +185,20 @@ function transferStatusBadge(v){const s=transferStatusOf(v);const cls=s==='IN_TR
 function canConfirmTransferVoucher(v){return v?.type==='TRANSFER'&&transferStatusOf(v)==='IN_TRANSIT'&&canAccessWarehouse(v.toWarehouse||'')&&(has('inventory')||has('editStock'))}
 const modules=['dashboard','sales','commissions','expenses','cashbook','salaries','debts','inventory','stockbook','warehouseMaster','warranty','customers','products','categories','prices','staff','reports','permissions','system','audit'];
 const permissionMap={
- Admin:modules.concat(['viewDashboardProfit','viewCost','viewSalary','manageSalary','editSales','deleteSales','editStock','deleteStock','audit']),
- Sale:['dashboard','sales','commissions','customers','products','warranty'],
+ Admin:modules.concat(['viewDashboardProfit','viewCost','viewSalary','manageSalary','editSaleCustomerInstall','editSales','deleteSales','editStock','deleteStock','audit']),
+ Sale:['dashboard','sales','editSaleCustomerInstall','commissions','customers','products','warranty'],
  'Kỹ thuật':['dashboard','warranty','customers','products'],
  Kho:['dashboard','inventory','stockbook','products'],
  'Kho Chính':['dashboard','inventory','stockbook','products'],
  'Kho Văn Phòng':['dashboard','inventory','stockbook','products'],
  'Kế toán':['dashboard','expenses','cashbook','commissions','debts','reports','sales','customers','products']
 };
-const permLabels={dashboard:'Dashboard',viewDashboardProfit:'Xem lợi nhuận trên Dashboard',sales:'Bán hàng',commissions:'Thu nhập nhân viên',expenses:'Phiếu chi',cashbook:'Sổ quỹ',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warehouseMaster:'Quản lý kho và nhà cung cấp',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',categories:'Danh mục chung',prices:'Bảng giá',categories:'Danh mục chung',staff:'Nhân viên',reports:'Báo cáo',categories:'Danh mục chung',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận trong báo cáo',editSales:'Sửa đơn bán',deleteSales:'Hủy phiếu bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký thao tác',salaries:'Lương nhân viên',viewSalary:'Xem lương',manageSalary:'Quản lý lương'};
+const permLabels={dashboard:'Dashboard',viewDashboardProfit:'Xem lợi nhuận trên Dashboard',sales:'Bán hàng',commissions:'Thu nhập nhân viên',expenses:'Phiếu chi',cashbook:'Sổ quỹ',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warehouseMaster:'Quản lý kho và nhà cung cấp',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',categories:'Danh mục chung',prices:'Bảng giá',categories:'Danh mục chung',staff:'Nhân viên',reports:'Báo cáo',categories:'Danh mục chung',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận trong báo cáo',editSaleCustomerInstall:'Sửa KH & lắp đặt trên đơn',editSales:'Sửa toàn bộ đơn (sản phẩm/giá)',deleteSales:'Hủy phiếu bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký thao tác',salaries:'Lương nhân viên',viewSalary:'Xem lương',manageSalary:'Quản lý lương'};
 
 const permissionGroups=[
   {title:'Tổng quan',desc:'Dashboard và quyền xem chỉ số nhạy cảm trên Dashboard',keys:['dashboard','viewDashboardProfit','reports','audit']},
-  {title:'Bán hàng & khách hàng',desc:'Tạo đơn, khách hàng, công nợ, bảo hành',keys:['sales','editSales','deleteSales','customers','debts','warranty','commissions']},
+  {title:'Bán hàng & khách hàng',desc:'Tạo đơn, khách hàng, công nợ, bảo hành',keys:['sales','customers','debts','warranty','commissions']},
+  {title:'Quyền sửa phiếu bán',desc:'Tách quyền sửa dịch vụ khỏi quyền sửa sản phẩm và giá',keys:['editSaleCustomerInstall','editSales','deleteSales']},
   {title:'Kho & sản phẩm',desc:'Sản phẩm, tồn kho, nhà cung cấp và chứng từ kho',keys:['products','inventory','stockbook','warehouseMaster','editStock','deleteStock']},
   {title:'Tài chính nhạy cảm',desc:'Giá vốn, lợi nhuận, lương, chi phí',keys:['expenses','cashbook','salaries','viewSalary','manageSalary','viewCost']},
   {title:'Quản trị hệ thống',desc:'Nhân viên, phân quyền và thiết lập hệ thống',keys:['staff','categories','prices','permissions','system']}
@@ -254,6 +255,8 @@ function normalizePermission(p={}){
   return {...p,role,perms:p.perms||[],warehouseAccess:wh};
 }
 function has(p){return currentPerm.role==='Admin'||(currentPerm.perms||[]).includes(p)}
+function canEditSaleCustomerInstall(){return has('editSaleCustomerInstall')||has('editSales')}
+function canEditSaleFinancials(){return has('editSales')}
 function isSaleCanceled(s){return String(s?.status||'').includes('Đã hủy')||String(s?.orderStatus||'').includes('Đã hủy')||s?.canceled===true||s?.isCanceled===true}
 function isVoucherCanceled(v){return String(v?.status||'').includes('Đã hủy')||v?.canceled===true||v?.isCanceled===true}
 function isReceiptCanceled(r){return String(r?.status||'').includes('Đã hủy')||r?.canceled===true||r?.isCanceled===true}
@@ -1542,6 +1545,7 @@ window.selectSaleCustomerForSaleEdit=(id)=>{
   if($('sceName')) $('sceName').value=i.name||'';
   if($('scePhone')) $('scePhone').value=i.phone||'';
   if($('sceAddress')) $('sceAddress').value=i.address||'';
+  if($('sceSource')) $('sceSource').value=i.source||'';
   if($('sceType')) $('sceType').value=['Khách lẻ','CTV','Đại lý','Công ty'].includes(i.type)?i.type:'Khách lẻ';
   if($('sceCustomerSearch')) $('sceCustomerSearch').value=`${i.name} ${i.phone} ${i.code}`;
   document.querySelectorAll('.sce-customer-row').forEach(btn=>btn.classList.toggle('selected',btn.dataset.id===id));
@@ -1557,9 +1561,14 @@ window.applyExistingCustomerToSaleEdit=()=>{
 };
 function saleCustomerEditModalHtml(c,saleId=''){
   const ci=customerInfo(c);
-  const title=saleId?'Sửa khách trên phiếu bán':'Sửa thông tin khách hàng';
-  const note=saleId?'Chỉ cập nhật thông tin khách của phiếu đang mở. Không thay đổi sản phẩm, số lượng, đơn giá, chiết khấu, đã thu, còn nợ và kho.':'Đang sửa khách ở phiếu bán đang nhập. Không tự tính lại giá sản phẩm.';
+  const sale=saleId?data.sales.find(x=>x.id===saleId):null;
+  const title=saleId?'Sửa khách hàng & lắp đặt':'Sửa thông tin khách hàng';
+  const note=saleId?'Chỉ cập nhật khách hàng, kỹ thuật và trạng thái lắp đặt. Sản phẩm, số lượng, đơn giá, chiết khấu, thanh toán và kho đều bị khóa.':'Đang sửa khách ở phiếu bán đang nhập. Không tự tính lại giá sản phẩm.';
   const initialSearch=ci.name&&ci.name!=='Chưa cập nhật tên'?`${ci.name} ${ci.phone||''} ${ci.code||''}`:'';
+  const installStatus=sale?(sale.installStatus||inferSaleInstallStatus(sale)||'Chưa lắp'):'Chưa lắp';
+  const installCompletedDate=sale?(sale.installCompletedDate||saleInstallationCompletedAt(sale)||''):'';
+  const techOptions=saleId?`<option value="">-- Chưa chọn kỹ thuật --</option>${data.staff.filter(x=>staffHasFunction(x,'Kỹ thuật')).map(x=>`<option value="${htmlesc(x.id||'')}" ${x.id===sale?.techId?'selected':''}>${htmlesc(x.name||'')}</option>`).join('')}`:'';
+  const installHtml=saleId?`<div class="sale-limited-edit-section"><h4>Thông tin lắp đặt</h4><div class="grid form-grid"><div><label>Trạng thái lắp đặt</label><select id="sceInstallStatus" onchange="saleLimitedInstallStatusChanged()">${['Chưa lắp','Đang lắp','Đã lắp','Đã hủy'].map(x=>`<option ${x===installStatus?'selected':''}>${x}</option>`).join('')}</select></div><div><label>Ngày hoàn thành lắp</label><input id="sceInstallCompletedDate" type="date" value="${htmlesc(installCompletedDate)}"></div><div><label>Nhân viên kỹ thuật</label><select id="sceTechId">${techOptions}</select></div><div><label>Ghi chú lắp đặt</label><input id="sceInstallNote" value="${htmlesc(sale?.installNote||'')}" placeholder="VD: Hẹn lắp buổi chiều"></div></div></div>`:'';
   return `<div class="modal-backdrop" id="saleCustomerEditModal"><div class="modal-card sale-customer-edit-modal"><div class="panel-head"><h3>${title}</h3><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Đóng</button></div>
   <input id="sceExistingId" type="hidden" value="${htmlesc(c.id||'')}"><input id="sceAppliedExistingId" type="hidden" value="">
   <div class="quick-pick-customer" style="margin-bottom:12px;padding:10px;border:1px dashed #cfe8ff;border-radius:14px;background:#f8fcff">
@@ -1568,8 +1577,13 @@ function saleCustomerEditModalHtml(c,saleId=''){
     <div id="sceCustomerResults" class="sce-customer-results"></div>
     <small class="field-note">Click trực tiếp vào khách cần chọn. Hệ thống dùng ID nội bộ nhưng không hiển thị ID ra giao diện, tránh nhầm khách trùng tên. Nếu nhập tay Tên/SĐT/Địa chỉ, hệ thống chỉ sửa snapshot của phiếu này.</small>
   </div>
-  <div class="grid form-grid"><input id="sceId" type="hidden" value="${htmlesc(c.id||'')}"><input id="sceSaleId" type="hidden" value="${htmlesc(saleId||'')}"><div><label>Mã KH</label><input id="sceCode" value="${htmlesc(ci.code||'')}" placeholder="KL090..."></div><div><label>Tên khách <span class="req">*</span></label><input id="sceName" value="${htmlesc(ci.name==='Chưa cập nhật tên'?'':ci.name)}" placeholder="Nhập đúng tên khách"></div><div><label>Loại khách</label><select id="sceType"><option ${ci.type==='Khách lẻ'?'selected':''}>Khách lẻ</option><option ${ci.type==='CTV'?'selected':''}>CTV</option><option ${ci.type==='Đại lý'?'selected':''}>Đại lý</option><option ${ci.type==='Công ty'?'selected':''}>Công ty</option></select></div><div><label>SĐT <span class="req">*</span></label><input id="scePhone" value="${htmlesc(ci.phone||'')}" placeholder="090..."></div><div class="span2"><label>Địa chỉ</label><input id="sceAddress" value="${htmlesc(ci.address||'')}" placeholder="Địa chỉ lắp đặt/giao hàng"></div></div><div class="muted-small" style="margin:10px 0">${note}</div><div style="text-align:right"><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Hủy</button><button class="btn primary" onclick="saveSaleCustomerEdit()">Lưu thông tin khách</button></div></div></div>`;
+  <div class="grid form-grid"><input id="sceId" type="hidden" value="${htmlesc(c.id||'')}"><input id="sceSaleId" type="hidden" value="${htmlesc(saleId||'')}"><div><label>Mã KH</label><input id="sceCode" value="${htmlesc(ci.code||'')}" placeholder="KL090..."></div><div><label>Tên khách <span class="req">*</span></label><input id="sceName" value="${htmlesc(ci.name==='Chưa cập nhật tên'?'':ci.name)}" placeholder="Nhập đúng tên khách"></div><div><label>Loại khách</label><select id="sceType"><option ${ci.type==='Khách lẻ'?'selected':''}>Khách lẻ</option><option ${ci.type==='CTV'?'selected':''}>CTV</option><option ${ci.type==='Đại lý'?'selected':''}>Đại lý</option><option ${ci.type==='Công ty'?'selected':''}>Công ty</option></select></div><div><label>SĐT <span class="req">*</span></label><input id="scePhone" value="${htmlesc(ci.phone||'')}" placeholder="090..."></div><div><label>Nguồn khách hàng</label><input id="sceSource" value="${htmlesc(ci.source||'')}" placeholder="Facebook, giới thiệu..."></div><div class="span2"><label>Địa chỉ</label><input id="sceAddress" value="${htmlesc(ci.address||'')}" placeholder="Địa chỉ lắp đặt/giao hàng"></div></div>${installHtml}<div class="muted-small" style="margin:10px 0">${note}</div><div style="text-align:right"><button class="btn ghost" onclick="document.getElementById('saleCustomerEditModal').remove()">Hủy</button><button class="btn primary" onclick="saveSaleCustomerEdit()">${saleId?'Lưu KH & lắp đặt':'Lưu thông tin khách'}</button></div></div></div>`;
 }
+window.saleLimitedInstallStatusChanged=()=>{
+  const status=$('sceInstallStatus')?.value||'Chưa lắp';
+  if(status==='Đã lắp'&&!$('sceInstallCompletedDate')?.value)$('sceInstallCompletedDate').value=today();
+  if(status!=='Đã lắp'&&$('sceInstallCompletedDate'))$('sceInstallCompletedDate').value='';
+};
 window.editSaleCustomer=()=>{
   const c=findCustomerBySearch();
   if(!c) return alert('Vui lòng chọn khách hàng trước khi sửa. Nếu là khách mới, bấm + Khách để tạo trước.');
@@ -1578,6 +1592,7 @@ window.editSaleCustomer=()=>{
   setTimeout(()=>{renderSaleCustomerEditResults(); $('sceName')?.focus();},80);
 }
 window.editSaleCustomerFromSale=(saleId)=>{
+  if(!canEditSaleCustomerInstall())return alert('Bạn chưa được cấp quyền Sửa KH & lắp đặt trên đơn.');
   const s=data.sales.find(x=>x.id===saleId);
   if(!s) return alert('Không tìm thấy phiếu bán');
   const ci=saleCustomerInfo(s);
@@ -1589,6 +1604,7 @@ window.editSaleCustomerFromSale=(saleId)=>{
 window.saveSaleCustomerEdit=async()=>{
   const saleId=$('sceSaleId')?.value||'';
   const sale=saleId?data.sales.find(x=>x.id===saleId):null;
+  if(saleId&&!canEditSaleCustomerInstall())return alert('Bạn chưa được cấp quyền Sửa KH & lắp đặt trên đơn.');
   const appliedExistingId=($('sceAppliedExistingId')?.value||'').trim();
   let customerId=($('sceId')?.value||$('sceExistingId')?.value||'').trim();
   const phone=extractPhone($('scePhone')?.value||'');
@@ -1619,27 +1635,34 @@ window.saveSaleCustomerEdit=async()=>{
   }
   if(!sale) return alert('Không tìm thấy phiếu bán cần sửa khách');
   const oldCustomerId=sale.customerId||'';
-  const oldPay=salePaymentInfo(sale);
-  const source=selectedCustomer?.source||oldCi.source||'';
+  const source=selectedCustomer?.source||String($('sceSource')?.value||oldCi.source||'').trim();
   const payload=customerSnapshotPayload({id:customerId,code:customerCode,name,phone,address,type,source});
+  const installStatus=$('sceInstallStatus')?.value||sale.installStatus||'Chưa lắp';
+  let installCompletedDate=String($('sceInstallCompletedDate')?.value||'').slice(0,10);
+  if(installStatus==='Đã lắp'&&!installCompletedDate)installCompletedDate=today();
+  if(installStatus!=='Đã lắp')installCompletedDate='';
+  const techId=$('sceTechId')?.value||'';
+  const techName=data.staff.find(x=>x.id===techId)?.name||'';
+  const installNote=String($('sceInstallNote')?.value||'').trim();
+  const editAt=new Date().toISOString();
   await updateDoc(doc(db,'sales',saleId),{
     ...payload,
-    // V58-FIX: chỉ sửa snapshot khách. Không đụng items/price/qty/discount/cost/grand/paid/debt/stock.
-    paidTotal:oldPay.paidTotal, debtLeft:oldPay.debtLeft, paymentStatus:oldPay.paymentStatus, status:oldPay.paymentStatus,
-    customerEditHistory:[...(sale.customerEditHistory||[]),{at:new Date().toISOString(),from:saleCustomerInfo(sale),to:{customerId,customerCode,name,phone,address,type,source}}],
+    // Quyền giới hạn chỉ sửa snapshot khách và nghiệp vụ lắp đặt.
+    // Tuyệt đối không gửi items/price/qty/discount/cost/grand/paid/debt/stock.
+    installStatus,installCompletedDate,techId,techName,installNote,
+    customerEditHistory:[...(sale.customerEditHistory||[]),{at:editAt,from:saleCustomerInfo(sale),to:{customerId,customerCode,name,phone,address,type,source}}],
+    installEditHistory:[...(sale.installEditHistory||[]),{at:editAt,from:{installStatus:sale.installStatus||inferSaleInstallStatus(sale),installCompletedDate:saleInstallationCompletedAt(sale),techId:sale.techId||'',techName:sale.techName||'',installNote:sale.installNote||''},to:{installStatus,installCompletedDate,techId,techName,installNote},by:currentUser?.email||''}],
     updatedAt:serverTimestamp()
   });
-  await syncRelatedDocsForSaleCustomer(saleId,{...payload,code:sale.code||''},sale);
-  await logAction('Sửa khách riêng trên phiếu bán',`${sale.code||saleId}: ${customerCode} - ${name}`);
+  try{await syncRelatedDocsForSaleCustomer(saleId,{...payload,code:sale.code||''},sale);}catch(e){console.warn('Không đồng bộ được thông tin khách sang chứng từ liên quan',e.message)}
+  await logAction('Sửa KH & lắp đặt trên phiếu bán',`${sale.code||saleId}: ${customerCode} - ${name} - ${installStatus}`);
   await loadAll();
   const ids=[oldCustomerId,customerId].filter(Boolean);
-  for(const id of [...new Set(ids)]) await updatePaymentStatusesForCustomer(id);
-  await updatePaymentStatusForSaleSnapshot(saleId);
-  await loadAll();
+  if(has('debts'))for(const id of [...new Set(ids)]) await updatePaymentStatusesForCustomer(id);
   document.getElementById('saleCustomerEditModal')?.remove();
   if(saleId){document.getElementById('saleDetailModal')?.remove(); viewSaleDetail(saleId);}
   try{renderSales();renderDebts();renderReceipts();renderReports();}catch(e){console.warn('Refresh after customer edit',e)}
-  if(window.showToast) window.showToast('Đã cập nhật khách trên phiếu','success',name);
+  if(window.showToast) window.showToast('Đã cập nhật khách hàng & lắp đặt','success',`${name} - ${installStatus}`);
 }
 
 
@@ -2355,6 +2378,7 @@ function calcSaleFromItemsForReturn(s,items){
   return {...totals,cost,commissionBase,saleCommission,techCost,techFuel,profit:commissionBase-cost-saleCommission-techCost-techFuel};
 }
 window.openSaleReturn=id=>{
+  if(!has('editSales'))return alert('Trả lại hàng bán làm thay đổi sản phẩm và tổng tiền. Bạn cần quyền Sửa toàn bộ đơn.');
   const s=data.sales.find(x=>x.id===id); if(!s)return alert('Không tìm thấy đơn bán');
   const sv=stockVoucherForSale(s); if(!sv)return alert('Đơn này chưa xuất kho nên không cần trả hàng nhập lại kho.');
   const wh=voucherWarehouse(sv)||s.warehouse||defaultWarehouse();
@@ -2369,6 +2393,7 @@ window.openSaleReturn=id=>{
   document.body.insertAdjacentHTML('beforeend',html);
 };
 window.saveSaleReturn=async(id)=>{
+  if(!has('editSales'))return alert('Bạn cần quyền Sửa toàn bộ đơn để xử lý trả lại hàng bán.');
   const s=data.sales.find(x=>x.id===id); if(!s)return alert('Không tìm thấy đơn bán');
   const wh=$('returnWarehouse')?.value||s.warehouse||defaultWarehouse();
   if(!canAccessWarehouse(wh))return alert('Bạn không có quyền nhập về kho: '+wh);
@@ -2423,6 +2448,7 @@ function saleNeedSupplementStock(s){
   return (+pay.debtLeft||0)<=0 && !stockVoucherForSale(s);
 }
 window.createSupplementStockVoucher=async(id)=>{
+  if(!has('editSales'))return alert('Bạn cần quyền Sửa toàn bộ đơn để tạo phiếu xuất kho bổ sung.');
   const s=data.sales.find(x=>x.id===id); if(!s)return alert('Không tìm thấy đơn bán');
   if(stockVoucherForSale(s))return alert('Đơn này đã có phiếu xuất kho');
   if(!confirm(`Tạo phiếu xuất kho bổ sung cho đơn ${s.code}?`))return;
@@ -2746,7 +2772,7 @@ function renderSales(){
       <td class="view-cost money-cell">${money(saleProfitValue(s))}</td>
       <td><span class="mini-status ${debtBadgeClass}">${canceled?'Đã hủy':pay.paymentStatus}</span></td>
       <td>${stockHtml}</td>
-      <td class="sale-actions"><button class="btn ghost" onclick="viewSaleDetail('${s.id}')">Chi tiết</button><button class="btn ghost" onclick="printSale('${s.id}')">In A5</button>${has('editSales')&&!canceled?`<button class="btn ghost" onclick="editSale('${s.id}')">Sửa</button>`:''}${has('deleteSales')&&!canceled?`<button class="btn danger" onclick="cancelSale('${s.id}')">Hủy</button>`:''}</td>
+      <td class="sale-actions"><button class="btn ghost" onclick="viewSaleDetail('${s.id}')">Chi tiết</button><button class="btn ghost" onclick="printSale('${s.id}')">In A5</button>${has('editSales')&&!canceled?`<button class="btn ghost" onclick="editSale('${s.id}')">Sửa toàn bộ</button>`:(!canceled&&canEditSaleCustomerInstall()?`<button class="btn ghost" onclick="editSaleCustomerFromSale('${s.id}')">Sửa KH/Lắp đặt</button>`:'')}${has('deleteSales')&&!canceled?`<button class="btn danger" onclick="cancelSale('${s.id}')">Hủy</button>`:''}</td>
     </tr>`}).join('')||'<tr><td colspan="16">Chưa có phiếu bán</td></tr>';
   if($('saleListSummary'))$('saleListSummary').innerHTML=`<div><span>Tổng phiếu</span><b>${rows.length}</b></div><div><span>Phiếu hôm nay</span><b>${todayCount}</b></div><div><span>Tổng bộ khóa</span><b>${totalQty}</b></div><div><span>Doanh số</span><b>${money(totalGrand)}</b></div><div><span>Đã thu</span><b>${money(totalPaid)}</b></div><div><span>Còn nợ</span><b class="${totalDebt>0?'text-danger':''}">${money(totalDebt)}</b></div>`;
 }
@@ -2774,12 +2800,18 @@ window.viewSaleDetail=id=>{
   const pay=salePaymentInfo(s); const sv=stockVoucherForSale(s); const recs=receiptsForSale(s); const returns=saleReturnVouchers(s); const ci=saleCustomerInfo(s);
   const returnHtml=returns.length?`<div class="receipt-list"><h4>Phiếu trả hàng bán</h4><table><thead><tr><th>Mã phiếu</th><th>Ngày</th><th>Kho nhập lại</th><th>Số dòng</th><th>Giá trị giảm/hoàn</th><th>Xử lý tiền</th><th>Ghi chú</th><th></th></tr></thead><tbody>${returns.map(v=>`<tr><td>${v.code||''}</td><td>${v.date||''}</td><td>${voucherWarehouse(v)}</td><td>${(v.items||[]).map(it=>`${it.code}: ${it.qty}`).join('<br>')}</td><td>${money(v.refundAmount||0)}</td><td>${v.settlement||''}${v.settlement==='Đã hoàn tiền'?`<br><small>${paymentMethodText(v.paymentMethod)}</small>`:''}</td><td>${v.note||''}</td><td><button class="btn ghost" onclick="printStock('${v.id}')">In phiếu</button></td></tr>`).join('')}</tbody></table></div>`:'';
   const receiptHtml=recs.length?`<div class="receipt-list"><h4>Phiếu thu liên quan</h4><table><thead><tr><th>Mã PT</th><th>Ngày</th><th>Số tiền phân bổ</th><th>PTTT</th><th>Ghi chú</th><th></th></tr></thead><tbody>${recs.map(r=>`<tr><td>${r.code||''}</td><td>${r.date||''}</td><td><b>${money(r.allocatedAmount||r.amount)}</b></td><td>${paymentMethodText(receiptEffectivePaymentMethod(r))}</td><td>${r.note||''}</td><td><button class="btn ghost" onclick="printReceipt('${r.id}')">In PT</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="receipt-list"><h4>Phiếu thu liên quan</h4><p>Chưa có phiếu thu được phân bổ cho đơn này.</p></div>`;
-  let html=`<div class="modal-backdrop" id="saleDetailModal"><div class="modal-card"><div class="panel-head"><h3>Chi tiết đơn ${s.code}</h3><button class="btn ghost" onclick="document.getElementById('saleDetailModal').remove()">Đóng</button></div>${isSaleCanceled(s)?`<div class="alert danger"><b>Phiếu đã hủy</b><br>Lý do: ${s.cancelReason||''}</div>`:''}<div class="sale-detail-grid"><div><b>Khách hàng</b><p><b>${ci.name}</b><br>Mã KH: ${ci.code||''}<br>SĐT: ${ci.phone||''}<br>Đ/c: ${ci.address||''}<br>Loại khách: ${ci.type||''}<br><button class="btn ghost" style="margin-top:8px" onclick="editSaleCustomerFromSale('${s.id}')">Sửa thông tin KH</button></p></div><div><b>Trạng thái công nợ & hoa hồng</b><p><span class="badge ${pay.debtLeft>0?(pay.paidTotal>0?'orange':'red'):'green'}">${pay.paymentStatus}</span><br>Tổng tiền: <b>${money(s.grand)}</b><br>Đã thu: <b>${money(pay.paidTotal)}</b><br>Còn nợ: <b>${money(pay.debtLeft)}</b><br>PTTT: <b>${paymentMethodText(s.paymentMethod||s.payMethod)}</b><br>Hoa hồng: <b>${saleFullyPaidForCommission(s)?'Đủ điều kiện':'Chưa đủ 100%'}</b>${saleCommissionEarnedAt(s)?`<br>Ngày đủ 100%: <b>${saleCommissionEarnedAt(s)}</b>`:''}<br>${saleMoneyStatus(s).overPaid>0?`Tiền dư: <b>${money(saleMoneyStatus(s).overPaid)}</b><br><span class="badge orange">${saleMoneyStatus(s).label}</span>`:''}</p></div><div><b>Kho</b><p>${sv?`<span class="badge green">Đã xuất kho</span><br>Kho xuất: <b>${voucherWarehouse(sv)}</b><br>Mã phiếu: <b>${sv.code||''}</b><br><button class="btn ghost" onclick="printStock('${sv.id}')">Xem/In phiếu xuất kho</button><br><button class="btn primary" style="margin-top:6px" onclick="openSaleReturn('${s.id}')">Trả lại hàng bán</button>`:`<span class="badge ${saleNeedSupplementStock(s)?'red':'orange'}">${saleNeedSupplementStock(s)?'Cần xuất kho bổ sung':'Chưa xuất kho'}</span><br>Đơn này chưa tạo phiếu xuất kho.<br><button class="btn primary" onclick="createSupplementStockVoucher('${s.id}')">Tạo phiếu xuất kho bổ sung</button>`}</p></div></div><table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK dòng</th><th>Thành tiền</th></tr></thead><tbody>${(s.items||[]).map(it=>`<tr><td>${it.code}</td><td>${it.name||''}</td><td>${it.qty}</td><td>${money(it.price)}</td><td>${it.discountType==='amount'?money(it.discount||0):((it.discount||0)+'%')}</td><td>${money(lineNet(it))}</td></tr>`).join('')}</tbody></table><div class="total-box"><div>Tiền hàng gốc: <b>${money(s.goodsBeforeDiscount||0)}</b></div><div>CK dòng: <b>${money(s.lineDiscountTotal||0)}</b></div><div>CK tổng đơn: <b>${money(s.orderDiscountTotal||0)}</b></div><div>Tiền sau CK: <b>${money(s.subtotal||0)}</b></div><div>Phụ thu: <b>${money(s.surcharge||0)}</b></div><div>Tổng tiền: <b>${money(s.grand)}</b></div><div>Đã thu: <b>${money(pay.paidTotal)}</b></div><div>Còn nợ: <b>${money(pay.debtLeft)}</b></div></div>${returnHtml}${receiptHtml}</div></div>`;
+  const limitedEditButton=canEditSaleCustomerInstall()&&!isSaleCanceled(s)?`<br><button class="btn ghost" style="margin-top:8px" onclick="editSaleCustomerFromSale('${s.id}')">Sửa KH & lắp đặt</button>`:'';
+  const returnButton=has('editSales')?`<br><button class="btn primary" style="margin-top:6px" onclick="openSaleReturn('${s.id}')">Trả lại hàng bán</button>`:'';
+  let html=`<div class="modal-backdrop" id="saleDetailModal"><div class="modal-card"><div class="panel-head"><h3>Chi tiết đơn ${s.code}</h3><button class="btn ghost" onclick="document.getElementById('saleDetailModal').remove()">Đóng</button></div>${isSaleCanceled(s)?`<div class="alert danger"><b>Phiếu đã hủy</b><br>Lý do: ${s.cancelReason||''}</div>`:''}<div class="sale-detail-grid"><div><b>Khách hàng & lắp đặt</b><p><b>${ci.name}</b><br>Mã KH: ${ci.code||''}<br>SĐT: ${ci.phone||''}<br>Đ/c: ${ci.address||''}<br>Loại khách: ${ci.type||''}<br>Trạng thái lắp: <b>${inferSaleInstallStatus(s)}</b>${saleInstallationCompletedAt(s)?`<br>Ngày hoàn thành: <b>${saleInstallationCompletedAt(s)}</b>`:''}${s.techName?`<br>Kỹ thuật: <b>${s.techName}</b>`:''}${limitedEditButton}</p></div><div><b>Trạng thái công nợ & hoa hồng</b><p><span class="badge ${pay.debtLeft>0?(pay.paidTotal>0?'orange':'red'):'green'}">${pay.paymentStatus}</span><br>Tổng tiền: <b>${money(s.grand)}</b><br>Đã thu: <b>${money(pay.paidTotal)}</b><br>Còn nợ: <b>${money(pay.debtLeft)}</b><br>PTTT: <b>${paymentMethodText(s.paymentMethod||s.payMethod)}</b><br>Hoa hồng: <b>${saleFullyPaidForCommission(s)?'Đủ điều kiện':'Chưa đủ 100%'}</b>${saleCommissionEarnedAt(s)?`<br>Ngày đủ 100%: <b>${saleCommissionEarnedAt(s)}</b>`:''}<br>${saleMoneyStatus(s).overPaid>0?`Tiền dư: <b>${money(saleMoneyStatus(s).overPaid)}</b><br><span class="badge orange">${saleMoneyStatus(s).label}</span>`:''}</p></div><div><b>Kho</b><p>${sv?`<span class="badge green">Đã xuất kho</span><br>Kho xuất: <b>${voucherWarehouse(sv)}</b><br>Mã phiếu: <b>${sv.code||''}</b><br><button class="btn ghost" onclick="printStock('${sv.id}')">Xem/In phiếu xuất kho</button>${returnButton}`:`<span class="badge ${saleNeedSupplementStock(s)?'red':'orange'}">${saleNeedSupplementStock(s)?'Cần xuất kho bổ sung':'Chưa xuất kho'}</span><br>Đơn này chưa tạo phiếu xuất kho.<br><button class="btn primary" onclick="createSupplementStockVoucher('${s.id}')">Tạo phiếu xuất kho bổ sung</button>`}</p></div></div><table><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá</th><th>CK dòng</th><th>Thành tiền</th></tr></thead><tbody>${(s.items||[]).map(it=>`<tr><td>${it.code}</td><td>${it.name||''}</td><td>${it.qty}</td><td>${money(it.price)}</td><td>${it.discountType==='amount'?money(it.discount||0):((it.discount||0)+'%')}</td><td>${money(lineNet(it))}</td></tr>`).join('')}</tbody></table><div class="total-box"><div>Tiền hàng gốc: <b>${money(s.goodsBeforeDiscount||0)}</b></div><div>CK dòng: <b>${money(s.lineDiscountTotal||0)}</b></div><div>CK tổng đơn: <b>${money(s.orderDiscountTotal||0)}</b></div><div>Tiền sau CK: <b>${money(s.subtotal||0)}</b></div><div>Phụ thu: <b>${money(s.surcharge||0)}</b></div><div>Tổng tiền: <b>${money(s.grand)}</b></div><div>Đã thu: <b>${money(pay.paidTotal)}</b></div><div>Còn nợ: <b>${money(pay.debtLeft)}</b></div></div>${returnHtml}${receiptHtml}</div></div>`;
   document.body.insertAdjacentHTML('beforeend',html);
 }
 window.editSale=id=>{
   const s=data.sales.find(x=>x.id===id);
   if(!s) return alert('Không tìm thấy phiếu bán cần sửa');
+  if(!canEditSaleFinancials()){
+    if(canEditSaleCustomerInstall())return window.editSaleCustomerFromSale(id);
+    return alert('Bạn không có quyền sửa phiếu bán.');
+  }
 
   // Phiếu đã thu tiền / đã xuất kho vẫn cho sửa thông tin khách hàng.
   // Để tránh lệch công nợ và tồn kho, nhân viên không được sửa tiền hàng/sản phẩm/kho trên phiếu đã khóa.
@@ -5114,7 +5146,7 @@ window.importCSV=(e,type)=>window.importExcel(e,type);
 
 
 window.exportBackup=()=>{
-  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,warehouses:data.warehouses,suppliers:data.suppliers,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v123'};
+  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,warehouses:data.warehouses,suppliers:data.suppliers,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v124'};
   let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));a.download='similock-da-nang-backup-'+today()+'.json';a.click()
 }
 

@@ -1,0 +1,14 @@
+HƯỚNG DẪN CẬP NHẬT V124 - BẢN GỌN
+
+1. Giải nén file ZIP.
+2. Mở thư mục erp_v124_deploy.
+3. Chọn toàn bộ 8 file trong thư mục.
+4. Kéo 8 file này vào thư mục gốc của GitHub và chọn Commit changes.
+5. Vào Firebase Console > Firestore Database > Rules.
+6. Mở file firestore.rules, sao chép toàn bộ nội dung, dán vào Firebase và bấm Publish.
+7. Vào phần mềm bằng Admin > Phân quyền > chọn sale1.
+8. Tích "Sửa KH & lắp đặt trên đơn".
+9. Bỏ tích "Sửa toàn bộ đơn (sản phẩm/giá)" rồi lưu.
+10. Cho sale1 đăng xuất, đăng nhập lại và tải lại trang bằng Cmd+Shift+R hoặc Ctrl+Shift+R.
+
+Lưu ý: Không cần tải các file QA, CHANGELOG hoặc hướng dẫn của gói đầy đủ lên GitHub.

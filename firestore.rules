@@ -11,6 +11,59 @@ service cloud.firestore {
     function isAdmin() { return isMainAdminEmail() || (myUserExists() && myUser().role == 'Admin'); }
     function hasProfile() { return myUserExists() && myUser().role != 'Chưa phân quyền'; }
     function hasPerm(perm) { return isAdmin() || (hasProfile() && myUser().perms is list && myUser().perms.hasAny([perm])); }
+    function canUpdateSaleCustomerInstall(oldSale, newSale) {
+      return hasPerm('editSaleCustomerInstall')
+        && newSale.diff(oldSale).affectedKeys().hasOnly([
+          'customerId', 'customerCode', 'customerName', 'customerPhone',
+          'customerAddress', 'customerType', 'customerGroup', 'customerSource',
+          'customerSnapshot', 'customerEditHistory',
+          'installStatus', 'installCompletedDate', 'techId', 'techName',
+          'installNote', 'installEditHistory', 'updatedAt'
+        ]);
+    }
+    function canUpdateSaleDebt(oldSale, newSale) {
+      return hasPerm('debts')
+        && newSale.diff(oldSale).affectedKeys().hasOnly([
+          'paidTotal', 'debt', 'debtLeft', 'paymentStatus', 'status',
+          'expectedSaleCommission', 'saleCommission', 'commissionEarnedAt',
+          'commissionStatus', 'commissionHistory', 'updatedAt'
+        ]);
+    }
+    function canUpdateSaleStockLink(oldSale, newSale) {
+      return hasPerm('sales')
+        && newSale.diff(oldSale).affectedKeys().hasOnly([
+          'stockVoucherId', 'stockVoucherCode', 'orderStatus', 'updatedAt'
+        ])
+        && (!oldSale.keys().hasAny(['stockVoucherId']) || oldSale.stockVoucherId == '')
+        && newSale.keys().hasAll(['stockVoucherId', 'stockVoucherCode', 'stockExported'])
+        && newSale.stockVoucherId is string
+        && newSale.stockVoucherId != ''
+        && newSale.stockVoucherCode is string
+        && newSale.stockVoucherCode != ''
+        && newSale.stockExported == true;
+    }
+    function canCancelSale(oldSale, newSale) {
+      return hasPerm('deleteSales')
+        && newSale.diff(oldSale).affectedKeys().hasOnly([
+          'canceled', 'isCanceled', 'status', 'paymentStatus', 'orderStatus',
+          'commissionStatus', 'commissionEarnedAt', 'commissionHistory',
+          'cancelReason', 'cancelledAt', 'cancelledBy', 'paidTotal',
+          'debtLeft', 'updatedAt'
+        ]);
+    }
+    function canRenameSaleWorkflow(oldSale, newSale) {
+      return (hasPerm('categories') || hasPerm('system'))
+        && newSale.diff(oldSale).affectedKeys().hasOnly([
+          'installStatus', 'orderStatus', 'updatedAt'
+        ]);
+    }
+    function canSyncSaleCustomerReference(oldDoc, newDoc) {
+      return (hasPerm('editSaleCustomerInstall') || hasPerm('editSales'))
+        && newDoc.diff(oldDoc).affectedKeys().hasOnly([
+          'saleId', 'customerId', 'customerCode', 'customerName',
+          'customerPhone', 'customerAddress', 'customerType', 'updatedAt'
+        ]);
+    }
     function isFixedWarehouseRole() {
       return myUserExists() && (myUser().role == 'Kho Chính' || myUser().role == 'Kho Văn Phòng');
     }
@@ -182,14 +235,20 @@ service cloud.firestore {
     match /sales/{id} {
       allow read: if hasPerm('sales') || hasPerm('commissions') || hasPerm('debts') || hasPerm('reports') || hasPerm('warranty');
       allow create: if hasPerm('sales');
-      allow update: if hasPerm('sales') || hasPerm('editSales') || hasPerm('deleteSales') || hasPerm('debts');
+      allow update: if hasPerm('editSales')
+        || canUpdateSaleCustomerInstall(resource.data, request.resource.data)
+        || canUpdateSaleDebt(resource.data, request.resource.data)
+        || canUpdateSaleStockLink(resource.data, request.resource.data)
+        || canCancelSale(resource.data, request.resource.data)
+        || canRenameSaleWorkflow(resource.data, request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /receipts/{id} {
       allow read: if hasPerm('sales') || hasPerm('commissions') || hasPerm('debts') || hasPerm('cashbook') || hasPerm('reports');
       allow create: if hasPerm('debts') || hasPerm('cashbook');
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || canSyncSaleCustomerReference(resource.data, request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /stockVouchers/{id} {
@@ -197,6 +256,7 @@ service cloud.firestore {
       allow create: if canWriteStockVoucher(request.resource.data)
         && validStockVoucherCreate(request.resource.data);
       allow update: if isAdmin()
+        || canSyncSaleCustomerReference(resource.data, request.resource.data)
         || (resource.data.type != 'TRANSFER'
           && canWriteStockVoucher(resource.data)
           && canWriteStockVoucher(request.resource.data))
