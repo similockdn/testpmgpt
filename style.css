@@ -378,6 +378,13 @@ table{max-width:100%;}
 .warehouse-items-head b{display:block;color:#082f49;font-size:16px;}
 .warehouse-items-head span{display:block;color:#64748b;font-size:12px;margin-top:3px;}
 .warehouse-list-panel .panel-head{margin-bottom:8px;}
+.warehouse-master-page{display:none;}
+.warehouse-master-page.active{display:block;}
+.warehouse-master-page .panel{overflow-x:auto;}
+.warehouse-master-page .hint{margin:12px 0;}
+.warehouse-master-form,.supplier-master-form{margin-bottom:12px;}
+.warehouse-master-page table{min-width:900px;}
+.warehouse-master-page button[disabled]{opacity:.45;cursor:not-allowed;}
 @media(max-width:1100px){
   .warehouse-save-actions{justify-content:flex-start;}
   .warehouse-file-tools{align-items:flex-start;flex-direction:column;}

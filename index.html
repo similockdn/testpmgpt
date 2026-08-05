@@ -69,6 +69,7 @@
             <button class="stock-menu-item" data-page="inventory" data-stock-operation="ADJUST">🧮 Điều chỉnh kho</button>
             <button class="stock-menu-item" data-page="inventory" data-stock-operation="RETURN">↩️ Trả lại hàng bán</button>
             <button class="stockbook-menu-item" data-page="stockbook">📊 Sổ kho</button>
+            <button class="warehouse-master-menu-item" data-page="warehouseMaster">🏬 Kho & Nhà cung cấp</button>
           </div>
         </div>
         <div class="menu-group">
@@ -363,7 +364,16 @@
               <div><label>Ngày</label><input id="stockDate" type="date" /></div>
               <div><label>Loại chứng từ</label><select id="stockType"><option value="IN">Phiếu nhập kho</option><option value="OUT">Phiếu xuất kho</option><option value="RETURN">Phiếu trả lại hàng bán</option><option value="TRANSFER">Phiếu chuyển kho</option><option value="ADJUST">Phiếu điều chỉnh</option><option value="CHECK">Phiếu kiểm kê</option></select></div>
               <div><label id="stockWarehouseLabel">Kho</label><select id="stockWarehouse"></select></div>
-              <div id="stockToWarehouseWrap" style="display:none"><label>Kho nhận</label><select id="stockToWarehouse"></select></div>
+              <div id="stockToWarehouseWrap" style="display:none"><label>Kho nhận <span class="req">*</span></label><select id="stockToWarehouse"></select></div>
+              <div id="stockSupplierWrap" style="display:none"><label>Nhà cung cấp <span class="req">*</span></label><select id="stockSupplier"></select></div>
+              <div id="stockRecipientWrap" class="span2" style="display:none">
+                <div class="grid form-grid">
+                  <div><label>Loại nơi nhận <span class="req">*</span></label><select id="stockRecipientType"><option value="Khách hàng">Khách hàng</option><option value="Kỹ thuật/Bảo hành">Kỹ thuật/Bảo hành</option><option value="Nhà cung cấp">Nhà cung cấp</option><option value="Khác">Khác</option></select></div>
+                  <div><label>Đối tượng/Nơi nhận <span class="req">*</span></label><input id="stockRecipientName" placeholder="Tên khách, kỹ thuật, nhà cung cấp..." /></div>
+                  <div><label>Số điện thoại</label><input id="stockRecipientPhone" placeholder="Số điện thoại người nhận" /></div>
+                  <div><label>Địa chỉ</label><input id="stockRecipientAddress" placeholder="Địa chỉ giao/nhận hàng" /></div>
+                </div>
+              </div>
               <div class="span2"><label>Lý do/Ghi chú</label><input id="stockNote" placeholder="VD: xuất bảo hành, chuyển kho, kiểm kê lệch, hàng lỗi..." /></div>
             </div>
             <div id="stockWorkflowHint" class="stock-workflow-hint"></div>
@@ -378,7 +388,40 @@
           <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá vốn</th><th>Ghi chú</th><th></th></tr></thead><tbody id="stockItems"></tbody></table>
           </div>
         </div>
-        <div class="panel warehouse-list-panel"><div class="panel-head"><div><h3>📋 Danh sách chứng từ kho</h3><span>Theo dõi toàn bộ phiếu nhập, xuất, trả hàng, chuyển kho và điều chỉnh.</span></div></div><div class="toolbar"><input class="search" id="stockVoucherSearch" placeholder="Tìm chứng từ kho theo mã / loại / kho / model / tên sản phẩm / ghi chú" oninput="renderStock()" /><button class="btn ghost" onclick="clearStockVoucherSearch()">Xóa tìm</button><span id="stockVoucherSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Loại</th><th>Kho</th><th>Số dòng</th><th>Giá trị</th><th>Hành động</th></tr></thead><tbody id="stockVoucherTable"></tbody></table></div>
+        <div class="panel warehouse-list-panel"><div class="panel-head"><div><h3>📋 Danh sách chứng từ kho</h3><span>Theo dõi toàn bộ phiếu nhập, xuất, trả hàng, chuyển kho và điều chỉnh.</span></div></div><div class="toolbar"><input class="search" id="stockVoucherSearch" placeholder="Tìm theo mã / kho / nơi nhận / nhà cung cấp / model / ghi chú" oninput="renderStock()" /><button class="btn ghost" onclick="clearStockVoucherSearch()">Xóa tìm</button><span id="stockVoucherSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Loại</th><th>Kho/Luồng kho</th><th>Đối tác</th><th>Trạng thái</th><th>Số dòng</th><th>Giá trị</th><th>Hành động</th></tr></thead><tbody id="stockVoucherTable"></tbody></table></div>
+      </section>
+
+      <section id="warehouseMaster" class="page warehouse-master-page">
+        <div class="panel">
+          <div class="panel-head"><div><h3>🏬 Danh mục kho</h3><span>Kho HCM đã được bổ sung. Kho tạo mới sẽ tự xuất hiện trong phân quyền, phiếu kho, sổ kho và báo cáo.</span></div><div><button class="btn ghost" onclick="exportExcel('warehouses')">Xuất Excel</button><button class="btn ghost" onclick="resetWarehouseMasterForm()">Kho mới</button><button class="btn primary" onclick="saveWarehouseMaster()">Lưu kho</button></div></div>
+          <div class="grid form-grid warehouse-master-form">
+            <input id="warehouseMasterId" hidden>
+            <div><label>Mã kho <span class="req">*</span></label><input id="warehouseMasterCode" placeholder="VD: HCM"></div>
+            <div><label>Tên kho <span class="req">*</span></label><input id="warehouseMasterName" placeholder="VD: Kho HCM"></div>
+            <div><label>Địa chỉ</label><input id="warehouseMasterAddress"></div>
+            <div><label>Điện thoại</label><input id="warehouseMasterPhone"></div>
+            <div><label>Trạng thái</label><select id="warehouseMasterActive"><option value="active">Đang sử dụng</option><option value="inactive">Tạm ẩn</option></select></div>
+            <div><label>Ghi chú</label><input id="warehouseMasterNote"></div>
+          </div>
+          <div class="hint"><b>An toàn dữ liệu:</b> Không thể xóa/tạm ẩn kho đang có chứng từ, đơn bán hoặc tài khoản được phân quyền. Kho Chính và Kho Văn Phòng được bảo vệ vì gắn với vai trò cố định.</div>
+          <table><thead><tr><th>Mã</th><th>Tên kho</th><th>Địa chỉ</th><th>Điện thoại</th><th>Trạng thái</th><th>Đang dùng</th><th>Hành động</th></tr></thead><tbody id="warehouseMasterTable"></tbody></table>
+        </div>
+
+        <div class="panel" id="supplierMasterForm">
+          <div class="panel-head"><div><h3>🏭 Danh mục nhà cung cấp</h3><span>Nhà cung cấp là thông tin bắt buộc khi lập phiếu nhập kho mới.</span></div><div><button class="btn ghost" onclick="exportExcel('suppliers')">Xuất Excel</button><button class="btn ghost" onclick="resetSupplierMasterForm()">NCC mới</button><button class="btn primary" onclick="saveSupplierMaster()">Lưu nhà cung cấp</button></div></div>
+          <div class="grid form-grid supplier-master-form">
+            <input id="supplierMasterId" hidden>
+            <div><label>Mã NCC <span class="req">*</span></label><input id="supplierMasterCode" placeholder="VD: NCC001"></div>
+            <div><label>Tên nhà cung cấp <span class="req">*</span></label><input id="supplierMasterName"></div>
+            <div><label>Người liên hệ</label><input id="supplierMasterContact"></div>
+            <div><label>Điện thoại</label><input id="supplierMasterPhone"></div>
+            <div><label>Mã số thuế</label><input id="supplierMasterTaxCode"></div>
+            <div><label>Địa chỉ</label><input id="supplierMasterAddress"></div>
+            <div><label>Trạng thái</label><select id="supplierMasterActive"><option value="active">Đang sử dụng</option><option value="inactive">Tạm ẩn</option></select></div>
+            <div><label>Ghi chú</label><input id="supplierMasterNote"></div>
+          </div>
+          <table><thead><tr><th>Mã</th><th>Nhà cung cấp</th><th>Liên hệ</th><th>Điện thoại</th><th>MST</th><th>Địa chỉ</th><th>Trạng thái</th><th>Số phiếu nhập</th><th>Hành động</th></tr></thead><tbody id="supplierMasterTable"></tbody></table>
+        </div>
       </section>
 
       <section id="cashbook" class="page">
@@ -408,14 +451,14 @@
           </div>
           <div class="grid form-grid stock-filter-grid">
             <div class="span2"><label>Tìm kiếm</label><input class="search" id="stockBookSearch" placeholder="Tìm model hoặc tên sản phẩm..." oninput="renderStockBook()"></div>
-            <div><label>Kho</label><select id="stockBookWarehouse" onchange="renderStockBook()"><option value="ALL">Tất cả kho được phân quyền</option><option>Kho Chính</option><option>Kho Văn Phòng</option></select></div>
+            <div><label>Kho</label><select id="stockBookWarehouse" onchange="renderStockBook()"><option value="ALL">Tất cả kho được phân quyền</option></select></div>
             <div><label>Tình trạng tồn</label><select id="stockBookStatus" onchange="renderStockBook()"><option value="ALL">Tất cả</option><option value="IN_STOCK">Còn hàng (&gt;0)</option><option value="LOW">Sắp hết hàng (≤ định mức)</option><option value="OUT">Hết hàng (=0)</option></select></div>
             <div><label>Từ ngày</label><input id="stockBookFrom" type="date" onchange="renderStockBook()"></div>
             <div><label>Đến ngày</label><input id="stockBookTo" type="date" onchange="renderStockBook()"></div>
             <div><label>&nbsp;</label><button class="btn ghost" onclick="clearStockBookDateFilter()">Xóa lọc ngày</button></div>
           </div>
           <div id="stockBookSummary" class="stock-summary-grid"></div>
-          <table><thead><tr id="stockBookHead"><th>Model</th><th>Sản phẩm</th><th>Nhập</th><th>Xuất</th><th>Chuyển kho</th><th>Điều chỉnh</th><th>Kho Chính</th><th>Kho Văn Phòng</th><th>Tổng tồn</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th></tr></thead><tbody id="stockBookTable"></tbody></table>
+          <table><thead><tr id="stockBookHead"><th>Model</th><th>Sản phẩm</th><th>Nhập</th><th>Xuất</th><th>Chuyển kho</th><th>Đang vận chuyển</th><th>Chênh lệch nhận</th><th>Điều chỉnh</th><th>Kho Chính</th><th>Kho Văn Phòng</th><th>Kho HCM</th><th>Tổng tồn</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th></tr></thead><tbody id="stockBookTable"></tbody></table>
         </div>
         <div class="panel"><div class="panel-head"><div><h3>📑 Nhật ký tồn kho</h3><span>Lưu toàn bộ phát sinh nhập, xuất, chuyển, điều chỉnh để truy vết khi lệch tồn.</span></div></div><table><thead><tr><th>Ngày</th><th>Mã phiếu</th><th>Nghiệp vụ</th><th>Kho</th><th>Model</th><th>Sản phẩm</th><th>SL +/-</th><th>Ghi chú</th></tr></thead><tbody id="stockLedgerTable"></tbody></table></div>
       </section>
@@ -516,7 +559,7 @@
           </div>
           <div class="toolbar category-toolbar"><select id="catFilterType" onchange="renderSystemCategories()"><option value="">Tất cả nhóm</option><option value="productCategory">Danh mục sản phẩm</option><option value="expenseCategory">Loại phiếu chi</option><option value="paymentMethod">Phương thức thanh toán</option><option value="warrantyReason">Lý do bảo hành</option><option value="installStatus">Trạng thái lắp đặt</option><option value="orderStatus">Trạng thái đơn hàng</option></select><input class="search" id="catSearch" placeholder="Tìm danh mục theo tên / nhóm / ghi chú" oninput="renderSystemCategories()"><button class="btn ghost" onclick="clearSystemCategorySearch()">Xóa tìm</button><span id="catSearchCount" class="muted-small"></span></div>
           <table><thead><tr><th>Nhóm</th><th>Tên danh mục</th><th>Trạng thái</th><th>Đang sử dụng</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody id="categoryTable"></tbody></table>
-          <div class="hint category-hint"><b>Lưu ý:</b> Không nên xóa danh mục đang phát sinh dữ liệu. Nếu cần thay đổi tên, dùng nút <b>Sửa</b> để hệ thống đổi tên đồng bộ trên sản phẩm, phiếu chi, phiếu thu hoặc bảo hành.</div>
+          <div class="hint category-hint"><b>Lưu ý:</b> Có thể Sửa/Xóa cả danh mục mặc định và danh mục tự tạo. Danh mục đang phát sinh dữ liệu sẽ không được xóa; hãy dùng <b>Sửa</b> để đổi tên đồng bộ trên sản phẩm, phiếu chi, phiếu thu hoặc bảo hành.</div>
         </div>
       </section>
 
@@ -620,7 +663,7 @@
         <div class="panel wide report-section report-section-stock report-stock-dashboard">
           <div class="panel-head"><div><h3>📦 Báo cáo kho tổng hợp</h3><span>Tồn kho, nhập/xuất, chuyển kho, điều chỉnh, nhật ký kho, hàng sắp hết và hàng tồn lâu.</span></div><div><button class="btn ghost" onclick="exportExcel('stockbook')">Xuất tồn kho</button><button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất chứng từ kho</button></div></div>
           <div class="grid form-grid stock-report-filter">
-            <div><label>Kho</label><select id="reportStockWarehouse" onchange="renderReports()"><option value="ALL">Tất cả kho được phân quyền</option><option>Kho Chính</option><option>Kho Văn Phòng</option></select></div>
+            <div><label>Kho</label><select id="reportStockWarehouse" onchange="renderReports()"><option value="ALL">Tất cả kho được phân quyền</option></select></div>
             <div><label>Tình trạng tồn</label><select id="reportStockStatus" onchange="renderReports()"><option value="ALL">Tất cả</option><option value="LOW">Sắp hết</option><option value="OUT">Hết hàng</option><option value="IN_STOCK">Còn hàng</option></select></div>
             <div><label>Tìm model / sản phẩm</label><input id="reportStockSearch" placeholder="VD: F07, S01..." oninput="renderReports()"></div>
             <div><label>&nbsp;</label><button class="btn ghost" onclick="clearReportStockFilter()">Xóa lọc kho</button></div>
@@ -631,22 +674,22 @@
 
         <div class="panel wide report-section report-section-stock">
           <div class="panel-head"><h3>📍 Tồn kho hiện tại</h3><span>Theo từng model và từng kho</span></div>
-          <table><thead id="reportStockHead"><tr><th>Model</th><th>Sản phẩm</th><th>Kho Chính</th><th>Kho Văn Phòng</th><th>Tổng tồn</th><th>Trạng thái</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th></tr></thead><tbody id="reportStockTable"></tbody></table>
+          <table><thead id="reportStockHead"><tr><th>Model</th><th>Sản phẩm</th><th>Kho Chính</th><th>Kho Văn Phòng</th><th>Kho HCM</th><th>Tổng tồn</th><th>Trạng thái</th><th class="view-cost">Giá vốn</th><th class="view-cost">Giá trị tồn</th></tr></thead><tbody id="reportStockTable"></tbody></table>
         </div>
 
         <div class="panel wide report-section report-section-stock">
           <div class="panel-head"><h3>⬇️ Báo cáo nhập kho</h3><span>Danh sách phiếu nhập trong kỳ</span></div>
-          <table><thead><tr><th>Ngày</th><th>Phiếu nhập</th><th>Kho</th><th>Model</th><th>Sản phẩm</th><th>SL</th><th class="view-cost">Giá trị</th><th>Ghi chú</th></tr></thead><tbody id="reportStockInTable"></tbody></table>
+          <table><thead><tr><th>Ngày</th><th>Phiếu nhập</th><th>Kho</th><th>Nhà cung cấp</th><th>Model</th><th>Sản phẩm</th><th>SL</th><th class="view-cost">Giá trị</th><th>Ghi chú</th></tr></thead><tbody id="reportStockInTable"></tbody></table>
         </div>
 
         <div class="panel wide report-section report-section-stock">
           <div class="panel-head"><h3>⬆️ Báo cáo xuất kho</h3><span>Xuất bán hàng và xuất thủ công trong kỳ</span></div>
-          <table><thead><tr><th>Ngày</th><th>Phiếu xuất</th><th>Kho</th><th>Khách hàng</th><th>Model</th><th>Sản phẩm</th><th>SL</th><th class="view-cost">Giá trị vốn</th><th>Ghi chú</th></tr></thead><tbody id="reportStockOutTable"></tbody></table>
+          <table><thead><tr><th>Ngày</th><th>Phiếu xuất</th><th>Kho xuất</th><th>Loại nơi nhận</th><th>Đối tượng/Nơi nhận</th><th>Model</th><th>Sản phẩm</th><th>SL</th><th class="view-cost">Giá trị vốn</th><th>Ghi chú</th></tr></thead><tbody id="reportStockOutTable"></tbody></table>
         </div>
 
         <div class="panel wide report-section report-section-stock">
           <div class="panel-head"><h3>🔁 Điều chuyển & điều chỉnh kho</h3><span>Kiểm soát hàng chuyển giữa kho và các phát sinh điều chỉnh</span></div>
-          <table><thead><tr><th>Ngày</th><th>Mã phiếu</th><th>Loại</th><th>Từ kho</th><th>Đến kho/Kho</th><th>Model</th><th>SL</th><th>Ghi chú</th></tr></thead><tbody id="reportStockMoveTable"></tbody></table>
+          <table><thead><tr><th>Ngày</th><th>Mã phiếu</th><th>Loại</th><th>Từ kho</th><th>Đến kho/Kho</th><th>Trạng thái</th><th>Model</th><th>SL gửi</th><th>SL nhận</th><th>Ghi chú</th></tr></thead><tbody id="reportStockMoveTable"></tbody></table>
         </div>
 
         <div class="panel wide report-section report-section-stock">

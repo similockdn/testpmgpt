@@ -58,6 +58,49 @@ service cloud.firestore {
         || ((hasPerm('inventory') || hasPerm('editStock')) && hasWarehouseAccess(stockFromWarehouse(stock)))
         || (hasPerm('sales') && (!isFixedWarehouseRole() || hasWarehouseAccess(stockFromWarehouse(stock))));
     }
+    function validStockVoucherCreate(stock) {
+      return (
+          stock.type != 'TRANSFER'
+          || (
+            stock.keys().hasAll(['transferStatus', 'receivedItems', 'toWarehouse'])
+            && stock.transferStatus == 'IN_TRANSIT'
+            && stock.receivedItems is list
+            && stock.receivedItems.size() == 0
+            && stockToWarehouse(stock) != ''
+            && stockToWarehouse(stock) != stockFromWarehouse(stock)
+          )
+        )
+        && (
+          stock.type != 'OUT'
+          || (
+            stock.keys().hasAll(['recipientType', 'recipientName'])
+            && stock.recipientType is string
+            && stock.recipientType != ''
+            && stock.recipientName is string
+            && stock.recipientName != ''
+            && stockToWarehouse(stock) == ''
+          )
+        );
+    }
+    function canConfirmTransfer(oldStock, newStock) {
+      return oldStock.keys().hasAny(['type'])
+        && oldStock.type == 'TRANSFER'
+        && oldStock.keys().hasAny(['transferStatus'])
+        && oldStock.transferStatus == 'IN_TRANSIT'
+        && newStock.keys().hasAny(['transferStatus'])
+        && (newStock.transferStatus == 'RECEIVED' || newStock.transferStatus == 'RECEIVED_WITH_DIFFERENCE')
+        && (hasPerm('inventory') || hasPerm('editStock'))
+        && hasWarehouseAccess(stockToWarehouse(oldStock))
+        && newStock.keys().hasAny(['receivedBy'])
+        && newStock.receivedBy == myEmail()
+        && oldStock.items is list
+        && newStock.receivedItems is list
+        && newStock.receivedItems.size() == oldStock.items.size()
+        && newStock.diff(oldStock).affectedKeys().hasOnly([
+          'transferStatus', 'receivedItems', 'receivedAt', 'receivedBy',
+          'receiveNote', 'updatedAt'
+        ]);
+    }
 
     match /users/{uid} {
       allow read: if isAdmin() || (signedIn() && uid == request.auth.uid);
@@ -110,6 +153,16 @@ service cloud.firestore {
       allow write: if hasPerm('categories') || hasPerm('system');
     }
 
+    match /warehouses/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /suppliers/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow write: if hasPerm('warehouseMaster') || hasPerm('categories') || hasPerm('system');
+    }
+
     match /warrantyReasons/{id} {
       allow read: if hasProfile() || isAdmin();
       allow write: if hasPerm('categories') || hasPerm('warranty');
@@ -141,9 +194,16 @@ service cloud.firestore {
 
     match /stockVouchers/{id} {
       allow read: if canReadStockVoucher(resource.data);
-      allow create: if canWriteStockVoucher(request.resource.data);
-      allow update: if canWriteStockVoucher(resource.data) && canWriteStockVoucher(request.resource.data);
-      allow delete: if (isAdmin() || hasPerm('deleteStock')) && canWriteStockVoucher(resource.data);
+      allow create: if canWriteStockVoucher(request.resource.data)
+        && validStockVoucherCreate(request.resource.data);
+      allow update: if isAdmin()
+        || (resource.data.type != 'TRANSFER'
+          && canWriteStockVoucher(resource.data)
+          && canWriteStockVoucher(request.resource.data))
+        || canConfirmTransfer(resource.data, request.resource.data);
+      allow delete: if resource.data.type != 'TRANSFER'
+        && (isAdmin() || hasPerm('deleteStock'))
+        && canWriteStockVoucher(resource.data);
     }
 
     match /warranties/{id} {
