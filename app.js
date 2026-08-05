@@ -118,7 +118,7 @@ function voucherToWarehouse(v){return v.toWarehouse||''}
 function isTransferVoucher(v){return v.type==='TRANSFER'}
 const modules=['dashboard','sales','commissions','expenses','cashbook','salaries','debts','inventory','stockbook','warranty','customers','products','categories','prices','staff','reports','permissions','system','audit'];
 const permissionMap={
- Admin:modules.concat(['viewCost','viewSalary','manageSalary','editSales','deleteSales','editStock','deleteStock','audit']),
+ Admin:modules.concat(['viewDashboardProfit','viewCost','viewSalary','manageSalary','editSales','deleteSales','editStock','deleteStock','audit']),
  Sale:['dashboard','sales','commissions','customers','products','warranty'],
  'Kỹ thuật':['dashboard','warranty','customers','products'],
  Kho:['dashboard','inventory','stockbook','products'],
@@ -126,10 +126,10 @@ const permissionMap={
  'Kho Văn Phòng':['dashboard','inventory','stockbook','products'],
  'Kế toán':['dashboard','expenses','cashbook','commissions','debts','reports','sales','customers','products']
 };
-const permLabels={dashboard:'Dashboard',sales:'Bán hàng',commissions:'Thu nhập nhân viên',expenses:'Phiếu chi',cashbook:'Sổ quỹ',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',categories:'Danh mục chung',prices:'Bảng giá',categories:'Danh mục chung',staff:'Nhân viên',reports:'Báo cáo',categories:'Danh mục chung',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận',editSales:'Sửa đơn bán',deleteSales:'Hủy phiếu bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký thao tác',salaries:'Lương nhân viên',viewSalary:'Xem lương',manageSalary:'Quản lý lương'};
+const permLabels={dashboard:'Dashboard',viewDashboardProfit:'Xem lợi nhuận trên Dashboard',sales:'Bán hàng',commissions:'Thu nhập nhân viên',expenses:'Phiếu chi',cashbook:'Sổ quỹ',debts:'Công nợ',inventory:'Kho',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',categories:'Danh mục chung',prices:'Bảng giá',categories:'Danh mục chung',staff:'Nhân viên',reports:'Báo cáo',categories:'Danh mục chung',permissions:'Phân quyền',system:'Hệ thống',viewCost:'Xem giá vốn/lợi nhuận trong báo cáo',editSales:'Sửa đơn bán',deleteSales:'Hủy phiếu bán',editStock:'Sửa phiếu kho',deleteStock:'Xóa phiếu kho',audit:'Xem nhật ký thao tác',salaries:'Lương nhân viên',viewSalary:'Xem lương',manageSalary:'Quản lý lương'};
 
 const permissionGroups=[
-  {title:'Tổng quan',desc:'Các màn hình điều hành chung',keys:['dashboard','reports','audit']},
+  {title:'Tổng quan',desc:'Dashboard và quyền xem chỉ số nhạy cảm trên Dashboard',keys:['dashboard','viewDashboardProfit','reports','audit']},
   {title:'Bán hàng & khách hàng',desc:'Tạo đơn, khách hàng, công nợ, bảo hành',keys:['sales','editSales','deleteSales','customers','debts','warranty','commissions']},
   {title:'Kho & sản phẩm',desc:'Sản phẩm, tồn kho và chứng từ kho',keys:['products','inventory','stockbook','editStock','deleteStock']},
   {title:'Tài chính nhạy cảm',desc:'Giá vốn, lợi nhuận, lương, chi phí',keys:['expenses','cashbook','salaries','viewSalary','manageSalary','viewCost']},
@@ -986,10 +986,11 @@ onAuthStateChanged(auth,async u=>{
 
 function applyPermissions(){
   const canViewCost=has('viewCost');
+  const canViewDashboardProfit=has('viewDashboardProfit');
   document.querySelectorAll('#menu button[data-page]').forEach(b=>{b.style.display=has(b.dataset.page)?'block':'none'});
   document.querySelectorAll('#menu .menu-group').forEach(g=>{const visible=[...g.querySelectorAll('button[data-page]')].some(b=>b.style.display!=='none');g.style.display=visible?'block':'none';});
   document.querySelectorAll('.view-cost').forEach(x=>x.classList.toggle('hidden',!canViewCost));
-  const profitCard=$('kpiProfitCard'); if(profitCard)profitCard.classList.toggle('hidden',!canViewCost);
+  document.querySelectorAll('.view-dashboard-profit').forEach(x=>x.classList.toggle('hidden',!canViewDashboardProfit));
   document.querySelectorAll('.salary-only').forEach(x=>x.classList.toggle('hidden',!(has('viewSalary')||has('manageSalary'))));
   document.querySelectorAll('.manage-salary').forEach(x=>x.classList.toggle('hidden',!has('manageSalary')));
 }
@@ -1169,6 +1170,7 @@ function dashboardWeekSalesRows(referenceDate=today()){
 function sumStockValue(){return data.products.reduce((a,p)=>a+(stockOf(p.code)*(costFor(p.code,today())||+p.cost||0)),0)}
 function renderDashboard(){
   const range=dashboardRangeDates();
+  const canViewDashboardProfit=has('viewDashboardProfit');
   const orderSalesInRange=salesOrdersInRange(range.from,range.to);
   const turnoverMetrics=salesTurnoverMetrics(orderSalesInRange);
   const salesInRange=revenueRecognizedSalesInRange(range.from,range.to);
@@ -1199,10 +1201,14 @@ function renderDashboard(){
   const warranties=activeWarranties().filter(w=>String(w.date||w.createdDate||w.createdAt||'')>=range.from&&String(w.date||w.createdDate||w.createdAt||'')<=range.to);
   if($('kpiSalesTurnover'))$('kpiSalesTurnover').textContent=money(turnoverMetrics.turnover);
   if($('kpiRevenue'))$('kpiRevenue').textContent=money(rev);
-  if($('kpiRevenueAfterExpense'))$('kpiRevenueAfterExpense').textContent=money(revenueMetrics.afterExpense);
-  if($('kpiRevenueAfterCommission'))$('kpiRevenueAfterCommission').textContent=money(revenueMetrics.afterCommission);
-  if($('kpiRevenueAfterExpenseCommission'))$('kpiRevenueAfterExpenseCommission').textContent=money(revenueMetrics.afterExpenseCommission);
-  if($('kpiProfit'))$('kpiProfit').textContent=money(profit);
+  if(canViewDashboardProfit){
+    if($('kpiRevenueAfterExpense'))$('kpiRevenueAfterExpense').textContent=money(revenueMetrics.afterExpense);
+    if($('kpiRevenueAfterCommission'))$('kpiRevenueAfterCommission').textContent=money(revenueMetrics.afterCommission);
+    if($('kpiRevenueAfterExpenseCommission'))$('kpiRevenueAfterExpenseCommission').textContent=money(revenueMetrics.afterExpenseCommission);
+    if($('kpiProfit'))$('kpiProfit').textContent=money(profit);
+  }else{
+    ['kpiRevenueAfterExpense','kpiRevenueAfterCommission','kpiRevenueAfterExpenseCommission','kpiProfit'].forEach(id=>{if($(id))$(id).textContent='Ẩn';});
+  }
   if($('kpiDebt'))$('kpiDebt').textContent=money(debt);
   if($('kpiDebtCount'))$('kpiDebtCount').textContent=activeDebtRows.length;
   if($('kpiCollected'))$('kpiCollected').textContent=money(collected);
@@ -1230,13 +1236,16 @@ function renderDashboard(){
   const weekSales=dashboardWeekSalesRows(today());
   const weekRevenue=weekSales.reduce((a,x)=>a+(+x.value||0),0);
   const weekOrders=weekSales.reduce((a,x)=>a+(+x.count||0),0);
+  const dashboardProfitChart=canViewDashboardProfit
+    ? modernLineChart('Lợi nhuận 12 tháng',last12.map(x=>({label:x.label,value:x.profit})),{sub:'Lợi nhuận theo đơn hàng',money:true,badge:compactMoney(last12.reduce((a,x)=>a+x.profit,0))})
+    : '';
   renderChartHtml('dashboardCharts',
     modernBarChart('Doanh thu ghi nhận từng ngày',weekSales,{sub:`Tuần hiện tại · ${weekOrders} đơn đã thu đủ 100%`,money:true,limit:7,badge:compactMoney(weekRevenue)})+
     modernLineChart('Doanh thu ghi nhận 12 tháng',last12.map(x=>({label:x.label,value:x.value})),{sub:'Theo ngày khoản thu làm phiếu đạt đủ 100%',money:true,badge:compactMoney(last12.reduce((a,x)=>a+x.value,0))})+
     modernDonutChart('Cơ cấu công nợ',debtPie,{sub:'Tình trạng thu tiền theo phiếu'})+
     modernBarChart('Top model bán chạy',productRows.map(x=>({label:x.code,value:x.qty})),{sub:'Số lượng bán trong '+range.label,limit:8})+
     modernBarChart('Tồn kho theo model',stockRows.map(x=>({label:x.label,value:x.value})),{sub:'Top model còn tồn nhiều nhất',limit:8})+
-    modernLineChart('Lợi nhuận 12 tháng',last12.map(x=>({label:x.label,value:x.profit})),{sub:'Lợi nhuận theo đơn hàng',money:true,badge:compactMoney(last12.reduce((a,x)=>a+x.profit,0))})+
+    dashboardProfitChart+
     modernDonutChart('Thu nhập Sale / Kỹ thuật',[{label:'Hoa hồng Sale',value:incomeSale},{label:'Công + xăng Kỹ thuật',value:incomeTech}],{sub:'Tổng trong '+range.label,money:true})
   );
 

@@ -108,10 +108,10 @@
         <div class="dash-v8-kpis dash-kpi-grid">
           <div class="dash-v8-kpi turnover"><div class="kpi-icon">🛒</div><div><span>Tổng doanh số bán hàng</span><b id="kpiSalesTurnover">0</b><small id="dashSalesTurnoverNote">Tất cả phiếu theo ngày bán, đã thu và chưa thu</small></div></div>
           <div class="dash-v8-kpi revenue"><div class="kpi-icon">💰</div><div><span>Tổng doanh thu</span><b id="kpiRevenue">0</b><small id="dashRevenueNote">Phiếu đã thu đủ 100%</small></div></div>
-          <div class="dash-v8-kpi profit view-cost"><div class="kpi-icon">➖</div><div><span>Doanh thu sau chi phí</span><b id="kpiRevenueAfterExpense">0</b><small>Trừ giá vốn, kỹ thuật, phiếu chi và lương</small></div></div>
-          <div class="dash-v8-kpi profit view-cost"><div class="kpi-icon">％</div><div><span>Doanh thu sau hoa hồng</span><b id="kpiRevenueAfterCommission">0</b><small>Trừ hoa hồng Sale</small></div></div>
-          <div class="dash-v8-kpi profit view-cost"><div class="kpi-icon">🧮</div><div><span>Sau chi phí + hoa hồng</span><b id="kpiRevenueAfterExpenseCommission">0</b><small>Đối chiếu công thức ròng</small></div></div>
-          <div class="dash-v8-kpi profit view-cost" id="kpiProfitCard"><div class="kpi-icon">📈</div><div><span>Lợi nhuận</span><b id="kpiProfit">0</b><small>Sau giá vốn, hoa hồng, kỹ thuật & chi phí</small></div></div>
+          <div class="dash-v8-kpi profit view-dashboard-profit"><div class="kpi-icon">➖</div><div><span>Doanh thu sau chi phí</span><b id="kpiRevenueAfterExpense">0</b><small>Trừ giá vốn, kỹ thuật, phiếu chi và lương</small></div></div>
+          <div class="dash-v8-kpi profit view-dashboard-profit"><div class="kpi-icon">％</div><div><span>Doanh thu sau hoa hồng</span><b id="kpiRevenueAfterCommission">0</b><small>Trừ hoa hồng Sale</small></div></div>
+          <div class="dash-v8-kpi profit view-dashboard-profit"><div class="kpi-icon">🧮</div><div><span>Sau chi phí + hoa hồng</span><b id="kpiRevenueAfterExpenseCommission">0</b><small>Đối chiếu công thức ròng</small></div></div>
+          <div class="dash-v8-kpi profit view-dashboard-profit" id="kpiProfitCard"><div class="kpi-icon">📈</div><div><span>Lợi nhuận</span><b id="kpiProfit">0</b><small>Sau giá vốn, hoa hồng, kỹ thuật & chi phí</small></div></div>
           <div class="dash-v8-kpi debt"><div class="kpi-icon">💳</div><div><span>Công nợ</span><b id="kpiDebt">0</b><small><i id="kpiDebtCount">0</i> phiếu đang nợ</small></div></div>
           <div class="dash-v8-kpi overdue"><div class="kpi-icon">⚠️</div><div><span>Quá hạn</span><b id="kpiOverdueCount">0</b><small>Cần xử lý</small></div></div>
           <div class="dash-v8-kpi orders"><div class="kpi-icon">🧾</div><div><span>Đơn hàng</span><b id="dashOrderCount">0</b><small id="dashOrderNote">Trong kỳ lọc</small></div></div>
@@ -223,9 +223,9 @@
         <div id="salesListTab" class="sales-tab-content">
         <div class="panel sales-list-panel">
           <div class="panel-head sales-list-head">
-            <div><h3>Danh sách phiếu bán</h3><span id="saleListHint">Phiếu bán trong ngày được ưu tiên hiển thị trước và có nhãn NEW.</span></div>
+            <div class="sales-list-title"><h3>Danh sách phiếu bán</h3><span id="saleListHint">Phiếu bán trong ngày được ưu tiên hiển thị trước và có nhãn NEW.</span></div>
             <div class="sale-list-filters">
-              <input class="search" id="saleSearch" placeholder="Tìm mã phiếu / mã KH / SĐT / khách / model" oninput="renderSales()" />
+              <input class="search" id="saleSearch" placeholder="Tìm mã phiếu, SĐT, khách hàng, model..." oninput="renderSales()" />
               <label>Tháng bán<input id="saleMonthFilter" type="month" onchange="saleListMonthChanged()" /></label>
               <label>Từ ngày<input id="saleFromFilter" type="date" onchange="saleListDateChanged()" /></label>
               <label>Đến ngày<input id="saleToFilter" type="date" onchange="saleListDateChanged()" /></label>
