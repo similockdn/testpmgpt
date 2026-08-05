@@ -1044,8 +1044,28 @@ function applyPermissions(){
   document.querySelectorAll('.salary-only').forEach(x=>x.classList.toggle('hidden',!(has('viewSalary')||has('manageSalary'))));
   document.querySelectorAll('.manage-salary').forEach(x=>x.classList.toggle('hidden',!has('manageSalary')));
 }
-document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn.closest('.menu-group').classList.toggle('open'));document.querySelectorAll('#menu button[data-page]').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page));
-function showPage(id){if(!has(id))return alert('Tài khoản chưa được phân quyền');document.querySelectorAll('#menu button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));const activeBtn=document.querySelector(`#menu button[data-page="${id}"]`);if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));$('pageTitle').textContent=btnTitle(id);$('pageSub').textContent='Similock Đà Nẵng - Quản lý bán hàng, kho, công nợ, bảo hành';if(id==='reports')setTimeout(()=>window.setReportTab?.(currentReportTab||'revenue'),0)}
+document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn.closest('.menu-group').classList.toggle('open'));
+document.querySelectorAll('#menu button[data-page]').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page,btn.dataset.stockOperation||''));
+function showPage(id,stockOperation=''){
+  if(!has(id))return alert('Tài khoản chưa được phân quyền');
+  const operation=id==='inventory'?(stockOperation||$('stockType')?.value||'IN'):'';
+  document.querySelectorAll('#menu button[data-page]').forEach(b=>{
+    const active=b.dataset.page===id && (id!=='inventory'||b.dataset.stockOperation===operation);
+    b.classList.toggle('active',active);
+    if(b.dataset.stockOperation)b.setAttribute('aria-current',active?'page':'false');
+  });
+  document.querySelectorAll('#menu .menu-group').forEach(g=>g.classList.toggle('active-group',[...g.querySelectorAll('button[data-page]')].some(b=>b.dataset.page===id)));
+  const activeBtn=id==='inventory'
+    ?document.querySelector(`#menu button[data-page="inventory"][data-stock-operation="${operation}"]`)
+    :document.querySelector(`#menu button[data-page="${id}"]`);
+  if(activeBtn)activeBtn.closest('.menu-group')?.classList.add('open');
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));
+  if(id==='inventory'&&stockOperation)window.setStockMode?.(operation);
+  const meta=id==='inventory'?(STOCK_OPERATION_META[operation]||STOCK_OPERATION_META.IN):null;
+  $('pageTitle').textContent=meta?.title||btnTitle(id);
+  $('pageSub').textContent=meta?.hint||'Similock Đà Nẵng - Quản lý bán hàng, kho, công nợ, bảo hành';
+  if(id==='reports')setTimeout(()=>window.setReportTab?.(currentReportTab||'revenue'),0);
+}
 function btnTitle(id){return ({dashboard:'Dashboard điều hành',sales:'Bán hàng',commissions:'Thu nhập nhân viên',expenses:'Phiếu chi / Chi phí',cashbook:'Sổ quỹ',salaries:'Lương nhân viên',debts:'Công nợ',inventory:'Kho hàng',stockbook:'Sổ kho',warranty:'Bảo hành',customers:'Khách hàng',products:'Sản phẩm',categories:'Danh mục chung',prices:'Bảng giá',categories:'Danh mục chung',staff:'Nhân viên',reports:'Báo cáo',categories:'Danh mục chung',permissions:'Phân quyền',system:'Hệ thống',audit:'Nhật ký thao tác'}[id]||id)}
 
 function renderAll(){
@@ -3449,14 +3469,19 @@ const STOCK_OPERATION_META={
 };
 function syncStockOperationMenu(type){
   const current=type||$('stockType')?.value||'IN';
-  document.querySelectorAll('[data-stock-mode]').forEach(btn=>{
-    const active=btn.dataset.stockMode===current;
-    btn.classList.toggle('active',active);
-    btn.setAttribute('aria-pressed',active?'true':'false');
-  });
+  const inventoryActive=$('inventory')?.classList.contains('active');
+  if(inventoryActive)document.querySelectorAll('#menu [data-stock-operation]').forEach(btn=>{
+      const active=btn.dataset.stockOperation===current;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-current',active?'page':'false');
+    });
   const meta=STOCK_OPERATION_META[current]||STOCK_OPERATION_META.IN;
   if($('warehouseOperationTitle'))$('warehouseOperationTitle').textContent=meta.title;
   if($('warehouseOperationHint'))$('warehouseOperationHint').textContent=meta.hint;
+  if(inventoryActive){
+    if($('pageTitle'))$('pageTitle').textContent=meta.title;
+    if($('pageSub'))$('pageSub').textContent=meta.hint;
+  }
 }
 window.setStockMode=(type)=>{if($('stockType')){$('stockType').value=type;resetStockForm();}};
 window.resetStockForm=()=>{editingStock=null;$('stockCode').value=nextCode(prefixByStockType($('stockType').value||'IN'),data.stockVouchers);$('stockDate').value=today();$('stockType').value=$('stockType').value||'IN';$('stockWarehouse').innerHTML=warehouseOptions(defaultWarehouse());$('stockWarehouse').value=defaultWarehouse();if($('stockToWarehouse')){$('stockToWarehouse').innerHTML=warehouseOptions(WAREHOUSES.find(w=>w!==defaultWarehouse())||defaultWarehouse(),WAREHOUSES);$('stockToWarehouse').value=WAREHOUSES.find(w=>w!==defaultWarehouse())||defaultWarehouse();}$('stockNote').value='';$('stockItems').innerHTML='';addStockItem();updateStockHeader()};
@@ -4752,7 +4777,7 @@ window.importCSV=(e,type)=>window.importExcel(e,type);
 
 
 window.exportBackup=()=>{
-  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v116'};
+  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v117'};
   let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));a.download='similock-da-nang-backup-'+today()+'.json';a.click()
 }
 

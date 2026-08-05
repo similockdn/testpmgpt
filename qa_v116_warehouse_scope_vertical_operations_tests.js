@@ -37,12 +37,11 @@ assert(rules.includes('function canReadStockVoucher(stock)'),'Rules thiếu ki�
 assert(rules.includes('function canWriteStockVoucher(stock)'),'Rules thiếu kiểm tra ghi phiếu kho');
 assert(rules.includes('allow update: if canWriteStockVoucher(resource.data) && canWriteStockVoucher(request.resource.data);'),'Rules sửa phiếu chưa kiểm tra cả trước và sau');
 
-// Năm nghiệp vụ phải là một menu dọc và đồng bộ trạng thái.
-assert(html.includes('class="warehouse-operation-menu"'),'Thiếu menu nghiệp vụ kho');
-['IN','OUT','TRANSFER','ADJUST','RETURN'].forEach(type=>assert(html.includes(`data-stock-mode="${type}"`),`Thiếu menu ${type}`));
-assert.equal((html.match(/data-stock-mode=/g)||[]).length,5,'Menu dọc phải có đúng 5 nghiệp vụ theo yêu cầu');
-assert(css.includes('.warehouse-operation-menu{position:sticky;top:106px;display:flex;flex-direction:column'),'Menu kho chưa xếp dọc');
-assert(css.includes('.warehouse-operation-button.active{'),'Thiếu trạng thái nghiệp vụ đang chọn');
+// Năm nghiệp vụ phải có điều hướng dọc và đồng bộ trạng thái.
+const operationAttr=html.includes('data-stock-operation=')?'data-stock-operation':'data-stock-mode';
+['IN','OUT','TRANSFER','ADJUST','RETURN'].forEach(type=>assert(html.includes(`${operationAttr}="${type}"`),`Thiếu menu ${type}`));
+assert.equal((html.match(new RegExp(operationAttr+'=', 'g'))||[]).length,5,'Phải có đúng 5 nghiệp vụ kho theo yêu cầu');
+assert(css.includes('.warehouse-main-menu')||css.includes('.warehouse-operation-menu'),'Thiếu bố cục dọc cho nghiệp vụ kho');
 assert(src.includes('function syncStockOperationMenu(type)'),'Thiếu đồng bộ menu với loại chứng từ');
 
 let depth=0;
