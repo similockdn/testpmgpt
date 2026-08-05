@@ -341,30 +341,30 @@
             </div>
           </div>
 
-          <div class="warehouse-action-board">
-            <div class="warehouse-action-group main-flow">
-              <b>Thao tác kho chính</b>
-              <div class="warehouse-action-buttons">
-                <button class="btn primary" onclick="setStockMode('IN')">⬇️ Nhập kho</button>
-                <button class="btn primary" onclick="setStockMode('OUT')">⬆️ Xuất kho</button>
-                <button class="btn ghost" onclick="setStockMode('RETURN')">↩️ Trả hàng bán</button>
-                <button class="btn ghost" onclick="setStockMode('TRANSFER')">🔁 Chuyển kho</button>
-                <button class="btn ghost" onclick="setStockMode('ADJUST')">🧮 Điều chỉnh</button>
+          <div class="warehouse-workspace">
+            <aside class="warehouse-operation-menu" aria-label="Nghiệp vụ kho">
+              <div class="warehouse-operation-menu-title"><b>Nghiệp vụ kho</b><span>Chọn loại phiếu cần lập</span></div>
+              <button type="button" class="warehouse-operation-button active" data-stock-mode="IN" aria-pressed="true" onclick="setStockMode('IN')"><span>⬇️</span><b>Nhập kho</b><small>Ghi tăng tồn</small></button>
+              <button type="button" class="warehouse-operation-button" data-stock-mode="OUT" aria-pressed="false" onclick="setStockMode('OUT')"><span>⬆️</span><b>Xuất kho</b><small>Ghi giảm tồn</small></button>
+              <button type="button" class="warehouse-operation-button" data-stock-mode="TRANSFER" aria-pressed="false" onclick="setStockMode('TRANSFER')"><span>🔁</span><b>Chuyển kho</b><small>Chọn kho nhận</small></button>
+              <button type="button" class="warehouse-operation-button" data-stock-mode="ADJUST" aria-pressed="false" onclick="setStockMode('ADJUST')"><span>🧮</span><b>Điều chỉnh kho</b><small>Tăng/giảm có lý do</small></button>
+              <button type="button" class="warehouse-operation-button" data-stock-mode="RETURN" aria-pressed="false" onclick="setStockMode('RETURN')"><span>↩️</span><b>Trả lại hàng bán</b><small>Nhập lại hàng trả</small></button>
+              <div class="warehouse-scope-note"><b>Phạm vi kho</b><span>Chỉ hiển thị tồn và lịch sử của kho được phân quyền.</span></div>
+            </aside>
+
+            <div class="warehouse-operation-content">
+              <div class="warehouse-file-tools">
+                <div><b>Dữ liệu chứng từ</b><span>Mẫu nhập và file xuất cũng chỉ lấy kho được phân quyền.</span></div>
+                <div class="warehouse-action-buttons">
+                  <input type="file" id="importStock" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'stockVouchers')">
+                  <button class="btn ghost" onclick="downloadTemplateExcel('stockVouchers')">Mẫu Excel</button>
+                  <button class="btn ghost" onclick="importStock.click()">Nhập Excel</button>
+                  <button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất Excel</button>
+                </div>
               </div>
-            </div>
-            <div class="warehouse-action-group file-flow">
-              <b>Dữ liệu & báo cáo</b>
-              <div class="warehouse-action-buttons">
-                <input type="file" id="importStock" accept=".xlsx,.xls,.csv" hidden onchange="importExcel(event,'stockVouchers')">
-                <button class="btn ghost" onclick="downloadTemplateExcel('stockVouchers')">Mẫu Excel</button>
-                <button class="btn ghost" onclick="importStock.click()">Nhập Excel</button>
-                <button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất Excel</button>
-              </div>
-            </div>
-          </div>
 
           <div class="warehouse-form-card">
-            <div class="warehouse-form-title">Thông tin chứng từ</div>
+            <div class="warehouse-form-title"><b id="warehouseOperationTitle">Phiếu nhập kho</b><small id="warehouseOperationHint">Nhập hàng vào đúng kho đang được phân quyền.</small></div>
             <div class="grid form-grid warehouse-form-grid">
               <div><label>Mã phiếu</label><input id="stockCode" readonly /></div>
               <div><label>Ngày</label><input id="stockDate" type="date" /></div>
@@ -382,6 +382,8 @@
             <button class="btn ghost" onclick="addStockItem()">+ Thêm mã hàng</button>
           </div>
           <table class="editable"><thead><tr><th>Model</th><th>Tên sản phẩm</th><th>SL</th><th>Đơn giá vốn</th><th>Ghi chú</th><th></th></tr></thead><tbody id="stockItems"></tbody></table>
+            </div>
+          </div>
         </div>
         <div class="panel warehouse-list-panel"><div class="panel-head"><div><h3>📋 Danh sách chứng từ kho</h3><span>Theo dõi toàn bộ phiếu nhập, xuất, trả hàng, chuyển kho và điều chỉnh.</span></div></div><div class="toolbar"><input class="search" id="stockVoucherSearch" placeholder="Tìm chứng từ kho theo mã / loại / kho / model / tên sản phẩm / ghi chú" oninput="renderStock()" /><button class="btn ghost" onclick="clearStockVoucherSearch()">Xóa tìm</button><span id="stockVoucherSearchCount" class="muted-small"></span></div><table><thead><tr><th>Mã</th><th>Ngày</th><th>Loại</th><th>Kho</th><th>Số dòng</th><th>Giá trị</th><th>Hành động</th></tr></thead><tbody id="stockVoucherTable"></tbody></table></div>
       </section>
@@ -770,7 +772,7 @@
           <div class="grid form-grid"><input id="uUid" type="hidden"><div><label>Email nhân viên</label><input id="uEmail" type="email" placeholder="email đăng nhập"></div><div><label>Họ tên</label><input id="uName" placeholder="Tên nhân viên"></div><div><label>Vai trò mẫu</label><select id="uRole"><option>Admin</option><option>Sale</option><option>Kỹ thuật</option><option>Kho</option><option>Kho Chính</option><option>Kho Văn Phòng</option><option>Kế toán</option></select></div></div>
           <div class="perm-toolbar"><b>Quyền chức năng</b><div><button class="btn ghost" type="button" onclick="selectAllPermissions()">Chọn tất cả</button><button class="btn ghost" type="button" onclick="clearAllPermissions()">Bỏ chọn tất cả</button></div></div>
           <div id="permBox" class="permission-groups"></div>
-          <div class="perm-toolbar"><b>Kho được xem / thao tác</b></div>
+          <div class="perm-toolbar"><b>Kho được xem / thao tác</b><small id="warehouseAccessNote" class="muted-small">Chọn các kho tài khoản được xem và thao tác.</small></div>
           <div id="warehouseAccessBox" class="warehouse-grid"></div>
           <div class="toolbar"><input class="search" id="permissionSearch" placeholder="Tìm phân quyền theo email / họ tên / vai trò / quyền" oninput="renderPermissions()" /><button class="btn ghost" onclick="clearPermissionSearch()">Xóa tìm</button><span id="permissionSearchCount" class="muted-small"></span></div>
           <table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Tóm tắt quyền</th><th>Kho được xem</th><th>Hành động</th></tr></thead><tbody id="permissionTable"></tbody></table>

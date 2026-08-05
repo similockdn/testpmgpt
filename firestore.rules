@@ -11,6 +11,53 @@ service cloud.firestore {
     function isAdmin() { return isMainAdminEmail() || (myUserExists() && myUser().role == 'Admin'); }
     function hasProfile() { return myUserExists() && myUser().role != 'Chưa phân quyền'; }
     function hasPerm(perm) { return isAdmin() || (hasProfile() && myUser().perms is list && myUser().perms.hasAny([perm])); }
+    function isFixedWarehouseRole() {
+      return myUserExists() && (myUser().role == 'Kho Chính' || myUser().role == 'Kho Văn Phòng');
+    }
+    function hasWarehouseAccess(warehouse) {
+      return isAdmin() || (
+        myUserExists()
+        && (
+          (myUser().role == 'Kho Chính' && warehouse == 'Kho Chính')
+          || (myUser().role == 'Kho Văn Phòng' && warehouse == 'Kho Văn Phòng')
+          || (
+            !isFixedWarehouseRole()
+            && myUser().keys().hasAny(['warehouseAccess'])
+            && myUser().warehouseAccess is list
+            && (
+              myUser().warehouseAccess.hasAny([warehouse])
+              || (myUser().role == 'Kho' && myUser().warehouseAccess.size() == 0)
+            )
+          )
+        )
+      );
+    }
+    function stockFromWarehouse(stock) {
+      return stock.keys().hasAny(['fromWarehouse']) && stock.fromWarehouse != ''
+        ? stock.fromWarehouse
+        : (stock.keys().hasAny(['warehouse']) ? stock.warehouse : 'Kho Chính');
+    }
+    function stockWarehouse(stock) {
+      return stock.keys().hasAny(['warehouse']) ? stock.warehouse : stockFromWarehouse(stock);
+    }
+    function stockToWarehouse(stock) {
+      return stock.keys().hasAny(['toWarehouse']) ? stock.toWarehouse : '';
+    }
+    function stockInWarehouseScope(stock) {
+      return hasWarehouseAccess(stockWarehouse(stock))
+        || hasWarehouseAccess(stockFromWarehouse(stock))
+        || hasWarehouseAccess(stockToWarehouse(stock));
+    }
+    function canReadStockVoucher(stock) {
+      return isAdmin()
+        || ((hasPerm('inventory') || hasPerm('stockbook')) && stockInWarehouseScope(stock))
+        || ((hasPerm('sales') || hasPerm('reports')) && (!isFixedWarehouseRole() || stockInWarehouseScope(stock)));
+    }
+    function canWriteStockVoucher(stock) {
+      return isAdmin()
+        || ((hasPerm('inventory') || hasPerm('editStock')) && hasWarehouseAccess(stockFromWarehouse(stock)))
+        || (hasPerm('sales') && (!isFixedWarehouseRole() || hasWarehouseAccess(stockFromWarehouse(stock))));
+    }
 
     match /users/{uid} {
       allow read: if isAdmin() || (signedIn() && uid == request.auth.uid);
@@ -93,9 +140,10 @@ service cloud.firestore {
     }
 
     match /stockVouchers/{id} {
-      allow read: if hasPerm('inventory') || hasPerm('stockbook') || hasPerm('sales') || hasPerm('reports');
-      allow create, update: if hasPerm('inventory') || hasPerm('editStock') || hasPerm('sales');
-      allow delete: if isAdmin() || hasPerm('deleteStock');
+      allow read: if canReadStockVoucher(resource.data);
+      allow create: if canWriteStockVoucher(request.resource.data);
+      allow update: if canWriteStockVoucher(resource.data) && canWriteStockVoucher(request.resource.data);
+      allow delete: if (isAdmin() || hasPerm('deleteStock')) && canWriteStockVoucher(resource.data);
     }
 
     match /warranties/{id} {
