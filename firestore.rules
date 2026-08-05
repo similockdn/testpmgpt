@@ -3,20 +3,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function myEmail() { return request.auth.token.email.lower(); }
+    function myEmail() { return signedIn() ? request.auth.token.email.lower() : ''; }
     function isMainAdminEmail() { return signedIn() && myEmail() == 'similockdn@gmail.com'; }
     function myUserPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
     function myUserExists() { return signedIn() && exists(myUserPath()); }
     function myUser() { return get(myUserPath()).data; }
-    function isAdmin() { return myUserExists() && myUser().role == 'Admin'; }
+    function isAdmin() { return isMainAdminEmail() || (myUserExists() && myUser().role == 'Admin'); }
     function hasProfile() { return myUserExists() && myUser().role != 'Chưa phân quyền'; }
+    function hasPerm(perm) { return isAdmin() || (hasProfile() && myUser().perms is list && myUser().perms.hasAny([perm])); }
 
-    // CHUẨN BẢO MẬT: users/{UID Firebase Auth}
     match /users/{uid} {
-      allow read: if signedIn();
-
-      // Chỉ email similockdn@gmail.com được tự tạo hồ sơ Admin cho chính UID của mình.
-      // Tài khoản khác chỉ được tự tạo hồ sơ chờ phân quyền, KHÔNG được tự gán Admin.
+      allow read: if isAdmin() || (signedIn() && uid == request.auth.uid);
       allow create: if signedIn() && (
         (isMainAdminEmail() && uid == request.auth.uid && request.resource.data.role == 'Admin') ||
         (uid == request.auth.uid
@@ -24,36 +21,104 @@ service cloud.firestore {
           && request.resource.data.perms is list
           && request.resource.data.perms.size() == 0)
       );
-
-      // Admin đã hợp lệ được phân quyền/sửa user.
-      // User thường chỉ được sửa thông tin cá nhân, không được đổi role/perms.
       allow update: if signedIn() && (
         isAdmin() ||
-        (isMainAdminEmail() && uid == request.auth.uid && request.resource.data.role == 'Admin') ||
         (uid == request.auth.uid
           && request.resource.data.role == resource.data.role
-          && request.resource.data.perms == resource.data.perms)
+          && request.resource.data.perms == resource.data.perms
+          && request.resource.data.warehouseAccess == resource.data.warehouseAccess)
       );
-
       allow delete: if isAdmin();
     }
 
-    // Bảng giá vốn: chỉ Admin được đọc/ghi để nhân viên không xem được giá vốn.
     match /costPrices/{id} {
-      allow read, write: if isAdmin() || isMainAdminEmail();
+      allow read: if hasPerm('viewCost');
+      allow write: if isAdmin();
     }
 
-
-    // Lương nhân viên: chỉ Admin hoặc user có quyền lương mới được truy cập.
     match /salaries/{id} {
-      allow read: if signedIn() && (isAdmin() || isMainAdminEmail() || (myUserExists() && myUser().perms.hasAny(['viewSalary','manageSalary'])));
-      allow write: if signedIn() && (isAdmin() || isMainAdminEmail() || (myUserExists() && myUser().perms.hasAny(['manageSalary'])));
+      allow read: if hasPerm('viewSalary') || hasPerm('manageSalary');
+      allow write: if hasPerm('manageSalary');
     }
 
-    // Dữ liệu ERP: chỉ tài khoản đã có hồ sơ hợp lệ mới truy cập.
-    // Email Admin chính được phép khởi tạo hệ thống lần đầu.
+    match /customers/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow create, update: if hasPerm('customers') || hasPerm('sales') || hasPerm('debts');
+      allow delete: if isAdmin();
+    }
+
+    match /products/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow create, update: if hasPerm('products');
+      allow delete: if isAdmin();
+    }
+
+    match /productCategories/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow write: if hasPerm('categories') || hasPerm('products');
+    }
+
+    match /systemCategories/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow write: if hasPerm('categories') || hasPerm('system');
+    }
+
+    match /warrantyReasons/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow write: if hasPerm('categories') || hasPerm('warranty');
+    }
+
+    match /prices/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow create, update: if hasPerm('prices');
+      allow delete: if isAdmin();
+    }
+
+    match /staff/{id} {
+      allow read: if hasProfile() || isAdmin();
+      allow write: if hasPerm('staff');
+    }
+
+    match /sales/{id} {
+      allow read: if hasPerm('sales') || hasPerm('commissions') || hasPerm('debts') || hasPerm('reports') || hasPerm('warranty');
+      allow create: if hasPerm('sales');
+      allow update: if hasPerm('sales') || hasPerm('editSales') || hasPerm('deleteSales') || hasPerm('debts');
+      allow delete: if isAdmin();
+    }
+
+    match /receipts/{id} {
+      allow read: if hasPerm('sales') || hasPerm('commissions') || hasPerm('debts') || hasPerm('cashbook') || hasPerm('reports');
+      allow create: if hasPerm('debts') || hasPerm('cashbook');
+      allow update, delete: if isAdmin();
+    }
+
+    match /stockVouchers/{id} {
+      allow read: if hasPerm('inventory') || hasPerm('stockbook') || hasPerm('sales') || hasPerm('reports');
+      allow create, update: if hasPerm('inventory') || hasPerm('editStock') || hasPerm('sales');
+      allow delete: if isAdmin() || hasPerm('deleteStock');
+    }
+
+    match /warranties/{id} {
+      allow read: if hasPerm('warranty') || hasPerm('reports');
+      allow create, update: if hasPerm('warranty');
+      allow delete: if isAdmin();
+    }
+
+    match /expenses/{id} {
+      allow read: if hasPerm('expenses') || hasPerm('cashbook') || hasPerm('reports');
+      allow create, update: if hasPerm('expenses');
+      allow delete: if isAdmin();
+    }
+
+    match /logs/{id} {
+      allow create: if hasProfile() || isAdmin();
+      allow read: if hasPerm('audit');
+      allow update, delete: if isAdmin();
+    }
+
+    // Mặc định từ chối mọi collection chưa được khai báo phía trên.
     match /{document=**} {
-      allow read, write: if signedIn() && (hasProfile() || isMainAdminEmail());
+      allow read, write: if false;
     }
   }
 }

@@ -1,6 +1,6 @@
 from pathlib import Path
 import re, zipfile, sys
-root=Path('/mnt/data/erp_v94')
+root=Path(__file__).resolve().parent
 html=(root/'index.html').read_text(errors='ignore')
 js=(root/'app.js').read_text(errors='ignore')
 ids=re.findall(r'id=["\']([^"\']+)["\']', html)
