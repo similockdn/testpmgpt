@@ -370,6 +370,9 @@ table{max-width:100%;}
 .warehouse-form-title b{font-weight:900;color:#082f49;font-size:16px;}
 .warehouse-form-title small{margin-top:4px;color:#64748b;font-size:11px;font-weight:700;}
 .warehouse-form-grid{gap:13px!important;}
+.stock-workflow-hint{display:none;margin-top:12px;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700;line-height:1.45;}
+.stock-workflow-hint.is-out{display:block;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;}
+.stock-workflow-hint.is-transfer{display:block;background:#ecfeff;border:1px solid #a5f3fc;color:#155e75;}
 .warehouse-note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:16px;padding:12px 14px;margin:12px 0 14px;font-size:13px;line-height:1.45;}
 .warehouse-items-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 8px;}
 .warehouse-items-head b{display:block;color:#082f49;font-size:16px;}

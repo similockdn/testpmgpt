@@ -1165,7 +1165,7 @@ function setOnlyCheckedProduct(boxId, code){
   const box=$(boxId); if(!box)return;
   box.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=x.value===code);
 }
-function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>staffHasFunction(x,'Sale')||staffHasFunction(x,'Quản lý')),x=>`${x.name}${staffHasFunction(x,'Kỹ thuật')?' (Sale + Kỹ thuật)':''}`);fillSelect($('saleTech'),data.staff.filter(x=>staffHasFunction(x,'Kỹ thuật')),x=>`${x.name}${staffHasFunction(x,'Sale')?' (Kỹ thuật + Sale)':''}`);refreshCommissionStaffOptions();ensureProductDatalist();fillReceiptCustomerOptions();renderProductCategoryOptions();renderWarrantyReasonOptions();renderExpenseCategoryOptions();renderPaymentMethodOptions();renderSystemCategories();renderWarrantyStaffSelectors();if($('saleWarehouse'))$('saleWarehouse').innerHTML=warehouseOptions($('saleWarehouse').value||defaultWarehouse());if($('stockWarehouse'))$('stockWarehouse').innerHTML=warehouseOptions($('stockWarehouse').value||defaultWarehouse());if($('stockToWarehouse'))$('stockToWarehouse').innerHTML=warehouseOptions($('stockToWarehouse').value||defaultWarehouse(),WAREHOUSES);if($('customerList')) $('customerList').innerHTML=data.customers.map(c=>`<option value="${customerSearchValue(c)}"></option>`).join('')}
+function renderSelectors(){fillSelect($('saleStaff'),data.staff.filter(x=>staffHasFunction(x,'Sale')||staffHasFunction(x,'Quản lý')),x=>`${x.name}${staffHasFunction(x,'Kỹ thuật')?' (Sale + Kỹ thuật)':''}`);fillSelect($('saleTech'),data.staff.filter(x=>staffHasFunction(x,'Kỹ thuật')),x=>`${x.name}${staffHasFunction(x,'Sale')?' (Kỹ thuật + Sale)':''}`);refreshCommissionStaffOptions();ensureProductDatalist();fillReceiptCustomerOptions();renderProductCategoryOptions();renderWarrantyReasonOptions();renderExpenseCategoryOptions();renderPaymentMethodOptions();renderSystemCategories();renderWarrantyStaffSelectors();if($('saleWarehouse'))$('saleWarehouse').innerHTML=warehouseOptions($('saleWarehouse').value||defaultWarehouse());if($('stockWarehouse'))$('stockWarehouse').innerHTML=warehouseOptions($('stockWarehouse').value||defaultWarehouse());syncTransferDestination();if($('customerList')) $('customerList').innerHTML=data.customers.map(c=>`<option value="${customerSearchValue(c)}"></option>`).join('')}
 let dashboardRange='month';
 let dashboardCustomFrom='';
 let dashboardCustomTo='';
@@ -3461,8 +3461,8 @@ window.printCashbook=()=>{
 
 const STOCK_OPERATION_META={
   IN:{title:'Phiếu nhập kho',hint:'Nhập hàng vào đúng kho đang được phân quyền.'},
-  OUT:{title:'Phiếu xuất kho',hint:'Xuất hàng từ kho bạn đang quản lý.'},
-  TRANSFER:{title:'Phiếu chuyển kho',hint:'Kho chuyển đi chỉ là kho bạn quản lý; kho nhận có thể là kho còn lại.'},
+  OUT:{title:'Phiếu xuất kho',hint:'Hàng ra khỏi hệ thống nên phiếu này không có kho nhận.'},
+  TRANSFER:{title:'Phiếu chuyển kho',hint:'Chuyển hàng giữa hai kho: trừ kho chuyển đi và cộng kho nhận.'},
   ADJUST:{title:'Phiếu điều chỉnh kho',hint:'Điều chỉnh tăng/giảm và bắt buộc ghi rõ lý do.'},
   RETURN:{title:'Phiếu trả lại hàng bán',hint:'Nhập lại hàng khách trả vào đúng kho phát sinh.'},
   CHECK:{title:'Phiếu kiểm kê',hint:'Ghi nhận chênh lệch giữa tồn hệ thống và tồn thực tế.'}
@@ -3484,8 +3484,38 @@ function syncStockOperationMenu(type){
   }
 }
 window.setStockMode=(type)=>{if($('stockType')){$('stockType').value=type;resetStockForm();}};
-window.resetStockForm=()=>{editingStock=null;$('stockCode').value=nextCode(prefixByStockType($('stockType').value||'IN'),data.stockVouchers);$('stockDate').value=today();$('stockType').value=$('stockType').value||'IN';$('stockWarehouse').innerHTML=warehouseOptions(defaultWarehouse());$('stockWarehouse').value=defaultWarehouse();if($('stockToWarehouse')){$('stockToWarehouse').innerHTML=warehouseOptions(WAREHOUSES.find(w=>w!==defaultWarehouse())||defaultWarehouse(),WAREHOUSES);$('stockToWarehouse').value=WAREHOUSES.find(w=>w!==defaultWarehouse())||defaultWarehouse();}$('stockNote').value='';$('stockItems').innerHTML='';addStockItem();updateStockHeader()};
+function transferDestinationWarehouses(sourceWarehouse){return WAREHOUSES.filter(warehouse=>warehouse!==sourceWarehouse)}
+function syncTransferDestination(preferredWarehouse=''){
+  const destination=$('stockToWarehouse');
+  if(!destination)return;
+  const sourceWarehouse=$('stockWarehouse')?.value||defaultWarehouse();
+  const allowed=transferDestinationWarehouses(sourceWarehouse);
+  const current=preferredWarehouse||destination.value;
+  const selected=allowed.includes(current)?current:(currentPerm.role==='Kho Chính'&&allowed.includes('Kho Văn Phòng')?'Kho Văn Phòng':allowed[0]||'');
+  destination.innerHTML=warehouseOptions(selected,allowed);
+  destination.value=selected;
+}
+function updateStockWorkflowHint(){
+  const hint=$('stockWorkflowHint');
+  if(!hint)return;
+  const type=$('stockType')?.value||'IN';
+  const source=$('stockWarehouse')?.value||defaultWarehouse();
+  const destination=$('stockToWarehouse')?.value||'';
+  if(type==='OUT'){
+    hint.className='stock-workflow-hint is-out';
+    hint.innerHTML='<b>Xuất kho:</b> Hàng đi ra khỏi hệ thống và không có kho nhận. Nếu đưa hàng sang Kho Văn Phòng, hãy chọn <b>Chuyển kho</b> ở menu bên trái.';
+  }else if(type==='TRANSFER'){
+    hint.className='stock-workflow-hint is-transfer';
+    hint.innerHTML=`<b>Chuyển kho:</b> ${source} → ${destination}. Hệ thống sẽ trừ tồn kho chuyển đi và cộng tồn kho nhận.`;
+  }else{
+    hint.className='stock-workflow-hint';
+    hint.textContent='';
+  }
+}
+window.resetStockForm=()=>{editingStock=null;$('stockCode').value=nextCode(prefixByStockType($('stockType').value||'IN'),data.stockVouchers);$('stockDate').value=today();$('stockType').value=$('stockType').value||'IN';$('stockWarehouse').innerHTML=warehouseOptions(defaultWarehouse());$('stockWarehouse').value=defaultWarehouse();syncTransferDestination();$('stockNote').value='';$('stockItems').innerHTML='';addStockItem();updateStockHeader()};
 $('stockType').addEventListener('change',()=>{ $('stockCode').value=nextCode(prefixByStockType($('stockType').value),data.stockVouchers); updateStockHeader(); });
+$('stockWarehouse').addEventListener('change',()=>{syncTransferDestination();updateStockWorkflowHint()});
+$('stockToWarehouse').addEventListener('change',updateStockWorkflowHint);
 function updateStockHeader(){
   const type=$('stockType').value;
   const isCheck=type==='CHECK';
@@ -3494,20 +3524,23 @@ function updateStockHeader(){
   const whLabel=$('stockWarehouseLabel');
   if(toWrap) toWrap.style.display=isTransfer?'block':'none';
   if(whLabel) whLabel.textContent=isTransfer?'Kho chuyển đi':'Kho';
+  if(isTransfer)syncTransferDestination();
   const ths=document.querySelectorAll('#inventory table.editable thead th');
   if(ths[2]) ths[2].textContent=isCheck?'Tồn thực tế':(isTransfer?'Số lượng chuyển':(type==='OUT'?'Số lượng xuất':(type==='RETURN'?'Số lượng trả':(type==='ADJUST'?'SL điều chỉnh (+/-)':'Số lượng nhập'))));
   if(ths[4]) ths[4].textContent=isCheck?'Ghi chú kiểm kê':(isTransfer?'Ghi chú chuyển kho':(type==='OUT'?'Lý do xuất':(type==='RETURN'?'Lý do trả hàng':(type==='ADJUST'?'Lý do điều chỉnh':'Ghi chú'))));
   document.querySelectorAll('#stockItems tr td:nth-child(3) input').forEach(inp=>{ if(type==='ADJUST') inp.removeAttribute('min'); else inp.setAttribute('min','0'); });
   syncStockOperationMenu(type);
+  updateStockWorkflowHint();
 }
 window.addStockItem=(it={})=>{ensureProductDatalist();let tr=document.createElement('tr');tr.innerHTML=`<td><input list="productCodesList" placeholder="Tìm model / tên SP" value="${it.code||''}" onchange="stockProductChanged(this)" oninput="stockProductChanged(this)"></td><td><input value="${it.name||''}" readonly></td><td><input type="number" value="${it.actualQty??it.inputQty??it.qty??1}"></td><td><input class="view-cost" type="number" value="${it.cost||0}"></td><td><input value="${it.note||''}"></td><td><button class="btn danger" onclick="this.closest('tr').remove()">X</button></td>`;$('stockItems').appendChild(tr);applyPermissions();updateStockHeader()}
 window.stockProductChanged=sel=>{let p=productByInput(sel.value)||{};if(!p.code)return;let tr=sel.closest('tr');tr.children[1].querySelector('input').value=p.name||'';tr.children[3].querySelector('input').value=p.cost||0;}
 function stockItems(){return [...$('stockItems').querySelectorAll('tr')].map(tr=>{const inp=[...tr.querySelectorAll('input')];return{code:productCodeFromInput(inp[0]?.value||''),name:inp[1]?.value||'',inputQty:+(inp[2]?.value||0)||0,cost:+(inp[3]?.value||0)||0,note:inp[4]?.value||''}}).filter(x=>x.code)}
 window.saveStockVoucher=async()=>{
   let raw=stockItems();if(!raw.length)return alert('Chưa có mã hàng');
-  let type=$('stockType').value, editingId=editingStock||'', warehouse=$('stockWarehouse')?.value||defaultWarehouse(), toWarehouse=$('stockToWarehouse')?.value||'Kho Văn Phòng';
+  let type=$('stockType').value, editingId=editingStock||'', warehouse=$('stockWarehouse')?.value||defaultWarehouse(), toWarehouse=$('stockToWarehouse')?.value||'';
   if(!canAccessWarehouse(warehouse))return alert('Bạn không có quyền thao tác kho: '+warehouse);
   if(type==='TRANSFER' && !canAccessWarehouse(warehouse))return alert('Bạn chỉ được điều chuyển từ kho mình quản lý');
+  if(type==='TRANSFER' && !transferDestinationWarehouses(warehouse).includes(toWarehouse))return alert('Kho nhận không hợp lệ. Vui lòng chọn kho khác kho chuyển đi.');
   if(type==='TRANSFER' && warehouse===toWarehouse)return alert('Kho chuyển đi và kho nhận phải khác nhau');
   let items=[];
   for(const it of raw){
@@ -3540,10 +3573,7 @@ window.editStock=id=>{
   $('stockType').value=v.type||'IN';
   $('stockWarehouse').innerHTML=warehouseOptions(v.fromWarehouse||v.warehouse||defaultWarehouse());
   $('stockWarehouse').value=v.fromWarehouse||v.warehouse||defaultWarehouse();
-  if($('stockToWarehouse')){
-    $('stockToWarehouse').innerHTML=warehouseOptions(v.toWarehouse||WAREHOUSES.find(w=>w!==($('stockWarehouse').value))||defaultWarehouse(),WAREHOUSES);
-    $('stockToWarehouse').value=v.toWarehouse||WAREHOUSES.find(w=>w!==($('stockWarehouse').value))||defaultWarehouse();
-  }
+  syncTransferDestination(v.toWarehouse||'');
   $('stockNote').value=v.note||'';
   $('stockItems').innerHTML='';
   (v.items||[]).forEach(it=>addStockItem({...it,inputQty:it.actualQty??it.inputQty??Math.abs(+it.qty||0)}));
@@ -4777,7 +4807,7 @@ window.importCSV=(e,type)=>window.importExcel(e,type);
 
 
 window.exportBackup=()=>{
-  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v117'};
+  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v118'};
   let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));a.download='similock-da-nang-backup-'+today()+'.json';a.click()
 }
 
