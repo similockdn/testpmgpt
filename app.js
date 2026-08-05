@@ -3691,6 +3691,20 @@ $('stockType').addEventListener('change',()=>{ $('stockCode').value=nextCode(pre
 $('stockWarehouse').addEventListener('change',()=>{syncTransferDestination();updateStockWorkflowHint()});
 $('stockToWarehouse').addEventListener('change',updateStockWorkflowHint);
 ['stockRecipientName','stockRecipientType'].forEach(id=>$(id)?.addEventListener('input',updateStockWorkflowHint));
+function stockSaveButtonText(type=$('stockType')?.value||'IN'){
+  const title=(STOCK_OPERATION_META[type]||STOCK_OPERATION_META.IN).title||'Phiếu kho';
+  return `💾 Lưu ${title.charAt(0).toLocaleLowerCase('vi-VN')+title.slice(1)}`;
+}
+function updateStockSaveSummary(){
+  const items=stockItems();
+  const lineCount=items.length;
+  const totalQty=items.reduce((sum,it)=>sum+Math.abs(+it.inputQty||0),0);
+  const summary=$('stockSaveSummary');
+  if(summary)summary.textContent=lineCount?`${lineCount} mã hàng · Tổng số lượng ${totalQty}`:'Chưa có mã hàng hợp lệ';
+  const buttonText=stockSaveButtonText();
+  if($('stockSaveTopButton'))$('stockSaveTopButton').textContent=buttonText;
+  if($('stockSaveBottomButton'))$('stockSaveBottomButton').textContent=buttonText;
+}
 function updateStockHeader(){
   const type=$('stockType').value;
   const isCheck=type==='CHECK';
@@ -3711,10 +3725,17 @@ function updateStockHeader(){
   document.querySelectorAll('#stockItems tr td:nth-child(3) input').forEach(inp=>{ if(type==='ADJUST') inp.removeAttribute('min'); else inp.setAttribute('min','0'); });
   syncStockOperationMenu(type);
   updateStockWorkflowHint();
+  updateStockSaveSummary();
 }
-window.addStockItem=(it={})=>{ensureProductDatalist();let tr=document.createElement('tr');tr.innerHTML=`<td><input list="productCodesList" placeholder="Tìm model / tên SP" value="${it.code||''}" onchange="stockProductChanged(this)" oninput="stockProductChanged(this)"></td><td><input value="${it.name||''}" readonly></td><td><input type="number" value="${it.actualQty??it.inputQty??it.qty??1}"></td><td><input class="view-cost" type="number" value="${it.cost||0}"></td><td><input value="${it.note||''}"></td><td><button class="btn danger" onclick="this.closest('tr').remove()">X</button></td>`;$('stockItems').appendChild(tr);applyPermissions();updateStockHeader()}
-window.stockProductChanged=sel=>{let p=productByInput(sel.value)||{};if(!p.code)return;let tr=sel.closest('tr');tr.children[1].querySelector('input').value=p.name||'';tr.children[3].querySelector('input').value=p.cost||0;}
+window.addStockItem=(it={})=>{ensureProductDatalist();let tr=document.createElement('tr');tr.innerHTML=`<td><input list="productCodesList" placeholder="Tìm model / tên SP" value="${it.code||''}" onchange="stockProductChanged(this)" oninput="stockProductChanged(this)"></td><td><input value="${it.name||''}" readonly></td><td><input type="number" value="${it.actualQty??it.inputQty??it.qty??1}"></td><td><input class="view-cost" type="number" value="${it.cost||0}"></td><td><input value="${it.note||''}"></td><td><button class="btn danger" onclick="this.closest('tr').remove();updateStockSaveSummary()">X</button></td>`;tr.addEventListener('input',updateStockSaveSummary);$('stockItems').appendChild(tr);applyPermissions();updateStockHeader()}
+window.stockProductChanged=sel=>{let p=productByInput(sel.value)||{};if(p.code){let tr=sel.closest('tr');tr.children[1].querySelector('input').value=p.name||'';tr.children[3].querySelector('input').value=p.cost||0;}updateStockSaveSummary();}
 function stockItems(){return [...$('stockItems').querySelectorAll('tr')].map(tr=>{const inp=[...tr.querySelectorAll('input')];return{code:productCodeFromInput(inp[0]?.value||''),name:inp[1]?.value||'',inputQty:+(inp[2]?.value||0)||0,cost:+(inp[3]?.value||0)||0,note:inp[4]?.value||''}}).filter(x=>x.code)}
+document.addEventListener('keydown',event=>{
+  if(!(event.ctrlKey||event.metaKey)||String(event.key).toLowerCase()!=='s')return;
+  if(!$('inventory')?.classList.contains('active'))return;
+  event.preventDefault();
+  window.saveStockVoucher();
+});
 window.saveStockVoucher=async()=>{
   let raw=stockItems();if(!raw.length)return alert('Chưa có mã hàng');
   let type=$('stockType').value, editingId=editingStock||'', warehouse=$('stockWarehouse')?.value||defaultWarehouse(), toWarehouse=$('stockToWarehouse')?.value||'';
@@ -5093,7 +5114,7 @@ window.importCSV=(e,type)=>window.importExcel(e,type);
 
 
 window.exportBackup=()=>{
-  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,warehouses:data.warehouses,suppliers:data.suppliers,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v121'};
+  const pack={exportedAt:new Date().toISOString(),customers:data.customers,products:data.products,prices:data.prices,staff:data.staff,sales:data.sales,warehouses:data.warehouses,suppliers:data.suppliers,stockVouchers:data.stockVouchers,receipts:data.receipts,warranties:data.warranties,warrantyReasons:data.warrantyReasons,systemCategories:data.systemCategories,expenses:data.expenses,salaries:data.salaries,users:data.users,logs:data.logs,version:'v122'};
   let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}));a.download='similock-da-nang-backup-'+today()+'.json';a.click()
 }
 

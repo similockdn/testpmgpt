@@ -1799,3 +1799,31 @@ table .text-center{text-align:center}
 .debt-table .badge{white-space:nowrap;margin-top:4px;display:inline-block}
 .cashbook-note{background:#f8fafc;border-left:4px solid #2563eb;padding:12px 14px;border-radius:10px;margin:10px 0 12px;color:#334155}
 .nav-menu .menu-group:first-child .menu-toggle{color:#1d4ed8;font-weight:800}
+
+/* V122 - Lưu phiếu kho ngay sau danh sách mã hàng */
+.warehouse-bottom-save-bar{
+  position:sticky;
+  bottom:10px;
+  z-index:24;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:14px 0 2px;
+  padding:12px 14px;
+  border:1px solid #bfdbfe;
+  border-radius:16px;
+  background:rgba(248,251,255,.96);
+  box-shadow:0 12px 30px rgba(15,23,42,.16);
+  backdrop-filter:blur(10px);
+}
+.warehouse-save-summary{display:flex;flex-direction:column;gap:3px;min-width:190px;color:#0f172a}
+.warehouse-save-summary b{font-size:14px;color:#0f4c81}
+.warehouse-save-summary span{font-size:11px;color:#64748b}
+.warehouse-bottom-save-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.warehouse-bottom-save-actions .stock-save-main{min-width:230px;min-height:46px;font-size:14px;font-weight:900;box-shadow:0 8px 18px rgba(37,99,235,.22)}
+@media(max-width:760px){
+  .warehouse-bottom-save-bar{align-items:stretch;flex-direction:column;bottom:6px;padding:10px}
+  .warehouse-bottom-save-actions{display:grid;grid-template-columns:1fr 1fr}
+  .warehouse-bottom-save-actions .stock-save-main{grid-column:1/-1;width:100%;min-width:0}
+}
