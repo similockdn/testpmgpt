@@ -1,7 +1,7 @@
-HƯỚNG DẪN CẬP NHẬT V124 - BẢN GỌN
+HƯỚNG DẪN CẬP NHẬT V125 - BẢN GỌN
 
 1. Giải nén file ZIP.
-2. Mở thư mục erp_v124_deploy.
+2. Mở thư mục erp_v125_deploy.
 3. Chọn toàn bộ 8 file trong thư mục.
 4. Kéo 8 file này vào thư mục gốc của GitHub và chọn Commit changes.
 5. Vào Firebase Console > Firestore Database > Rules.
@@ -12,3 +12,9 @@ HƯỚNG DẪN CẬP NHẬT V124 - BẢN GỌN
 10. Cho sale1 đăng xuất, đăng nhập lại và tải lại trang bằng Cmd+Shift+R hoặc Ctrl+Shift+R.
 
 Lưu ý: Không cần tải các file QA, CHANGELOG hoặc hướng dẫn của gói đầy đủ lên GitHub.
+
+NỘI DUNG CẬP NHẬT V125:
+- Bổ sung nút "Xuất doanh thu & lãi lỗ" trong Báo cáo, file Excel có tổng hợp, chi tiết đơn, chi phí và lương.
+- Hoa hồng được tính ngay khi đơn đạt đủ 100%, theo đúng ngày thu đủ; không phụ thuộc trạng thái lắp đặt.
+- Sửa trường hợp đơn đã thu trong tháng 7 nhưng bị chuyển sai sang tháng sau khi chỉnh sửa dữ liệu.
+- Tương thích các phiếu cũ đã chốt thu đủ nhưng thiếu liên kết chứng từ của phiên bản trước.
