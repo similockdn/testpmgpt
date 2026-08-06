@@ -2239,13 +2239,19 @@ function saleCommissionEarnedAt(s={}){
   if(trustedEligibilityFloor&&eligibilityFloor&&earnedAt&&earnedAt<eligibilityFloor)earnedAt=eligibilityFloor;
   return earnedAt;
 }
+function saleCommissionRecognitionDate(s={}){
+  // Quy tắc V126: hoa hồng thuộc tháng lên đơn, nhưng chỉ xuất hiện sau khi
+  // phiếu đã thu đủ 100%. Ví dụ đơn tháng 7 thu đủ đầu tháng 8 vẫn tính tháng 7.
+  if(!saleFullyPaidForCommission(s))return '';
+  return reportDateValue(s.date||s.saleDate||s.orderDate||s.createdDate||s.createdAt||saleCommissionEarnedAt(s));
+}
 function commissionEligibleSales(){
   return activeSales().filter(s=>saleFullyPaidForCommission(s));
 }
 function commissionRecognizedSalesInRange(from='',to=''){
   return commissionEligibleSales().filter(s=>{
-    const earnedAt=saleCommissionEarnedAt(s);
-    return earnedAt&&(!from||earnedAt>=from)&&(!to||earnedAt<=to);
+    const recognizedAt=saleCommissionRecognitionDate(s);
+    return recognizedAt&&(!from||recognizedAt>=from)&&(!to||recognizedAt<=to);
   });
 }
 function currentStaffMatchIds(){
@@ -3086,9 +3092,9 @@ function commissionPartsForFilter(s={},filter=commissionAppliedFilter||{}){
 function commissionFilteredSales(){
   const f=commissionAppliedFilter||{q:'',dept:'',staffId:'',from:'',to:''};
   return commissionEligibleSales().filter(s=>{
-    // Kỳ hoa hồng tính theo ngày đơn lần đầu đạt trạng thái thu đủ 100%,
-    // không dùng ngày bán hàng.
-    let d=saleCommissionEarnedAt(s);
+    // Kỳ hoa hồng tính theo ngày lên đơn. Điều kiện bắt buộc vẫn là đơn đã thu
+    // đủ 100%; thời điểm thu đủ có thể nằm ở tháng sau.
+    let d=saleCommissionRecognitionDate(s);
     if(f.from && d<f.from) return false;
     if(f.to && d>f.to) return false;
     const parts=commissionPartsForFilter(s,f);
@@ -3171,7 +3177,7 @@ function renderCommissions(){
     }
   });
 
-  if($('commissionSummary')) $('commissionSummary').innerHTML=`<div>Tổng doanh thu đã thu đủ: <b>${money(totalRevenue)}</b></div><div>Doanh số tính HH: <b>${money(totalCommissionBase)}</b></div><div>Tổng phụ thu: <b>${money(totalSurcharge)}</b></div><div>Tổng chiết khấu: <b>${money(totalDiscount)}</b></div><div>Hoa hồng Sale: <b>${money(totalSaleCommission)}</b></div><div>Công kỹ thuật: <b>${money(totalTechCost)}</b></div><div>Tiền xăng KT: <b>${money(totalTechFuel)}</b></div><div>Tổng chi: <b>${money(totalSaleCommission+totalTechCost+totalTechFuel)}</b></div><div class="muted-small full">Chỉ tính hoa hồng cho phiếu bán đã thu đủ 100%.</div>`;
+  if($('commissionSummary')) $('commissionSummary').innerHTML=`<div>Tổng doanh thu đã thu đủ: <b>${money(totalRevenue)}</b></div><div>Doanh số tính HH: <b>${money(totalCommissionBase)}</b></div><div>Tổng phụ thu: <b>${money(totalSurcharge)}</b></div><div>Tổng chiết khấu: <b>${money(totalDiscount)}</b></div><div>Hoa hồng Sale: <b>${money(totalSaleCommission)}</b></div><div>Công kỹ thuật: <b>${money(totalTechCost)}</b></div><div>Tiền xăng KT: <b>${money(totalTechFuel)}</b></div><div>Tổng chi: <b>${money(totalSaleCommission+totalTechCost+totalTechFuel)}</b></div><div class="muted-small full">Chỉ tính khi đã thu đủ 100%; kỳ hoa hồng theo tháng lên đơn, dù thu đủ ở tháng sau.</div>`;
 
   $('commissionByStaff').innerHTML=Object.values(bySale)
     .sort((a,b)=>b.commission-a.commission)
@@ -3191,9 +3197,9 @@ function renderCommissions(){
     $('commissionOrderTitle').textContent=`🧾 Chi tiết đơn hàng (${rows.length} đơn${staff?' - '+staff.name:''})`;
   }
   $('commissionByOrder').innerHTML=rows.slice()
-    .sort((a,b)=>String(saleCommissionEarnedAt(b)).localeCompare(String(saleCommissionEarnedAt(a))))
-    .map((s,idx)=>{const parts=commissionPartsForFilter(s,applied);const itemSum=saleItemSummary(s);return `<tr><td class="text-center">${idx+1}</td><td>${saleCommissionEarnedAt(s)||''}</td><td>${s.code}</td><td>${saleCustomerInfo(s).name||''}</td><td>${itemSum.models||''}</td><td>${itemSum.qtyText||itemSum.totalQty||''}</td><td>${commissionStaffMeta(s,'Sale').name||''}</td><td>${commissionStaffMeta(s,'Kỹ thuật').name||''}</td><td>${money(s.grand)}</td><td>${money(parts.includeSale?(s.surcharge||0):0)}</td><td>${money(parts.includeSale?(s.discountTotal||0):0)}</td><td>${money(parts.includeSale?saleCommissionBaseValue(s):0)}</td><td>${parts.includeSale?(s.commissionPercent??0):0}%</td><td><b>${money(parts.saleCommission)}</b></td><td><b>${money(parts.techCost)}</b></td><td><b>${money(parts.techFuel)}</b></td><td><b>${money(parts.saleCommission+parts.techCost+parts.techFuel)}</b></td></tr>`})
-    .join('')||'<tr><td colspan="17">Không có đơn bán theo bộ lọc</td></tr>'; 
+    .sort((a,b)=>String(saleCommissionRecognitionDate(b)).localeCompare(String(saleCommissionRecognitionDate(a)))||String(saleCommissionEarnedAt(b)).localeCompare(String(saleCommissionEarnedAt(a))))
+    .map((s,idx)=>{const parts=commissionPartsForFilter(s,applied);const itemSum=saleItemSummary(s);return `<tr><td class="text-center">${idx+1}</td><td>${saleCommissionRecognitionDate(s)||''}</td><td>${saleCommissionEarnedAt(s)||''}</td><td>${s.code}</td><td>${saleCustomerInfo(s).name||''}</td><td>${itemSum.models||''}</td><td>${itemSum.qtyText||itemSum.totalQty||''}</td><td>${commissionStaffMeta(s,'Sale').name||''}</td><td>${commissionStaffMeta(s,'Kỹ thuật').name||''}</td><td>${money(s.grand)}</td><td>${money(parts.includeSale?(s.surcharge||0):0)}</td><td>${money(parts.includeSale?(s.discountTotal||0):0)}</td><td>${money(parts.includeSale?saleCommissionBaseValue(s):0)}</td><td>${parts.includeSale?(s.commissionPercent??0):0}%</td><td><b>${money(parts.saleCommission)}</b></td><td><b>${money(parts.techCost)}</b></td><td><b>${money(parts.techFuel)}</b></td><td><b>${money(parts.saleCommission+parts.techCost+parts.techFuel)}</b></td></tr>`})
+    .join('')||'<tr><td colspan="18">Không có đơn bán theo bộ lọc</td></tr>'; 
   if($('employeeIncomeTable'))$('employeeIncomeTable').innerHTML=employeeIncomeRows().map(r=>`<tr><td><b>${r.name}</b></td><td>${money(r.saleCommission)}</td><td>${money(r.techCost)}</td><td>${money(r.techFuel)}</td><td>${money(r.bonus)}</td><td>${money(r.deduct)}</td><td><b>${money(r.total)}</b></td></tr>`).join('')||'<tr><td colspan="7">Không có dữ liệu thu nhập theo bộ lọc</td></tr>';
   if($('techPerformanceTable'))$('techPerformanceTable').innerHTML=techPerformanceRows().map(r=>`<tr><td><b>${r.name}</b></td><td>${r.count}</td><td>${r.qty}</td><td>${money(r.techCost)}</td><td>${money(r.techFuel)}</td><td>${r.warranty||0}</td></tr>`).join('')||'<tr><td colspan="6">Không có dữ liệu hiệu suất kỹ thuật</td></tr>';
   showIncomeTab(incomeActiveTab||'sale');
@@ -4613,7 +4619,8 @@ function renderReports(){
   const debt=sales.reduce((a,s)=>a+(+salePaymentInfo(s).debtLeft||0),0);
   const totalCost=sales.reduce((a,s)=>a+saleCostValue(s),0);
   const grossMargin=revenueBeforeVat-totalCost;
-  // Lợi nhuận đơn dùng hoa hồng dự kiến theo ngày bán; thu nhập thực nhận dùng ngày thu đủ 100%.
+  // Lợi nhuận đơn dùng hoa hồng dự kiến; thu nhập thực nhận chỉ mở khóa khi thu đủ
+  // 100% và được xếp về tháng lên đơn.
   const projectedComm=sales.reduce((a,s)=>a+saleExpectedCommissionValue(s),0);
   const recognizedCommissionSales=commissionRecognizedSalesInRange(from,to);
   const comm=recognizedCommissionSales.reduce((a,s)=>a+saleCommissionValue(s),0);
@@ -4645,7 +4652,7 @@ function renderReports(){
     <div class="report-card view-cost">Lợi nhuận đơn hàng<b>${money(grossProfit)}</b></div>
     <div class="report-card view-cost">Chi phí vận hành<b>${money(op)}</b></div><div class="report-card salary-only">Lương nhân viên<b>${money(sal)}</b></div><div class="report-card view-cost">Tổng chi phí CTY<b>${money(totalCompanyCost)}</b></div>
     <div class="report-card view-cost">Lợi nhuận ròng<b>${money(profit)}</b></div>
-    <div class="report-card">Tổng phụ thu<b>${money(surchargeTotal)}</b></div><div class="report-card view-cost">Hoa hồng đã ghi nhận<b>${money(comm)}</b><small>Theo ngày thu đủ 100%</small></div>`;
+    <div class="report-card">Tổng phụ thu<b>${money(surchargeTotal)}</b></div><div class="report-card view-cost">Hoa hồng đã ghi nhận<b>${money(comm)}</b><small>Đã thu đủ 100%, tính theo tháng lên đơn</small></div>`;
   if($('reportSalesTurnoverDetailTable'))$('reportSalesTurnoverDetailTable').innerHTML=orderSales.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.code||'').localeCompare(String(a.code||''))).map(s=>{
     const ci=saleCustomerInfo(s),sum=saleItemSummary(s),pay=salePaymentInfo(s);
     const grand=Math.max(0,Math.round(+s.grand||0));
@@ -4665,7 +4672,7 @@ function renderReports(){
     ['Giá vốn sản phẩm', -totalCost, 'Lấy từ Bảng giá vốn hiệu lực, nếu không có thì lấy Giá vốn trong Sản phẩm'],
     ['Lãi gộp', grossMargin, 'Doanh số trước VAT - Giá vốn'],
     ['Hoa hồng dự kiến theo đơn', -projectedComm, 'Theo % được lưu trên đơn; tính cả phụ thu và dùng để ước tính lợi nhuận'],
-    ['Hoa hồng đã ghi nhận trong kỳ', comm, 'Chỉ các đơn thu đủ 100%, tính theo ngày thu đủ; dòng tham chiếu, không trừ lặp'],
+    ['Hoa hồng đã ghi nhận trong kỳ', comm, 'Chỉ các đơn thu đủ 100%, xếp theo tháng lên đơn; dòng tham chiếu, không trừ lặp'],
     ['Công kỹ thuật', -techCostOnly, 'Tiền công lắp đặt nhập trong phiếu bán'],
     ['Tiền xăng kỹ thuật', -techFuelOnly, 'Tiền xăng nhập trong phiếu bán'],
     ['Lợi nhuận đơn hàng', grossProfit, 'Lãi gộp - hoa hồng - công kỹ thuật - tiền xăng'],
@@ -4880,7 +4887,7 @@ const excelSchemas={
   salesTurnover:{sheet:'Chi_tiet_doanh_so',headers:['Ngày bán','Mã phiếu','Mã KH','Khách hàng','SĐT','Nguồn khách hàng','Model','Số lượng','Sale','Kỹ thuật','Tổng doanh số','Đã thu lũy kế','Còn phải thu','Trạng thái thu tiền','Ngày ghi nhận doanh thu'],sample:[]},
   revenueReport:{sheet:'Doanh_thu_ghi_nhan',headers:['Ngày ghi nhận doanh thu','Ngày bán','Mã phiếu','Mã KH','Khách hàng','SĐT','Nguồn khách hàng','Trạng thái lắp','Ngày hoàn thành lắp','Model','Số lượng','Sale','Kỹ thuật','Doanh thu','Đã thu','Còn nợ','Phụ thu','Chiết khấu','VAT','Doanh thu trước VAT'],sample:[]},
   profitLossReport:{sheet:'Bao_cao_lai_lo',headers:['Ngày ghi nhận','Ngày bán','Mã phiếu','Khách hàng','Nguồn khách hàng','Model','Số lượng','Doanh thu gồm VAT','VAT','Doanh thu trước VAT','Giá vốn','Lãi gộp','Hoa hồng Sale','Công kỹ thuật','Tiền xăng KT','Lợi nhuận đơn hàng'],sample:[]},
-  commissions:{sheet:'Hoa_hong',headers:['commissionEarnedAt','saleDate','code','customer','customerSource','saleStaff','techStaff','grand','paidTotal','debtLeft','commissionPercent','saleCommission','techCost','techFuel','totalCommission'],sample:[]},
+  commissions:{sheet:'Hoa_hong',headers:['commissionRecognitionDate','commissionEarnedAt','saleDate','code','customer','customerSource','saleStaff','techStaff','grand','paidTotal','debtLeft','commissionPercent','saleCommission','techCost','techFuel','totalCommission'],sample:[]},
   stockbook:{sheet:'So_kho',headers:['code','name','inQty','outQty','transferQty','adjustQty','Kho Chính','Kho Văn Phòng','Kho HCM','stock'],sample:[]},
   debtsSettled:{sheet:'Cong_no_da_tat_toan',headers:['STT','Phiếu','Khách hàng','SĐT','Nguồn khách hàng','Model','Tổng tiền','Đã thu','Ngày thanh toán'],sample:[]},
   techPerformance:{sheet:'Hieu_suat_ky_thuat',headers:['Kỹ thuật','Số phiếu','Số bộ','Công','Tiền xăng','Bảo hành phát sinh'],sample:[]},
@@ -4906,7 +4913,7 @@ function exportRows(type){let rows=[];
   if(type==='salesTurnover'){const range=reportRange();rows=salesOrdersInRange(range.from,range.to).map(s=>{const ci=saleCustomerInfo(s),pay=salePaymentInfo(s),sum=saleItemSummary(s),grand=Math.max(0,Math.round(+s.grand||0)),paidAllocated=Math.min(grand,Math.max(0,Math.round(+pay.paidTotal||0))),debt=Math.max(0,grand-paidAllocated);return {'Ngày bán':s.date||'','Mã phiếu':s.code||'','Mã KH':ci.code||'','Khách hàng':ci.name||'','SĐT':ci.phone||'','Nguồn khách hàng':ci.source||'','Model':sum.models||'','Số lượng':sum.totalQty||0,'Sale':s.staffName||'','Kỹ thuật':s.techName||'','Tổng doanh số':grand,'Đã thu lũy kế':paidAllocated,'Còn phải thu':debt,'Trạng thái thu tiền':debt<=0&&grand>0?'Đã thu đủ':(paidAllocated>0?'Thu một phần':'Chưa thu'),'Ngày ghi nhận doanh thu':saleRevenueRecognitionDate(s)}});}
   if(type==='revenueReport'){const range=reportRange();rows=revenueRecognizedSalesInRange(range.from,range.to).map(s=>{const ci=saleCustomerInfo(s),pay=salePaymentInfo(s),sum=saleItemSummary(s);return {'Ngày ghi nhận doanh thu':saleRevenueRecognitionDate(s),'Ngày bán':s.date||'','Mã phiếu':s.code||'','Mã KH':ci.code||'','Khách hàng':ci.name||'','SĐT':ci.phone||'','Nguồn khách hàng':ci.source||'','Trạng thái lắp':inferSaleInstallStatus(s),'Ngày hoàn thành lắp':saleInstallationCompletedAt(s),'Model':sum.models||'','Số lượng':sum.totalQty||0,'Sale':s.staffName||'','Kỹ thuật':s.techName||'','Doanh thu':+s.grand||0,'Đã thu':pay.paidTotal,'Còn nợ':pay.debtLeft,'Phụ thu':+s.surcharge||0,'Chiết khấu':+s.discountTotal||0,'VAT':+s.vat||0,'Doanh thu trước VAT':calcCommissionBase(s)}});}
   if(type==='profitLossReport')rows=profitLossDetailExportRows();
-  if(type==='commissions')rows=commissionFilteredSales().map(s=>{const parts=commissionPartsForFilter(s),itemSum=saleItemSummary(s),pay=salePaymentInfo(s),ci=saleCustomerInfo(s);return {commissionEarnedAt:saleCommissionEarnedAt(s),saleDate:s.date,code:s.code,customer:ci.name,customerSource:ci.source||'',model:itemSum.models,qty:itemSum.totalQty,qtyDetail:itemSum.qtyText,saleStaff:commissionStaffMeta(s,'Sale').name,techStaff:commissionStaffMeta(s,'Kỹ thuật').name,grand:s.grand,paidTotal:pay.paidTotal,debtLeft:pay.debtLeft,surcharge:parts.includeSale?(s.surcharge||0):0,discountTotal:parts.includeSale?(s.discountTotal||0):0,commissionBase:parts.includeSale?saleCommissionBaseValue(s):0,commissionPercent:parts.includeSale?(s.commissionPercent??0):0,saleCommission:parts.saleCommission,techCost:parts.techCost,techFuel:parts.techFuel,totalCommission:parts.saleCommission+parts.techCost+parts.techFuel}});
+  if(type==='commissions')rows=commissionFilteredSales().map(s=>{const parts=commissionPartsForFilter(s),itemSum=saleItemSummary(s),pay=salePaymentInfo(s),ci=saleCustomerInfo(s);return {commissionRecognitionDate:saleCommissionRecognitionDate(s),commissionEarnedAt:saleCommissionEarnedAt(s),saleDate:s.date,code:s.code,customer:ci.name,customerSource:ci.source||'',model:itemSum.models,qty:itemSum.totalQty,qtyDetail:itemSum.qtyText,saleStaff:commissionStaffMeta(s,'Sale').name,techStaff:commissionStaffMeta(s,'Kỹ thuật').name,grand:s.grand,paidTotal:pay.paidTotal,debtLeft:pay.debtLeft,surcharge:parts.includeSale?(s.surcharge||0):0,discountTotal:parts.includeSale?(s.discountTotal||0):0,commissionBase:parts.includeSale?saleCommissionBaseValue(s):0,commissionPercent:parts.includeSale?(s.commissionPercent??0):0,saleCommission:parts.saleCommission,techCost:parts.techCost,techFuel:parts.techFuel,totalCommission:parts.saleCommission+parts.techCost+parts.techFuel}});
   if(type==='debtsSettled')rows=calcSettledDebts().map((d,idx)=>{const ci=customerInfo(d.customer);return {'STT':idx+1,'Phiếu':d.saleCode||'','Khách hàng':ci.name||'','SĐT':ci.phone||'','Nguồn khách hàng':ci.source||'','SL':debtTotalQty(d),'Model':debtGroupProductModels(d)||'','Tổng tiền':d.total||0,'Đã thu':d.paid||0,'Ngày thanh toán':debtSettledDate(d)}});
   if(type==='techPerformance')rows=techPerformanceRows().map(r=>({'Kỹ thuật':r.name,'Số phiếu':r.count,'Số bộ':r.qty,'Công':r.techCost,'Tiền xăng':r.techFuel,'Bảo hành phát sinh':r.warranty||0}));
   if(type==='employeeIncome')rows=employeeIncomeRows().map(r=>({'Nhân viên':r.name,'Hoa hồng Sale':r.saleCommission,'Công kỹ thuật':r.techCost,'Tiền xăng':r.techFuel,'Thưởng':r.bonus,'Phạt':r.deduct,'Tổng thu nhập':r.total}));
@@ -5009,9 +5016,10 @@ function makeWorkbook(sheets){assertExcel();const wb=XLSX.utils.book_new();Objec
 
 function safeSheetName(name){return String(name||'Nhan_vien').replace(/[\/?*\[\]:]/g,' ').slice(0,31)||'Nhan_vien'}
 function commissionExportRowsForSales(rows){
-  return rows.slice().sort((a,b)=>String(saleCommissionEarnedAt(a)).localeCompare(String(saleCommissionEarnedAt(b)))).map((s,idx)=>{const parts=commissionPartsForFilter(s),pay=salePaymentInfo(s),ci=saleCustomerInfo(s);return {
+  return rows.slice().sort((a,b)=>String(saleCommissionRecognitionDate(a)).localeCompare(String(saleCommissionRecognitionDate(b)))||String(saleCommissionEarnedAt(a)).localeCompare(String(saleCommissionEarnedAt(b)))).map((s,idx)=>{const parts=commissionPartsForFilter(s),pay=salePaymentInfo(s),ci=saleCustomerInfo(s);return {
     STT:idx+1,
-    'Ngày đủ 100%':saleCommissionEarnedAt(s),
+    'Ngày đơn tính HH':saleCommissionRecognitionDate(s),
+    'Ngày thu đủ 100%':saleCommissionEarnedAt(s),
     'Ngày bán':s.date||'',
     'Mã phiếu':s.code||'',
     'Khách hàng':ci.name||'',
@@ -5037,7 +5045,7 @@ function commissionExportRowsForSales(rows){
 }
 function commissionSummaryRows(rows){
   const total=(key)=>rows.reduce((a,r)=>a+(+r[key]||0),0);
-  return [{STT:'', 'Ngày đủ 100%':'', 'Ngày bán':'', 'Mã phiếu':'TỔNG', 'Khách hàng':'', 'SĐT':'', 'Nguồn khách hàng':'', 'Model':'', 'Số lượng':total('Số lượng'), 'Chi tiết SL':'', 'Sale':'', 'Kỹ thuật':'', 'Tiền hàng':total('Tiền hàng'), 'Tổng đã thu':total('Tổng đã thu'), 'Còn nợ':total('Còn nợ'), 'Phụ thu':total('Phụ thu'), 'Chiết khấu':total('Chiết khấu'), 'Doanh số tính HH':total('Doanh số tính HH'), '% HH':'', 'Hoa hồng Sale':total('Hoa hồng Sale'), 'Công kỹ thuật':total('Công kỹ thuật'), 'Tiền xăng KT':total('Tiền xăng KT'), 'Tổng nhận':total('Tổng nhận')}];
+  return [{STT:'', 'Ngày đơn tính HH':'', 'Ngày thu đủ 100%':'', 'Ngày bán':'', 'Mã phiếu':'TỔNG', 'Khách hàng':'', 'SĐT':'', 'Nguồn khách hàng':'', 'Model':'', 'Số lượng':total('Số lượng'), 'Chi tiết SL':'', 'Sale':'', 'Kỹ thuật':'', 'Tiền hàng':total('Tiền hàng'), 'Tổng đã thu':total('Tổng đã thu'), 'Còn nợ':total('Còn nợ'), 'Phụ thu':total('Phụ thu'), 'Chiết khấu':total('Chiết khấu'), 'Doanh số tính HH':total('Doanh số tính HH'), '% HH':'', 'Hoa hồng Sale':total('Hoa hồng Sale'), 'Công kỹ thuật':total('Công kỹ thuật'), 'Tiền xăng KT':total('Tiền xăng KT'), 'Tổng nhận':total('Tổng nhận')}];
 }
 window.exportCommissionByStaff=()=>{try{
   assertExcel();

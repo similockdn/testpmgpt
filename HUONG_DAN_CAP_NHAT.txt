@@ -1,7 +1,7 @@
-HƯỚNG DẪN CẬP NHẬT V125 - BẢN GỌN
+HƯỚNG DẪN CẬP NHẬT V126 - BẢN GỌN
 
 1. Giải nén file ZIP.
-2. Mở thư mục erp_v125_deploy.
+2. Mở thư mục erp_v126_deploy.
 3. Chọn toàn bộ 8 file trong thư mục.
 4. Kéo 8 file này vào thư mục gốc của GitHub và chọn Commit changes.
 5. Vào Firebase Console > Firestore Database > Rules.
@@ -18,3 +18,9 @@ NỘI DUNG CẬP NHẬT V125:
 - Hoa hồng được tính ngay khi đơn đạt đủ 100%, theo đúng ngày thu đủ; không phụ thuộc trạng thái lắp đặt.
 - Sửa trường hợp đơn đã thu trong tháng 7 nhưng bị chuyển sai sang tháng sau khi chỉnh sửa dữ liệu.
 - Tương thích các phiếu cũ đã chốt thu đủ nhưng thiếu liên kết chứng từ của phiên bản trước.
+
+NỘI DUNG CẬP NHẬT V126:
+- Hoa hồng chỉ được tính sau khi đơn đã thu đủ 100%.
+- Kỳ hoa hồng được xác định theo tháng lên đơn, không theo tháng thu tiền.
+- Ví dụ: đơn lên trong tháng 7, đầu tháng 8 mới thu đủ thì vẫn tính hoa hồng tháng 7.
+- Báo cáo và Excel hiển thị riêng ngày lên đơn tính hoa hồng và ngày thực tế thu đủ 100%.

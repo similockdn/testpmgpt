@@ -280,7 +280,7 @@
         </div>
         <div class="panel wide">
           <div class="panel-head"><h3 id="commissionOrderTitle">🧾 Hoa hồng / công kỹ thuật theo từng đơn hàng</h3></div>
-          <table><thead><tr><th>STT</th><th>Ngày thu đủ 100%</th><th>Mã đơn</th><th>Khách</th><th>Model</th><th>SL</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>Phụ thu</th><th>Chiết khấu</th><th>Doanh số tính HH</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng chi</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
+          <table><thead><tr><th>STT</th><th>Ngày đơn tính HH</th><th>Ngày thu đủ 100%</th><th>Mã đơn</th><th>Khách</th><th>Model</th><th>SL</th><th>Sale</th><th>Kỹ thuật</th><th>Doanh thu</th><th>Phụ thu</th><th>Chiết khấu</th><th>Doanh số tính HH</th><th>% Sale</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Tổng chi</th></tr></thead><tbody id="commissionByOrder"></tbody></table>
         </div>
       </section>
 
@@ -757,7 +757,7 @@
         </div>
 
         <div class="panel wide report-section report-section-commissions">
-          <div class="panel-head"><div><h3>👤 Báo cáo thu nhập / hoa hồng</h3><span>Hoa hồng chỉ ghi nhận khi thu đủ 100%, theo tháng thu đủ; doanh số tính hoa hồng gồm phụ thu.</span></div><div><button class="btn ghost" onclick="exportExcel('commissions')">Xuất hoa hồng</button><button class="btn ghost" onclick="showPage('commissions')">Mở phân hệ thu nhập</button></div></div>
+          <div class="panel-head"><div><h3>👤 Báo cáo thu nhập / hoa hồng</h3><span>Chỉ đơn thu đủ 100% mới có hoa hồng; hoa hồng được xếp vào tháng lên đơn, kể cả khi thu đủ ở tháng sau.</span></div><div><button class="btn ghost" onclick="exportExcel('commissions')">Xuất hoa hồng</button><button class="btn ghost" onclick="showPage('commissions')">Mở phân hệ thu nhập</button></div></div>
           <div id="reportIncomeSummary" class="report-grid"></div>
           <div id="reportIncomeCharts" class="report-chart-grid"></div>
           <table><thead><tr><th>Nhân viên</th><th>Hoa hồng Sale</th><th>Công kỹ thuật</th><th>Tiền xăng</th><th>Thưởng</th><th>Phạt/khấu trừ</th><th>Tổng thu nhập</th></tr></thead><tbody id="reportIncomeTable"></tbody></table>
