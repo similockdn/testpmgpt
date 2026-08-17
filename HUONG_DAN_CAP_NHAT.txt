@@ -1,7 +1,7 @@
-HƯỚNG DẪN CẬP NHẬT V127 - BẢN GỌN
+HƯỚNG DẪN CẬP NHẬT V128 - BẢN GỌN
 
 1. Giải nén file ZIP.
-2. Mở thư mục erp_v127_deploy.
+2. Mở thư mục erp_v128_deploy.
 3. Chọn toàn bộ 8 file trong thư mục.
 4. Kéo 8 file này vào thư mục gốc của GitHub và chọn Commit changes.
 5. Vào Firebase Console > Firestore Database > Rules.
@@ -31,3 +31,9 @@ NỘI DUNG CẬP NHẬT V127:
 - Khi xóa phiếu xuất kho liên kết đơn bán, hệ thống tự gỡ liên kết kho khỏi đơn để không còn tham chiếu sai.
 - Trong Phiếu nhập kho có thêm "Nguồn nhập": chọn Nhà cung cấp hoặc Kho Chính (chuyển nội bộ).
 - Chọn Kho Chính làm nguồn sẽ tự chọn Kho Văn Phòng làm kho nhận và lập phiếu chuyển kho hai bước; kho nhận xác nhận số lượng trước khi cộng tồn.
+
+NỘI DUNG CẬP NHẬT V128:
+- Khi Kho Văn Phòng nhập từ Kho Chính, hệ thống vẫn cho lưu dù tồn Kho Chính bằng 0 hoặc không đủ.
+- Trước khi lưu, hệ thống hiển thị số tồn hiện tại và số tồn âm dự kiến để Admin xác nhận.
+- Phiếu vẫn theo quy trình chuyển kho hai bước; Kho Văn Phòng chỉ được cộng tồn sau khi xác nhận nhận hàng.
+- Nhật ký phiếu ghi rõ trường hợp cho phép tồn Kho Chính bị âm để dễ kiểm tra và đối soát.
