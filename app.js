@@ -1,6 +1,6 @@
 import { auth, db } from './firebase-config.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
-import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp, writeBatch, query, where } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
+import { collection, addDoc, setDoc, doc, deleteDoc, getDocs, getDoc, updateDoc, serverTimestamp, writeBatch, query, where, runTransaction } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
 
 function createMissingElement(id){
   console.warn('Thiếu phần tử giao diện, tự tạo tạm để tránh lỗi:', id);
@@ -113,6 +113,7 @@ const PROTECTED_WAREHOUSE_NAMES=['Kho Chính','Kho Văn Phòng'];
 const WAREHOUSES=DEFAULT_WAREHOUSE_RECORDS.map(x=>x.name);
 let currentUser=null,currentPerm={role:'Admin',perms:[],warehouseAccess:WAREHOUSES},creatingAdmin=false;let editingSale=null,editingStock=null,editingWarranty=null,editingExpense=null,editingReceipt=null;
 let editingWarehouseMaster=null,editingSupplier=null;
+let stockCountersSynced=false;
 let commissionAppliedFilter={q:'',dept:'',staffId:'',period:'all',month:'',from:'',to:''};
 const data={customers:[],products:[],productCategories:[],systemCategories:[],warehouses:[],suppliers:[],warrantyReasons:[],staff:[],prices:[],costPrices:[],sales:[],stockVouchers:[],receipts:[],warranties:[],expenses:[],salaries:[],users:[],logs:[]};
 function warehouseDefaultRecord(name){return DEFAULT_WAREHOUSE_RECORDS.find(x=>searchKey(x.name)===searchKey(name))||null}
@@ -137,7 +138,7 @@ function activeSuppliers(){return (data.suppliers||[]).filter(row=>row.active!==
 function supplierById(id){return (data.suppliers||[]).find(row=>row.id===id)||null}
 function supplierOptions(selected=''){return '<option value="">-- Chọn nhà cung cấp --</option>'+activeSuppliers().map(row=>`<option value="${row.id}" ${row.id===selected?'selected':''}>${htmlesc([row.code,row.name].filter(Boolean).join(' - '))}</option>`).join('')}
 function userWarehouses(){
-  if(currentPerm.role==='Admin')return WAREHOUSES;
+  if(isCurrentAdmin())return WAREHOUSES;
   // Vai trò kho mang ý nghĩa phạm vi cố định. Không cho dữ liệu cũ hoặc thao tác
   // chọn nhầm hai kho làm nhân viên Kho Chính/Kho Văn Phòng nhìn chéo tồn kho.
   if(currentPerm.role==='Kho Chính')return ['Kho Chính'];
@@ -145,9 +146,9 @@ function userWarehouses(){
   const assigned=Array.isArray(currentPerm.warehouseAccess)?currentPerm.warehouseAccess.filter(w=>WAREHOUSES.includes(w)):[];
   return assigned.length?assigned:WAREHOUSES;
 }
-function canAccessWarehouse(w){return currentPerm.role==='Admin'||userWarehouses().includes(w)}
+function canAccessWarehouse(w){return isCurrentAdmin()||userWarehouses().includes(w)}
 function canAccessVoucher(v){
-  if(currentPerm.role==='Admin')return true;
+  if(isCurrentAdmin())return true;
   if(!has('inventory')&&!has('stockbook'))return false;
   // Kho nhận được xem phiếu chuyển gửi đến để xác nhận, nhưng không được xem
   // tồn chi tiết của kho gửi. Phiếu xuất chỉ thuộc phạm vi kho xuất vì nơi nhận
@@ -254,7 +255,8 @@ function normalizePermission(p={}){
   if(role==='Kho Văn Phòng')wh=['Kho Văn Phòng'];
   return {...p,role,perms:p.perms||[],warehouseAccess:wh};
 }
-function has(p){return currentPerm.role==='Admin'||(currentPerm.perms||[]).includes(p)}
+function isCurrentAdmin(){return currentPerm.role==='Admin'||normEmail(currentUser?.email||'')===ADMIN_EMAIL}
+function has(p){return isCurrentAdmin()||(currentPerm.perms||[]).includes(p)}
 function canEditSaleCustomerInstall(){return has('editSaleCustomerInstall')||has('editSales')}
 function canEditSaleFinancials(){return has('editSales')}
 function isSaleCanceled(s){return String(s?.status||'').includes('Đã hủy')||String(s?.orderStatus||'').includes('Đã hủy')||s?.canceled===true||s?.isCanceled===true}
@@ -287,11 +289,63 @@ async function loadAll(){
   refreshWarehouseCache();
   currentPerm=normalizePermission(currentPerm);
   for(const n of ['suppliers','customers','products','productCategories','systemCategories','warrantyReasons','staff','prices','costPrices','sales','stockVouchers','receipts','warranties','warrantyReasons','expenses','salaries','users','logs']) await loadCol(n);
+  if(isCurrentAdmin()&&!stockCountersSynced){
+    try{await syncStockCountersFromData();stockCountersSynced=true;}
+    catch(e){console.warn('Không đồng bộ được bộ đếm phiếu kho:',e.message);}
+  }
   renderAll();
 }
 async function logAction(action,detail){try{await addDoc(col('logs'),{action,detail,email:currentUser?.email||'',at:serverTimestamp()})}catch(e){}}
 function fillSelect(el,arr,labelFn,valFn){if(!el)return;el.innerHTML='<option value="">-- Chọn --</option>'+arr.map(x=>`<option value="${valFn?valFn(x):x.id}">${labelFn(x)}</option>`).join('')}
-function nextCode(prefix,arr){let max=0;arr.forEach(x=>{const m=String(x.code||'').match(/(\d+)$/);if(m)max=Math.max(max,+m[1])});return prefix+String(max+1).padStart(6,'0')}
+function sequenceMax(prefix,arr){
+  let max=0;
+  (arr||[]).forEach(x=>{
+    const m=String(x.code||'').trim().match(new RegExp('^'+prefix+'(\\d+)$','i'));
+    if(m)max=Math.max(max,+m[1]);
+  });
+  return max;
+}
+function formatSequenceCode(prefix,value){return prefix+String(Math.max(1,+value||1)).padStart(6,'0')}
+function nextCode(prefix,arr){return formatSequenceCode(prefix,sequenceMax(prefix,arr)+1)}
+async function reserveStockVoucherCode(type){
+  const prefix=prefixByStockType(type);
+  const counterRef=doc(db,'stockCounters',prefix);
+  return runTransaction(db,async transaction=>{
+    const snapshot=await transaction.get(counterRef);
+    const stored=snapshot.exists()?(+snapshot.data().value||0):0;
+    const next=Math.max(stored,sequenceMax(prefix,data.stockVouchers))+1;
+    transaction.set(counterRef,{prefix,value:next,updatedAt:serverTimestamp()},{merge:true});
+    return formatSequenceCode(prefix,next);
+  });
+}
+async function syncStockCountersFromData(){
+  const prefixes=[...new Set(['IN','OUT','RETURN','TRANSFER','CHECK','ADJUST'].map(prefixByStockType))];
+  for(const prefix of prefixes){
+    const counterRef=doc(db,'stockCounters',prefix);
+    const localMax=sequenceMax(prefix,data.stockVouchers);
+    await runTransaction(db,async transaction=>{
+      const snapshot=await transaction.get(counterRef);
+      const stored=snapshot.exists()?(+snapshot.data().value||0):-1;
+      if(!snapshot.exists()||stored<localMax)transaction.set(counterRef,{prefix,value:Math.max(0,localMax),updatedAt:serverTimestamp()},{merge:true});
+    });
+  }
+}
+async function syncStockCounterForCode(type,code){
+  const prefix=prefixByStockType(type);
+  const match=String(code||'').trim().match(new RegExp('^'+prefix+'(\\d+)$','i'));
+  if(!match)return;
+  const value=+match[1]||0;
+  const counterRef=doc(db,'stockCounters',prefix);
+  await runTransaction(db,async transaction=>{
+    const snapshot=await transaction.get(counterRef);
+    const stored=snapshot.exists()?(+snapshot.data().value||0):-1;
+    if(!snapshot.exists()||stored<value)transaction.set(counterRef,{prefix,value,updatedAt:serverTimestamp()},{merge:true});
+  });
+}
+function stockVoucherCodeExists(code,excludeId=''){
+  const key=String(code||'').trim().toUpperCase();
+  return (data.stockVouchers||[]).some(v=>v.id!==excludeId&&String(v.code||'').trim().toUpperCase()===key);
+}
 function stockOf(code,excludeVoucherId='',warehouse=''){
   if(!warehouse){
     // Tổng tồn = cộng tồn từng kho để phiếu chuyển kho không làm thay đổi tổng tồn.
@@ -1113,6 +1167,7 @@ function applyPermissions(){
   document.querySelectorAll('.view-dashboard-profit').forEach(x=>x.classList.toggle('hidden',!canViewDashboardProfit));
   document.querySelectorAll('.salary-only').forEach(x=>x.classList.toggle('hidden',!(has('viewSalary')||has('manageSalary'))));
   document.querySelectorAll('.manage-salary').forEach(x=>x.classList.toggle('hidden',!has('manageSalary')));
+  document.querySelectorAll('.admin-only').forEach(x=>x.classList.toggle('hidden',!isCurrentAdmin()));
 }
 document.querySelectorAll('#menu .menu-toggle').forEach(btn=>btn.onclick=()=>btn.closest('.menu-group').classList.toggle('open'));
 document.querySelectorAll('#menu button[data-page]').forEach(btn=>btn.onclick=()=>showPage(btn.dataset.page,btn.dataset.stockOperation||''));
@@ -2460,7 +2515,8 @@ window.saveSaleReturn=async(id)=>{
   const commissionEligibilityDate=becameFullByReturn?returnDate:(s.commissionEligibilityDate||'');
   const commissionEligibilityReason=becameFullByReturn?'sale_return':(s.commissionEligibilityReason||'');
   const rci=saleCustomerInfo(s);
-  const voucher={code:nextCode('TH',data.stockVouchers),date:returnDate,type:'RETURN',warehouse:wh,saleId:s.id,saleCode:s.code,customerId:s.customerId||'',customerCode:rci.code||'',customerName:rci.name,customerPhone:rci.phone||'',customerAddress:rci.address||'',customerType:rci.type||'',note:$('returnNote')?.value||`Trả lại hàng bán từ đơn ${s.code}`,settlement:returnSettlement,paymentMethod:normalizePaymentMethod($('returnPaymentMethod')?.value)||'Tiền mặt',refundAmount,refundPaid:refundPaid>0,items:returnItems,value:returnItems.reduce((a,it)=>a+(+it.qty||0)*(+it.cost||0),0),locked:true,updatedAt:serverTimestamp()};
+  const returnVoucherCode=await reserveStockVoucherCode('RETURN');
+  const voucher={code:returnVoucherCode,date:returnDate,type:'RETURN',warehouse:wh,saleId:s.id,saleCode:s.code,customerId:s.customerId||'',customerCode:rci.code||'',customerName:rci.name,customerPhone:rci.phone||'',customerAddress:rci.address||'',customerType:rci.type||'',note:$('returnNote')?.value||`Trả lại hàng bán từ đơn ${s.code}`,settlement:returnSettlement,paymentMethod:normalizePaymentMethod($('returnPaymentMethod')?.value)||'Tiền mặt',refundAmount,refundPaid:refundPaid>0,items:returnItems,value:returnItems.reduce((a,it)=>a+(+it.qty||0)*(+it.cost||0),0),locked:true,updatedAt:serverTimestamp()};
   await addDoc(col('stockVouchers'),{...voucher,createdAt:serverTimestamp()});
   const oldCommission=saleExpectedCommissionValue(s);
   const newCommission=Math.round(calcCommissionBase(newTotals)*(+s.commissionPercent||0)/100);
@@ -2500,8 +2556,9 @@ window.createSupplementStockVoucher=async(id)=>{
   const items=voucherItemsFromSaleItems(s.items||[]);
   const cost=(s.items||[]).reduce((a,it)=>a+costFor(it.code,s.date||today())*(+it.qty||0),0);
   const sci=saleCustomerInfo(s);
+  const supplementVoucherCode=await reserveStockVoucherCode('OUT');
   const voucher={
-    code:nextCode('XK',data.stockVouchers),date:s.date||today(),type:'OUT',warehouse,saleId:s.id,saleCode:s.code,customerId:s.customerId||'',customerCode:sci.code||'',customerName:sci.name,customerPhone:sci.phone||'',customerAddress:sci.address||'',customerType:sci.type||'',
+    code:supplementVoucherCode,date:s.date||today(),type:'OUT',warehouse,saleId:s.id,saleCode:s.code,customerId:s.customerId||'',customerCode:sci.code||'',customerName:sci.name,customerPhone:sci.phone||'',customerAddress:sci.address||'',customerType:sci.type||'',
     recipientType:'Khách hàng',recipientName:sci.name||s.code||'',recipientPhone:sci.phone||'',recipientAddress:sci.address||'',
     note:`Xuất kho bổ sung cho đơn bán ${s.code}`,
     items,value:cost,updatedAt:serverTimestamp()
@@ -2742,7 +2799,8 @@ window.saveSale=async()=>{let customer=findCustomerBySearch();if(!customer){quic
   const savedSaleId=editingSale;
   // Kiêm xuất kho: tạo/cập nhật phiếu xuất kho OUT riêng để trừ tồn kho. Không tick thì chưa xuất kho.
   if(exportStock){
-    const voucher={code:oldSale?.stockVoucherCode||nextCode('XK',data.stockVouchers),date:o.date,type:'OUT',warehouse:saleWarehouse,saleId:editingSale,saleCode:o.code,customerId:o.customerId||'',customerCode:o.customerCode||'',customerName:o.customerName,customerPhone:o.customerPhone||'',customerAddress:o.customerAddress||'',customerType:o.customerType||'',recipientType:'Khách hàng',recipientName:o.customerName||o.code||'',recipientPhone:o.customerPhone||'',recipientAddress:o.customerAddress||'',note:`Xuất kho theo đơn bán ${o.code}`,items:voucherItemsFromSaleItems(items),value:cost,updatedAt:serverTimestamp()};
+    const exportVoucherCode=o.stockVoucherId?(oldSale?.stockVoucherCode||nextCode('XK',data.stockVouchers)):await reserveStockVoucherCode('OUT');
+    const voucher={code:exportVoucherCode,date:o.date,type:'OUT',warehouse:saleWarehouse,saleId:editingSale,saleCode:o.code,customerId:o.customerId||'',customerCode:o.customerCode||'',customerName:o.customerName,customerPhone:o.customerPhone||'',customerAddress:o.customerAddress||'',customerType:o.customerType||'',recipientType:'Khách hàng',recipientName:o.customerName||o.code||'',recipientPhone:o.customerPhone||'',recipientAddress:o.customerAddress||'',note:`Xuất kho theo đơn bán ${o.code}`,items:voucherItemsFromSaleItems(items),value:cost,updatedAt:serverTimestamp()};
     if(o.stockVoucherId){await updateDoc(doc(db,'stockVouchers',o.stockVoucherId),voucher)}
     else{const vr=await addDoc(col('stockVouchers'),{...voucher,createdAt:serverTimestamp()});await updateDoc(doc(db,'sales',editingSale),{stockVoucherId:vr.id,stockVoucherCode:voucher.code,orderStatus:'Hoàn tất'})}
   }else if(oldSale?.stockVoucherId){
@@ -3730,6 +3788,36 @@ function syncStockOperationMenu(type){
 }
 window.setStockMode=(type)=>{if($('stockType')){$('stockType').value=type;resetStockForm();}};
 function transferDestinationWarehouses(sourceWarehouse){return WAREHOUSES.filter(warehouse=>warehouse!==sourceWarehouse)}
+function stockInSourceWarehouse(){
+  if(($('stockType')?.value||'IN')!=='IN')return '';
+  const value=$('stockInSource')?.value||'SUPPLIER';
+  return value==='SUPPLIER'?'':value;
+}
+function stockInIsInternal(){return !!stockInSourceWarehouse()}
+function effectiveStockFormType(){return stockInIsInternal()?'TRANSFER':($('stockType')?.value||'IN')}
+function syncStockInSource(preferred=''){
+  const source=$('stockInSource');
+  if(!source)return;
+  const allowedSources=isCurrentAdmin()?WAREHOUSES:userWarehouses();
+  const current=preferred||source.value||'SUPPLIER';
+  source.innerHTML='<option value="SUPPLIER">Nhà cung cấp</option>'+allowedSources.map(name=>`<option value="${htmlesc(name)}">${htmlesc(name)} (chuyển nội bộ)</option>`).join('');
+  source.value=current==='SUPPLIER'||allowedSources.includes(current)?current:'SUPPLIER';
+}
+function syncStockReceivingWarehouse(preferred=''){
+  const selector=$('stockWarehouse');
+  if(!selector)return;
+  const source=stockInSourceWarehouse();
+  const allowed=source?transferDestinationWarehouses(source):userWarehouses();
+  const officePreferred=source==='Kho Chính'&&allowed.includes('Kho Văn Phòng')?'Kho Văn Phòng':'';
+  const selected=allowed.includes(preferred)?preferred:(officePreferred||allowed[0]||'');
+  selector.innerHTML=warehouseOptions(selected,allowed);
+  selector.value=selected;
+}
+function refreshStockPreviewCode(){
+  if(editingStock)return;
+  const type=effectiveStockFormType();
+  $('stockCode').value=nextCode(prefixByStockType(type),data.stockVouchers);
+}
 function syncTransferDestination(preferredWarehouse=''){
   const destination=$('stockToWarehouse');
   if(!destination)return;
@@ -3746,7 +3834,11 @@ function updateStockWorkflowHint(){
   const type=$('stockType')?.value||'IN';
   const source=$('stockWarehouse')?.value||defaultWarehouse();
   const destination=$('stockToWarehouse')?.value||'';
-  if(type==='OUT'){
+  if(type==='IN'&&stockInIsInternal()){
+    const internalSource=stockInSourceWarehouse();
+    hint.className='stock-workflow-hint is-transfer';
+    hint.innerHTML=`<b>Nhập nội bộ hai bước:</b> ${htmlesc(internalSource)} → ${htmlesc(source)}. Hệ thống lập phiếu chuyển kho; hàng chỉ cộng vào kho nhận sau khi xác nhận số lượng thực tế.`;
+  }else if(type==='OUT'){
     hint.className='stock-workflow-hint is-out';
     const recipient=$('stockRecipientName')?.value||'đối tượng bên ngoài';
     hint.innerHTML=`<b>Xuất kho:</b> ${source} → ${htmlesc(recipient)}. Hàng ra khỏi hệ thống và chỉ trừ tồn kho xuất; không chọn kho nội bộ.`;
@@ -3758,12 +3850,14 @@ function updateStockWorkflowHint(){
     hint.textContent='';
   }
 }
-window.resetStockForm=()=>{editingStock=null;$('stockCode').value=nextCode(prefixByStockType($('stockType').value||'IN'),data.stockVouchers);$('stockDate').value=today();$('stockType').value=$('stockType').value||'IN';$('stockWarehouse').innerHTML=warehouseOptions(defaultWarehouse());$('stockWarehouse').value=defaultWarehouse();syncTransferDestination();if($('stockSupplier')){$('stockSupplier').innerHTML=supplierOptions();$('stockSupplier').value='';}if($('stockRecipientType'))$('stockRecipientType').value='Khách hàng';['stockRecipientName','stockRecipientPhone','stockRecipientAddress'].forEach(id=>{if($(id))$(id).value=''});$('stockNote').value='';$('stockItems').innerHTML='';addStockItem();updateStockHeader()};
-$('stockType').addEventListener('change',()=>{ $('stockCode').value=nextCode(prefixByStockType($('stockType').value),data.stockVouchers); updateStockHeader(); });
+window.resetStockForm=()=>{editingStock=null;$('stockDate').value=today();$('stockType').value=$('stockType').value||'IN';syncStockInSource('SUPPLIER');syncStockReceivingWarehouse(defaultWarehouse());syncTransferDestination();if($('stockSupplier')){$('stockSupplier').innerHTML=supplierOptions();$('stockSupplier').value='';}if($('stockRecipientType'))$('stockRecipientType').value='Khách hàng';['stockRecipientName','stockRecipientPhone','stockRecipientAddress'].forEach(id=>{if($(id))$(id).value=''});$('stockNote').value='';$('stockItems').innerHTML='';refreshStockPreviewCode();addStockItem();updateStockHeader()};
+$('stockType').addEventListener('change',()=>{syncStockInSource('SUPPLIER');syncStockReceivingWarehouse(defaultWarehouse());refreshStockPreviewCode();updateStockHeader();});
+$('stockInSource')?.addEventListener('change',()=>{syncStockReceivingWarehouse($('stockWarehouse')?.value||'');refreshStockPreviewCode();updateStockHeader();});
 $('stockWarehouse').addEventListener('change',()=>{syncTransferDestination();updateStockWorkflowHint()});
 $('stockToWarehouse').addEventListener('change',updateStockWorkflowHint);
 ['stockRecipientName','stockRecipientType'].forEach(id=>$(id)?.addEventListener('input',updateStockWorkflowHint));
 function stockSaveButtonText(type=$('stockType')?.value||'IN'){
+  if(type==='IN'&&stockInIsInternal())return '💾 Lưu phiếu nhập nội bộ';
   const title=(STOCK_OPERATION_META[type]||STOCK_OPERATION_META.IN).title||'Phiếu kho';
   return `💾 Lưu ${title.charAt(0).toLocaleLowerCase('vi-VN')+title.slice(1)}`;
 }
@@ -3779,17 +3873,20 @@ function updateStockSaveSummary(){
 }
 function updateStockHeader(){
   const type=$('stockType').value;
+  const internalIn=type==='IN'&&stockInIsInternal();
   const isCheck=type==='CHECK';
   const isTransfer=type==='TRANSFER';
   const isOut=type==='OUT';
   const toWrap=$('stockToWarehouseWrap');
   const supplierWrap=$('stockSupplierWrap');
+  const sourceWrap=$('stockInSourceWrap');
   const recipientWrap=$('stockRecipientWrap');
   const whLabel=$('stockWarehouseLabel');
   if(toWrap) toWrap.style.display=isTransfer?'block':'none';
-  if(supplierWrap)supplierWrap.style.display=type==='IN'?'block':'none';
+  if(sourceWrap)sourceWrap.style.display=type==='IN'?'block':'none';
+  if(supplierWrap)supplierWrap.style.display=type==='IN'&&!internalIn?'block':'none';
   if(recipientWrap)recipientWrap.style.display=isOut?'block':'none';
-  if(whLabel) whLabel.textContent=isTransfer?'Kho chuyển đi':(isOut?'Kho xuất':'Kho');
+  if(whLabel) whLabel.textContent=internalIn?'Kho nhận':(isTransfer?'Kho chuyển đi':(isOut?'Kho xuất':'Kho'));
   if(isTransfer)syncTransferDestination();
   const ths=document.querySelectorAll('#inventory table.editable thead th');
   if(ths[2]) ths[2].textContent=isCheck?'Tồn thực tế':(isTransfer?'Số lượng chuyển':(type==='OUT'?'Số lượng xuất':(type==='RETURN'?'Số lượng trả':(type==='ADJUST'?'SL điều chỉnh (+/-)':'Số lượng nhập'))));
@@ -3810,19 +3907,24 @@ document.addEventListener('keydown',event=>{
 });
 window.saveStockVoucher=async()=>{
   let raw=stockItems();if(!raw.length)return alert('Chưa có mã hàng');
-  let type=$('stockType').value, editingId=editingStock||'', warehouse=$('stockWarehouse')?.value||defaultWarehouse(), toWarehouse=$('stockToWarehouse')?.value||'';
-  const supplierId=type==='IN'?($('stockSupplier')?.value||''):'';
+  const formType=$('stockType').value;
+  const internalSource=stockInSourceWarehouse();
+  const internalDestination=internalSource?($('stockWarehouse')?.value||''):'';
+  let type=internalSource?'TRANSFER':formType, editingId=editingStock||'';
+  let warehouse=internalSource||($('stockWarehouse')?.value||defaultWarehouse());
+  let toWarehouse=internalSource?($('stockWarehouse')?.value||''):($('stockToWarehouse')?.value||'');
+  const supplierId=formType==='IN'&&!internalSource?($('stockSupplier')?.value||''):'';
   const supplier=supplierById(supplierId);
-  const recipientType=type==='OUT'?String($('stockRecipientType')?.value||'').trim():'';
-  const recipientName=type==='OUT'?String($('stockRecipientName')?.value||'').trim():'';
-  const recipientPhone=type==='OUT'?String($('stockRecipientPhone')?.value||'').trim():'';
-  const recipientAddress=type==='OUT'?String($('stockRecipientAddress')?.value||'').trim():'';
+  const recipientType=formType==='OUT'?String($('stockRecipientType')?.value||'').trim():'';
+  const recipientName=formType==='OUT'?String($('stockRecipientName')?.value||'').trim():'';
+  const recipientPhone=formType==='OUT'?String($('stockRecipientPhone')?.value||'').trim():'';
+  const recipientAddress=formType==='OUT'?String($('stockRecipientAddress')?.value||'').trim():'';
   if(!canAccessWarehouse(warehouse))return alert('Bạn không có quyền thao tác kho: '+warehouse);
   if(type==='TRANSFER' && !canAccessWarehouse(warehouse))return alert('Bạn chỉ được điều chuyển từ kho mình quản lý');
   if(type==='TRANSFER' && !transferDestinationWarehouses(warehouse).includes(toWarehouse))return alert('Kho nhận không hợp lệ. Vui lòng chọn kho khác kho chuyển đi.');
   if(type==='TRANSFER' && warehouse===toWarehouse)return alert('Kho chuyển đi và kho nhận phải khác nhau');
   if(type==='OUT'&&(!recipientType||!recipientName))return alert('Phiếu xuất kho bắt buộc chọn loại nơi nhận và nhập Đối tượng/Nơi nhận.');
-  if(type==='IN'&&!supplier)return alert('Phiếu nhập kho bắt buộc chọn nhà cung cấp. Hãy tạo nhà cung cấp trong mục Kho & Nhà cung cấp nếu danh sách đang trống.');
+  if(formType==='IN'&&!internalSource&&!supplier)return alert('Phiếu nhập kho bắt buộc chọn nhà cung cấp. Hãy tạo nhà cung cấp trong mục Kho & Nhà cung cấp nếu danh sách đang trống.');
   let items=[];
   for(const it of raw){
     if((type==='CHECK'&&it.inputQty<0)||(!['ADJUST','CHECK'].includes(type)&&it.inputQty<=0)||(type==='ADJUST'&&it.inputQty===0))return alert('Số lượng không hợp lệ: '+it.code);
@@ -3835,15 +3937,23 @@ window.saveStockVoucher=async()=>{
       items.push({...it,qty:it.inputQty});
     }
   }
-  let o={code:$('stockCode').value,date:$('stockDate').value,type,warehouse:warehouse,fromWarehouse:warehouse,toWarehouse:type==='TRANSFER'?toWarehouse:'',supplierId:supplier?.id||'',supplierCode:supplier?.code||'',supplierName:supplier?.name||'',recipientType,recipientName,recipientPhone,recipientAddress,note:$('stockNote').value,items,value:items.reduce((a,it)=>a+Math.abs(+it.qty||0)*(+it.cost||0),0),updatedAt:serverTimestamp()};
+  let voucherCode=$('stockCode').value;
+  if(!editingStock){
+    try{voucherCode=await reserveStockVoucherCode(type);$('stockCode').value=voucherCode;}
+    catch(err){console.error(err);return alert('Không thể cấp số phiếu kho duy nhất. Vui lòng kiểm tra kết nối và thử lại.');}
+  }
+  if(stockVoucherCodeExists(voucherCode,editingStock||''))return alert('Mã phiếu '+voucherCode+' đã tồn tại. Vui lòng bấm Phiếu mới để hệ thống cấp mã khác.');
+  let o={code:voucherCode,date:$('stockDate').value,type,warehouse:warehouse,fromWarehouse:warehouse,toWarehouse:type==='TRANSFER'?toWarehouse:'',entryMode:internalSource?'INTERNAL_RECEIPT':'',supplierId:supplier?.id||'',supplierCode:supplier?.code||'',supplierName:supplier?.name||'',recipientType,recipientName,recipientPhone,recipientAddress,note:$('stockNote').value,items,value:items.reduce((a,it)=>a+Math.abs(+it.qty||0)*(+it.cost||0),0),updatedAt:serverTimestamp()};
   if(type==='ADJUST' && items.some(it=>!String(it.note||o.note||'').trim()))return alert('Phiếu điều chỉnh kho bắt buộc nhập lý do điều chỉnh cho từng dòng hoặc ghi chú chung.');
-  if(editingStock){if(!has('editStock'))return alert('Không có quyền sửa kho');const oldV=data.stockVouchers.find(x=>x.id===editingStock);if(oldV?.type==='TRANSFER')return alert('Phiếu chuyển kho không sửa trực tiếp sau khi gửi. Admin có thể hủy phiếu đang vận chuyển và lập phiếu mới.');if(stockVoucherLocked(oldV)&&currentPerm.role!=='Admin')return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được sửa.');await updateDoc(doc(db,'stockVouchers',editingStock),o);await logAction('Sửa phiếu kho',`${o.code} - ${stockTypeName(type)}`)}
+  if(editingStock){if(!has('editStock'))return alert('Không có quyền sửa kho');const oldV=data.stockVouchers.find(x=>x.id===editingStock);if(oldV?.type==='TRANSFER')return alert('Phiếu chuyển kho không sửa trực tiếp sau khi gửi. Admin có thể hủy phiếu đang vận chuyển và lập phiếu mới.');if(stockVoucherLocked(oldV)&&!isCurrentAdmin())return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được sửa.');await updateDoc(doc(db,'stockVouchers',editingStock),o);await logAction('Sửa phiếu kho',`${o.code} - ${stockTypeName(type)}`)}
   else {
     const transferFields=type==='TRANSFER'?{transferStatus:'IN_TRANSIT',receivedItems:[],dispatchedAt:serverTimestamp(),dispatchedBy:currentUser?.email||''}:{};
     await addDoc(col('stockVouchers'),{...o,...transferFields,locked:!!o.saleId,createdAt:serverTimestamp()});
-    await logAction('Tạo phiếu kho',`${o.code} - ${stockTypeName(type)}${type==='TRANSFER'?' - Đang vận chuyển':''}`)
+    await logAction('Tạo phiếu kho',`${o.code} - ${stockTypeName(type)}${internalSource?` - Nhập nội bộ ${warehouse} → ${toWarehouse}`:(type==='TRANSFER'?' - Đang vận chuyển':'')}`)
   }
-  await loadAll();resetStockForm()
+  const savedCode=o.code;
+  await loadAll();resetStockForm();
+  if(internalSource)alert(`Đã lập phiếu ${savedCode}: ${internalSource} → ${internalDestination}. Phiếu đang vận chuyển; bấm "Xác nhận nhận" sau khi kho nhận kiểm đếm thực tế.`)
 }
 function stockVoucherText(v){return [v.code,v.date,stockTypeName(v.type),voucherWarehouse(v),v.fromWarehouse,v.toWarehouse,v.supplierCode,v.supplierName,v.recipientType,v.recipientName,v.recipientPhone,v.recipientAddress,v.customerName,transferStatusLabel(v),v.note,(v.items||[]).map(it=>[it.code,it.name,it.qty,it.inputQty,it.actualQty,it.note].join(' ')).join(' ')].join(' ').toLowerCase()}
 window.editStock=id=>{
@@ -3852,11 +3962,12 @@ window.editStock=id=>{
   if(!canAccessVoucher(v))return alert('Bạn không có quyền xem hoặc sửa chứng từ của kho này.');
   if(!has('editStock'))return alert('Không có quyền sửa phiếu kho');
   if(v.type==='TRANSFER')return alert('Phiếu chuyển kho không sửa trực tiếp sau khi gửi. Nếu đang vận chuyển, Admin hãy hủy phiếu và lập phiếu mới.');
-  if(stockVoucherLocked(v)&&currentPerm.role!=='Admin')return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được sửa.');
+  if(stockVoucherLocked(v)&&!isCurrentAdmin())return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được sửa.');
   editingStock=id;
   $('stockCode').value=v.code||'';
   $('stockDate').value=v.date||today();
   $('stockType').value=v.type||'IN';
+  syncStockInSource('SUPPLIER');
   $('stockWarehouse').innerHTML=warehouseOptions(v.fromWarehouse||v.warehouse||defaultWarehouse());
   $('stockWarehouse').value=v.fromWarehouse||v.warehouse||defaultWarehouse();
   syncTransferDestination(v.toWarehouse||'');
@@ -3906,7 +4017,7 @@ window.confirmTransferReceipt=async id=>{
 };
 window.cancelTransferVoucher=async id=>{
   const v=data.stockVouchers.find(x=>x.id===id);
-  if(currentPerm.role!=='Admin')return alert('Chỉ Admin được hủy phiếu chuyển kho.');
+  if(!isCurrentAdmin())return alert('Chỉ Admin được hủy phiếu chuyển kho.');
   if(!v||v.type!=='TRANSFER')return alert('Không tìm thấy phiếu chuyển kho');
   if(transferStatusOf(v)!=='IN_TRANSIT')return alert('Chỉ được hủy phiếu đang vận chuyển. Phiếu đã nhận phải xử lý bằng phiếu điều chỉnh để giữ lịch sử.');
   const reason=prompt(`Nhập lý do hủy phiếu chuyển ${v.code} (bắt buộc):`,'');
@@ -3915,6 +4026,62 @@ window.cancelTransferVoucher=async id=>{
   await updateDoc(doc(db,'stockVouchers',id),{canceled:true,isCanceled:true,status:'Đã hủy',transferStatus:'CANCELED',cancelReason:String(reason).trim(),cancelledAt:serverTimestamp(),cancelledBy:currentUser?.email||'',updatedAt:serverTimestamp()});
   await logAction('Hủy phiếu chuyển kho',`${v.code} | ${reason}`);
   await loadAll();
+};
+window.repairDuplicateStockVoucherCodes=async()=>{
+  if(!isCurrentAdmin())return alert('Chỉ Admin được chuẩn hóa mã phiếu kho.');
+  const ordered=[...(data.stockVouchers||[])].sort((a,b)=>{
+    const at=(+a.createdAt?.seconds||0)-(+b.createdAt?.seconds||0);
+    return at||String(a.date||'').localeCompare(String(b.date||''))||String(a.id||'').localeCompare(String(b.id||''));
+  });
+  const seen=new Set();
+  const duplicates=[];
+  ordered.forEach(v=>{
+    const code=String(v.code||'').trim().toUpperCase();
+    if(!code)return;
+    if(seen.has(code))duplicates.push(v);else seen.add(code);
+  });
+  if(!duplicates.length)return alert('Không phát hiện mã phiếu kho bị trùng.');
+  if(!confirm(`Phát hiện ${duplicates.length} phiếu bị trùng mã. Hệ thống sẽ giữ mã của phiếu đầu tiên và cấp mã mới cho các phiếu còn lại. Tiếp tục?`))return;
+  const changed=[];
+  for(const voucher of duplicates){
+    const oldCode=voucher.code||'';
+    const newCode=await reserveStockVoucherCode(voucher.type||'IN');
+    await updateDoc(doc(db,'stockVouchers',voucher.id),{code:newCode,renumberedFrom:oldCode,renumberedAt:serverTimestamp(),renumberedBy:currentUser?.email||'',updatedAt:serverTimestamp()});
+    const linkedSales=(data.sales||[]).filter(s=>s.stockVoucherId===voucher.id);
+    for(const sale of linkedSales)await updateDoc(doc(db,'sales',sale.id),{stockVoucherCode:newCode,updatedAt:serverTimestamp()});
+    changed.push(`${oldCode} → ${newCode}`);
+  }
+  await logAction('Chuẩn hóa mã phiếu kho',changed.join(' | '));
+  await loadAll();
+  alert(`Đã sửa ${changed.length} phiếu trùng mã:\n${changed.join('\n')}`);
+};
+window.deleteStockVoucher=async id=>{
+  const v=(data.stockVouchers||[]).find(x=>x.id===id);
+  if(!v)return alert('Không tìm thấy phiếu kho.');
+  const isAdmin=isCurrentAdmin();
+  if(!canAccessVoucher(v))return alert('Bạn không có quyền xóa chứng từ của kho này.');
+  if(!isAdmin&&!has('deleteStock'))return alert('Bạn chưa được cấp quyền Xóa phiếu kho.');
+  if(v.type==='TRANSFER'&&!isAdmin)return alert('Chỉ Admin được xóa phiếu chuyển kho.');
+  if(v.type==='RETURN'&&v.saleId)return alert('Phiếu trả hàng đang liên kết đơn bán nên không thể xóa riêng lẻ, tránh sai tồn kho và giá trị đơn.');
+  const token=prompt(`Bạn đang xóa vĩnh viễn phiếu ${v.code||id}. Nhập XOA để xác nhận:`,'');
+  if(token!=='XOA')return;
+  const reason=prompt('Nhập lý do xóa phiếu kho (bắt buộc):','Nhập sai phiếu');
+  if(!String(reason||'').trim())return alert('Bắt buộc nhập lý do xóa phiếu.');
+  const route=v.type==='TRANSFER'?`${v.fromWarehouse||v.warehouse||''} → ${v.toWarehouse||''}`:voucherWarehouse(v);
+  if(!confirm(`Xác nhận xóa ${v.code||id}? Tồn kho liên quan tại ${route} sẽ được tính lại ngay.`))return;
+  const linkedSale=(data.sales||[]).find(s=>s.stockVoucherId===v.id);
+  try{
+    const batch=writeBatch(db);
+    batch.delete(doc(db,'stockVouchers',id));
+    if(linkedSale)batch.update(doc(db,'sales',linkedSale.id),{stockVoucherId:'',stockVoucherCode:'',stockExported:false,orderStatus:'Chưa xuất kho',updatedAt:serverTimestamp()});
+    await batch.commit();
+    await logAction('Xóa phiếu kho',`${v.code||id} | ${stockTypeName(v.type)} | ${route} | ${String(reason).trim()}`);
+    await loadAll();
+    alert('Đã xóa phiếu kho '+(v.code||id)+' và cập nhật lại tồn kho.');
+  }catch(err){
+    console.error('DELETE STOCK VOUCHER ERROR',err);
+    alert('Không thể xóa phiếu kho: '+(err?.message||'Lỗi phân quyền hoặc kết nối. Hãy kiểm tra đã Publish firestore.rules của V127.'));
+  }
 };
 window.printStock=id=>{
   const v=data.stockVouchers.find(x=>x.id===id);
@@ -3945,14 +4112,14 @@ function renderStock(){
   $('stockVoucherTable').innerHTML=rows.map(v=>{
     const locked=stockVoucherLocked(v);
     const isTransfer=v.type==='TRANSFER';
-    const canEdit=!isTransfer&&has('editStock')&&(!locked||currentPerm.role==='Admin');
-    const canDelete=!isTransfer&&has('deleteStock')&&(!locked||currentPerm.role==='Admin');
+    const canEdit=!isTransfer&&has('editStock')&&(!locked||isCurrentAdmin());
+    const canDelete=!(v.type==='RETURN'&&v.saleId)&&(isCurrentAdmin()||(!isTransfer&&has('deleteStock')&&!locked));
     const route=isTransfer?`${v.fromWarehouse||v.warehouse||''} → ${v.toWarehouse||''}`:voucherWarehouse(v);
     const partner=v.type==='IN'?(v.supplierName||'Chưa chọn NCC'):(v.type==='OUT'?(v.recipientName||v.toWarehouse||v.customerName||''):'');
     const status=isTransfer?transferStatusBadge(v):'<span class="muted-small">—</span>';
     const receiveAction=canConfirmTransferVoucher(v)?`<button class="btn primary" onclick="openTransferReceipt('${v.id}')">Xác nhận nhận</button>`:'';
-    const cancelAction=isTransfer&&transferStatusOf(v)==='IN_TRANSIT'&&currentPerm.role==='Admin'?`<button class="btn danger" onclick="cancelTransferVoucher('${v.id}')">Hủy chuyển</button>`:'';
-    return `<tr><td>${v.code}</td><td>${v.date}</td><td>${stockTypeName(v.type)}${locked?'<br><small>Đã khóa</small>':''}</td><td>${route}</td><td>${htmlesc(partner)}</td><td>${status}</td><td>${(v.items||[]).length}</td><td>${has('viewCost')?money(v.value):'Ẩn'}</td><td><button class="btn ghost" onclick="printStock('${v.id}')">In A5</button> ${receiveAction} ${canEdit?`<button class="btn ghost" onclick="editStock('${v.id}')">Sửa</button>`:''} ${canDelete?`<button class="btn danger" onclick="removeDoc('stockVouchers','${v.id}')">Xóa</button>`:''} ${cancelAction}</td></tr>`
+    const cancelAction=isTransfer&&transferStatusOf(v)==='IN_TRANSIT'&&isCurrentAdmin()?`<button class="btn danger" onclick="cancelTransferVoucher('${v.id}')">Hủy chuyển</button>`:'';
+    return `<tr><td>${v.code}</td><td>${v.date}</td><td>${stockTypeName(v.type)}${locked?'<br><small>Đã khóa</small>':''}</td><td>${route}</td><td>${htmlesc(partner)}</td><td>${status}</td><td>${(v.items||[]).length}</td><td>${has('viewCost')?money(v.value):'Ẩn'}</td><td><button class="btn ghost" onclick="printStock('${v.id}')">In A5</button> ${receiveAction} ${canEdit?`<button class="btn ghost" onclick="editStock('${v.id}')">Sửa</button>`:''} ${canDelete?`<button class="btn danger" onclick="deleteStockVoucher('${v.id}')">Xóa</button>`:''} ${cancelAction}</td></tr>`
   }).join('')||'<tr><td colspan="9">Không tìm thấy chứng từ kho phù hợp</td></tr>'
 }
 window.clearStockVoucherSearch=()=>{if($('stockVoucherSearch'))$('stockVoucherSearch').value='';renderStock();}
@@ -4833,20 +5000,12 @@ window.cancelSale=async(id)=>{
 };
 window.removeDoc=async(name,id)=>{
   const label={sales:'đơn bán',stockVouchers:'phiếu kho',customers:'khách hàng',products:'sản phẩm',prices:'bảng giá',staff:'nhân viên',warranties:'bảo hành',expenses:'chi phí',receipts:'phiếu thu'}[name]||name;
-  if(name==='stockVouchers'){
-    const transfer=data.stockVouchers.find(x=>x.id===id);
-    if(transfer?.type==='TRANSFER')return cancelTransferVoucher(id);
-  }
+  if(name==='stockVouchers')return window.deleteStockVoucher(id);
   const code=prompt(`Bạn đang xóa ${label}. Nhập XOA để xác nhận:`);
   if(code!=='XOA')return;
   let customerToRefresh='';
   if(name==='sales'){
     return cancelSale(id);
-  }
-  if(name==='stockVouchers'){
-    const v=data.stockVouchers.find(x=>x.id===id);
-    if(!v||!canAccessVoucher(v))return alert('Bạn không có quyền xóa chứng từ của kho này.');
-    if(stockVoucherLocked(v)&&currentPerm.role!=='Admin')return alert('Phiếu kho đã liên kết đơn bán/đã khóa. Chỉ Admin được xóa.');
   }
   if(name==='receipts'){
     const r=data.receipts.find(x=>x.id===id);
@@ -5182,7 +5341,9 @@ window.importExcel=async(e,type)=>{
       }
       else if(type==='stockVouchers'){
         const voucherType=String(obj.type||'IN').trim().toUpperCase();
-        const code=String(obj.code||nextCode(prefixByStockType(voucherType),data.stockVouchers)).trim();
+        const suppliedCode=String(obj.code||'').trim().toUpperCase();
+        const code=suppliedCode||`__AUTO__${voucherType}`;
+        if(suppliedCode&&stockVoucherCodeExists(suppliedCode)){skip++;errors.push(`Dòng ${r+2}: mã phiếu ${suppliedCode} đã tồn tại`);continue;}
         const importWarehouse=String(obj.warehouse||defaultWarehouse()).trim();
         const toWarehouse=String(obj.toWarehouse||obj['Kho nhận']||'').trim();
         const supplier=(data.suppliers||[]).find(row=>searchKey(row.code)===searchKey(obj.supplierCode||'')||searchKey(row.name)===searchKey(obj.supplierName||''));
@@ -5244,7 +5405,16 @@ window.importExcel=async(e,type)=>{
     }catch(err){skip++;errors.push(`Dòng ${r+2}: ${err.message}`)}
   }
   if(type==='stockVouchers'){
-    for(const v of stockGroup.values()){v.value=(v.items||[]).reduce((a,it)=>a+Math.abs(+it.qty||0)*(+it.cost||0),0);await addDoc(col('stockVouchers'),{...v,...(v.type==='TRANSFER'?{dispatchedAt:serverTimestamp()}:{}),createdAt:serverTimestamp()});}
+    const importCodes=new Set((data.stockVouchers||[]).map(v=>String(v.code||'').trim().toUpperCase()).filter(Boolean));
+    for(const v of stockGroup.values()){
+      if(String(v.code||'').startsWith('__AUTO__'))v.code=await reserveStockVoucherCode(v.type);
+      const normalizedCode=String(v.code||'').trim().toUpperCase();
+      if(importCodes.has(normalizedCode)){const count=(v.items||[]).length;ok=Math.max(0,ok-count);skip+=count;errors.push(`Phiếu ${normalizedCode}: mã bị trùng, không nhập`);continue;}
+      importCodes.add(normalizedCode);
+      v.value=(v.items||[]).reduce((a,it)=>a+Math.abs(+it.qty||0)*(+it.cost||0),0);
+      await syncStockCounterForCode(v.type,v.code);
+      await addDoc(col('stockVouchers'),{...v,...(v.type==='TRANSFER'?{dispatchedAt:serverTimestamp()}:{}),createdAt:serverTimestamp()});
+    }
   }
   await logAction('Import Excel '+type,`Thành công ${ok}, bỏ qua ${skip}`);
   await loadAll();e.target.value='';alert(`Import Excel xong: ${ok} dòng. Bỏ qua: ${skip}`+(errors.length?'\n'+errors.slice(0,8).join('\n'):''));

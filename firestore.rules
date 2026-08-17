@@ -261,9 +261,18 @@ service cloud.firestore {
           && canWriteStockVoucher(resource.data)
           && canWriteStockVoucher(request.resource.data))
         || canConfirmTransfer(resource.data, request.resource.data);
-      allow delete: if resource.data.type != 'TRANSFER'
-        && (isAdmin() || hasPerm('deleteStock'))
+      allow delete: if (isAdmin() || (resource.data.type != 'TRANSFER' && hasPerm('deleteStock')))
         && canWriteStockVoucher(resource.data);
+    }
+
+    match /stockCounters/{id} {
+      allow read: if hasPerm('inventory') || hasPerm('sales');
+      allow create: if isAdmin();
+      allow update: if (hasPerm('inventory') || hasPerm('sales'))
+        && request.resource.data.prefix == resource.data.prefix
+        && request.resource.data.value is int
+        && request.resource.data.value > resource.data.value;
+      allow delete: if isAdmin();
     }
 
     match /warranties/{id} {

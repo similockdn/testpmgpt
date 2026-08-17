@@ -1,15 +1,14 @@
-HƯỚNG DẪN CẬP NHẬT V126 - BẢN GỌN
+HƯỚNG DẪN CẬP NHẬT V127 - BẢN GỌN
 
 1. Giải nén file ZIP.
-2. Mở thư mục erp_v126_deploy.
+2. Mở thư mục erp_v127_deploy.
 3. Chọn toàn bộ 8 file trong thư mục.
 4. Kéo 8 file này vào thư mục gốc của GitHub và chọn Commit changes.
 5. Vào Firebase Console > Firestore Database > Rules.
 6. Mở file firestore.rules, sao chép toàn bộ nội dung, dán vào Firebase và bấm Publish.
-7. Vào phần mềm bằng Admin > Phân quyền > chọn sale1.
-8. Tích "Sửa KH & lắp đặt trên đơn".
-9. Bỏ tích "Sửa toàn bộ đơn (sản phẩm/giá)" rồi lưu.
-10. Cho sale1 đăng xuất, đăng nhập lại và tải lại trang bằng Cmd+Shift+R hoặc Ctrl+Shift+R.
+7. Đăng nhập bằng Admin và chờ phần mềm tải xong dữ liệu để khởi tạo bộ đếm số phiếu kho.
+8. Tải lại trang bằng Cmd+Shift+R hoặc Ctrl+Shift+R.
+9. Nếu dữ liệu cũ đã có nhiều phiếu cùng mã NK000001: vào Kho > Nhập kho > bấm "Sửa mã phiếu trùng" bằng tài khoản Admin.
 
 Lưu ý: Không cần tải các file QA, CHANGELOG hoặc hướng dẫn của gói đầy đủ lên GitHub.
 
@@ -24,3 +23,11 @@ NỘI DUNG CẬP NHẬT V126:
 - Kỳ hoa hồng được xác định theo tháng lên đơn, không theo tháng thu tiền.
 - Ví dụ: đơn lên trong tháng 7, đầu tháng 8 mới thu đủ thì vẫn tính hoa hồng tháng 7.
 - Báo cáo và Excel hiển thị riêng ngày lên đơn tính hoa hồng và ngày thực tế thu đủ 100%.
+
+NỘI DUNG CẬP NHẬT V127:
+- Cấp số phiếu kho bằng bộ đếm giao dịch Firestore, tránh lặp NK000001 khi tải dữ liệu chậm hoặc nhiều người lưu gần nhau.
+- Admin có nút "Sửa mã phiếu trùng" để đánh lại số cho các phiếu đã trùng trước đây; phiếu đầu tiên được giữ nguyên.
+- Admin có thể xóa phiếu nhập/xuất/điều chỉnh/chuyển kho; bắt buộc nhập XOA và lý do, đồng thời ghi nhật ký.
+- Khi xóa phiếu xuất kho liên kết đơn bán, hệ thống tự gỡ liên kết kho khỏi đơn để không còn tham chiếu sai.
+- Trong Phiếu nhập kho có thêm "Nguồn nhập": chọn Nhà cung cấp hoặc Kho Chính (chuyển nội bộ).
+- Chọn Kho Chính làm nguồn sẽ tự chọn Kho Văn Phòng làm kho nhận và lập phiếu chuyển kho hai bước; kho nhận xác nhận số lượng trước khi cộng tồn.

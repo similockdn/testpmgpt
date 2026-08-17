@@ -354,6 +354,7 @@
                   <button class="btn ghost" onclick="downloadTemplateExcel('stockVouchers')">Mẫu Excel</button>
                   <button class="btn ghost" onclick="importStock.click()">Nhập Excel</button>
                   <button class="btn ghost" onclick="exportExcel('stockVouchers')">Xuất Excel</button>
+                  <button class="btn ghost admin-only" onclick="repairDuplicateStockVoucherCodes()">Sửa mã phiếu trùng</button>
                 </div>
               </div>
 
@@ -363,6 +364,7 @@
               <div><label>Mã phiếu</label><input id="stockCode" readonly /></div>
               <div><label>Ngày</label><input id="stockDate" type="date" /></div>
               <div><label>Loại chứng từ</label><select id="stockType"><option value="IN">Phiếu nhập kho</option><option value="OUT">Phiếu xuất kho</option><option value="RETURN">Phiếu trả lại hàng bán</option><option value="TRANSFER">Phiếu chuyển kho</option><option value="ADJUST">Phiếu điều chỉnh</option><option value="CHECK">Phiếu kiểm kê</option></select></div>
+              <div id="stockInSourceWrap" style="display:none"><label>Nguồn nhập <span class="req">*</span></label><select id="stockInSource"></select></div>
               <div><label id="stockWarehouseLabel">Kho</label><select id="stockWarehouse"></select></div>
               <div id="stockToWarehouseWrap" style="display:none"><label>Kho nhận <span class="req">*</span></label><select id="stockToWarehouse"></select></div>
               <div id="stockSupplierWrap" style="display:none"><label>Nhà cung cấp <span class="req">*</span></label><select id="stockSupplier"></select></div>
@@ -379,7 +381,7 @@
             <div id="stockWorkflowHint" class="stock-workflow-hint"></div>
           </div>
 
-          <div class="warehouse-note"><b>Quy trình chuẩn:</b> Nhân viên kho chỉ xem và thao tác đúng kho được phân quyền. Nhập hàng vào kho được giao → Chuyển kho khi cần → Bán hàng/xuất kho theo đúng kho → Trả hàng bán nhập lại đúng kho phát sinh.</div>
+          <div class="warehouse-note"><b>Quy trình chuẩn:</b> Nhập từ nhà cung cấp vào kho được giao. Khi nhập Kho Văn Phòng từ Kho Chính, chọn <b>Nguồn nhập: Kho Chính</b>; hệ thống lập phiếu chuyển và chỉ cộng tồn sau khi kho nhận xác nhận. Sau đó bán hàng/xuất kho và trả hàng đúng kho phát sinh.</div>
 
           <div class="warehouse-items-head">
             <div><b>Danh sách mã hàng</b><span>Nhập model, số lượng, giá vốn và ghi chú cho từng dòng.</span></div>
